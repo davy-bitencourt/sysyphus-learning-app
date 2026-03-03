@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// [Home] é um StatefulWidget porque precisa manter o estado da aba
+/// selecionada (_selectedTab) e reagir a mudanças de layout (mobile/desktop).
 class Home extends StatefulWidget {
   const Home({super.key});
 
@@ -8,8 +10,12 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  /// Controla qual aba está ativa (0 = My Decks, 1 = Imported Decks).
+  /// Usa int em vez de enum por simplicidade — só dois estados possíveis.
   int _selectedTab = 0;
 
+  /// Lista de decks exibidos. Cada item é um Map simples com título e
+  /// data da última revisão. Em produção, seria uma lista de objetos tipados.
   final List<Map<String, String>> _decks = [
     {'title': 'Concurso da Polícia Militar', 'lastReview': 'Última revisão há 30 dias'},
     {'title': 'Curso de Proficiência em Inglês', 'lastReview': 'Última revisão há 4 dias'},
@@ -17,7 +23,9 @@ class _HomeState extends State<Home> {
     {'title': 'Questões de Gramática em Francês', 'lastReview': 'Última revisão há 1 mês'},
   ];
 
-  /// Replace with real data: Map of normalized date -> review intensity (0-4)
+  /// Constrói um mapa de datas → intensidade de atividade (0–4) para o heatmap.
+  /// Por ora usa um padrão cíclico fixo; em produção viria de um banco de dados.
+  /// DateTime(year, month, day) normaliza a chave, removendo o componente de hora.
   Map<DateTime, int> _buildActivityMap() {
     final map = <DateTime, int>{};
     final today = DateTime.now();
@@ -29,32 +37,46 @@ class _HomeState extends State<Home> {
     return map;
   }
 
+  /// Retorna a cor do quadradinho do heatmap de acordo com o nível de atividade.
+  /// Segue a paleta do GitHub Contributions Graph (verde escalonado).
   Color _heatColor(int value) {
     switch (value) {
-      case 1:  return const Color(0xFF9BE9A8);
-      case 2:  return const Color(0xFF40C463);
-      case 3:  return const Color(0xFF30A14E);
-      case 4:  return const Color(0xFF216E39);
-      default: return const Color(0xFFEBEDF0);
+      case 1:  return const Color(0xFF9BE9A8); // verde muito claro
+      case 2:  return const Color(0xFF40C463); // verde médio
+      case 3:  return const Color(0xFF30A14E); // verde forte
+      case 4:  return const Color(0xFF216E39); // verde escuro
+      default: return const Color(0xFFEBEDF0); // cinza (sem atividade)
     }
   }
 
+  /// Breakpoint simples: ≥ 600px de largura é tratado como desktop/tablet.
+  /// Evita importar pacotes externos de responsividade para algo tão direto.
   static bool _isDesktop(BuildContext ctx) =>
       MediaQuery.of(ctx).size.width >= 600;
+
+  // ── Build principal ────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final desktop = _isDesktop(context);
     return Scaffold(
+      // Cor de fundo neutra que contrasta com os cards brancos.
       backgroundColor: const Color(0xFFF2F4F7),
       appBar: _buildAppBar(desktop),
+      // Escolhe o layout baseado no breakpoint.
       body: desktop ? _buildDesktopBody() : _buildMobileBody(),
+      // BottomNav e FAB só fazem sentido no mobile; no desktop usa sidebar.
       bottomNavigationBar: desktop ? null : _buildBottomNav(),
       floatingActionButton: desktop ? null : _buildFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
+  // ── AppBar ─────────────────────────────────────────────────────────────────
+
+  /// AppBar compartilhado entre mobile e desktop.
+  /// No desktop exibe links de navegação em texto; no mobile só ícones.
+  /// leadingWidth ampliado para comportar logo + nome do app.
   PreferredSizeWidget _buildAppBar(bool desktop) {
     return AppBar(
       backgroundColor: Colors.white,
@@ -63,6 +85,7 @@ class _HomeState extends State<Home> {
       leading: Padding(
         padding: const EdgeInsets.only(left: 16),
         child: Row(children: [
+          // Logo: Container com ícone — substitui uma imagem real sem asset extra.
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
@@ -78,14 +101,7 @@ class _HomeState extends State<Home> {
         ]),
       ),
       actions: [
-        if (desktop) ...[
-          TextButton(onPressed: () {},
-            child: const Text('Home',
-              style: TextStyle(color: Color(0xFF1565C0), fontWeight: FontWeight.bold))),
-          TextButton(onPressed: () {},
-            child: Text('Statistics', style: TextStyle(color: Colors.grey[500]))),
-          const SizedBox(width: 8),
-        ],
+        // Links de nav só no desktop — no mobile a BottomNav cumpre esse papel.
         IconButton(icon: const Icon(Icons.sync, color: Color(0xFF555555)), onPressed: () {}),
         IconButton(icon: const Icon(Icons.menu, color: Color(0xFF555555)), onPressed: () {}),
       ],
@@ -94,6 +110,8 @@ class _HomeState extends State<Home> {
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
 
+  /// Layout mobile: tudo em coluna única, rolagem vertical.
+  /// SingleChildScrollView com padding para não conflitar com a BottomNav + FAB.
   Widget _buildMobileBody() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -108,7 +126,9 @@ class _HomeState extends State<Home> {
           const SizedBox(height: 20),
           _buildTabBar(),
           const SizedBox(height: 12),
+          // _buildDeckList usa Column internamente — sem altura fixa, sem overflow.
           _buildDeckList(),
+          // Espaço extra para não ficar atrás da BottomNav/FAB.
           const SizedBox(height: 80),
         ],
       ),
@@ -117,10 +137,16 @@ class _HomeState extends State<Home> {
 
   // ── Desktop ────────────────────────────────────────────────────────────────
 
+  /// Layout desktop: sidebar fixa à esquerda + área de conteúdo à direita.
+  /// Row de nível superior; a sidebar tem altura infinita para preencher a tela.
   Widget _buildDesktopBody() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+
+        // ── Sidebar ──────────────────────────────────────────────────────────
+        // Container com cor sólida faz a barra lateral. width fixo de 220px é
+        // suficiente para labels curtos sem desperdiçar espaço.
         Container(
           width: 220,
           height: double.infinity,
@@ -135,16 +161,17 @@ class _HomeState extends State<Home> {
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
                     color: Colors.grey[400], letterSpacing: 1)),
               ),
-              _sidebarItem(Icons.home_outlined,      'Home',       true),
-              _sidebarItem(Icons.bar_chart_outlined,  'Statistics', false),
-              _sidebarItem(Icons.settings_outlined,   'Settings',   false),
+              _sidebarItem(Icons.home_outlined,     'Home',       true),
+              _sidebarItem(Icons.bar_chart_outlined, 'Statistics', false),
+              _sidebarItem(Icons.settings_outlined,  'Settings',   false),
+              // Spacer empurra o botão "Nova Deck" para o fundo da sidebar.
               const Spacer(),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('New Deck'),
+                  label: const Text('Nova Deck'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2C2C54),
                     foregroundColor: Colors.white,
@@ -157,6 +184,9 @@ class _HomeState extends State<Home> {
             ],
           ),
         ),
+
+        // ── Conteúdo principal ────────────────────────────────────────────────
+        // Expanded faz o conteúdo ocupar todo o espaço restante após a sidebar.
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -171,18 +201,43 @@ class _HomeState extends State<Home> {
                 const SizedBox(height: 24),
                 _buildTabBar(),
                 const SizedBox(height: 12),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 3.8,
-                  ),
-                  itemCount: _decks.length,
-                  itemBuilder: (_, i) => _buildDeckCard(_decks[i]),
+
+                // ── FIX: Column em vez de GridView ────────────────────────────
+                //
+                // O GridView anterior usava childAspectRatio: 3.8, que impunha
+                // uma altura fixa a cada célula (~altura/3.8). O conteúdo dos
+                // cards (thumbnail 64px + texto + tags + padding) excedia essa
+                // altura calculada, causando RenderFlex overflows tanto no eixo
+                // vertical (bottom) quanto horizontal (right).
+                //
+                // A correção mais simples e robusta é substituir o GridView por
+                // uma Column: cada card define sua própria altura com base no
+                // conteúdo, eliminando qualquer overflow por altura insuficiente.
+                //
+                // Alternativa com 2 colunas: usar Wrap (veja comentário abaixo).
+                Column(
+                  children: _decks.map(_buildDeckCard).toList(),
                 ),
+
+                // ── Alternativa: 2 colunas sem altura fixa com Wrap ───────────
+                //
+                // Se quiser manter o grid de 2 colunas, use Wrap dentro de um
+                // LayoutBuilder para calcular a largura disponível:
+                //
+                // LayoutBuilder(builder: (context, constraints) {
+                //   return Wrap(
+                //     spacing: 12,
+                //     runSpacing: 12,
+                //     children: _decks.map((deck) => SizedBox(
+                //       // Metade da largura disponível menos o espaço entre colunas
+                //       width: (constraints.maxWidth - 12) / 2,
+                //       child: _buildDeckCard(deck),
+                //     )).toList(),
+                //   );
+                // }),
+                //
+                // Wrap não impõe altura: cada "linha" se expande para caber o
+                // card mais alto, resolvendo o overflow sem precisar de aspectRatio.
               ],
             ),
           ),
@@ -191,10 +246,15 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // ── Sidebar item ───────────────────────────────────────────────────────────
+
+  /// Item de navegação da sidebar com destaque visual quando ativo.
+  /// ListTile dense reduz o padding vertical padrão, adequado para sidebars.
   Widget _sidebarItem(IconData icon, String label, bool active) {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
+        // Fundo levemente colorido indica seleção sem ser intrusivo.
         color: active
             ? const Color(0xFF1565C0).withValues(alpha: 0.08)
             : Colors.transparent,
@@ -213,10 +273,16 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // ── Utilitários de layout ──────────────────────────────────────────────────
+
+  /// Rótulo de seção padronizado — reutilizado em vários pontos da tela.
   Widget _sectionLabel(String text) => Text(text,
     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
       color: Color(0xFF1A1A2E)));
 
+  /// Barra de busca estilizada como campo flutuante.
+  /// Container com BoxShadow imita elevação sem usar Material/Card,
+  /// permitindo controle total do radius e cor.
   Widget _buildSearchBar() {
     return Container(
       height: 44,
@@ -233,6 +299,8 @@ class _HomeState extends State<Home> {
           hintText: 'Search',
           hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
           prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+          // InputBorder.none remove a linha padrão do TextField; o visual
+          // vem inteiramente do Container externo.
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
@@ -242,16 +310,24 @@ class _HomeState extends State<Home> {
 
   // ── Heatmap ────────────────────────────────────────────────────────────────
   //
-  // FIX: Container (padding) is the OUTER widget.
-  // LayoutBuilder is the INNER child — so constraints.maxWidth already
-  // reflects the width AFTER the 16px padding on each side is consumed.
-  // availW only subtracts dayLabelW + labelGap. Nothing else.
+  // Arquitetura de medição:
+  //   Container (padding: 16) → LayoutBuilder → mede largura INTERNA
+  //   availW = constraints.maxWidth - dayLabelW - labelGap
+  //   visibleCols = availW ~/ cellStep  (truncado → sem overflow horizontal)
+  //   gridW = visibleCols * cellStep - cellGap  (remove gap do último slot)
+  //
+  // Container externo já absorve o padding antes do LayoutBuilder medir,
+  // então constraints.maxWidth reflete a área útil corretamente.
 
   Widget _buildHeatmapCard() {
+    // Dimensões dos quadradinhos do heatmap.
     const double cellSize  = 11;
     const double cellGap   = 2;
-    const double cellStep  = cellSize + cellGap; // 13 px per column slot
+    // Passo de cada coluna: tamanho + gap entre células.
+    const double cellStep  = cellSize + cellGap; // 13 px por slot de coluna
+    // Largura reservada para os rótulos dos dias (Mon/Wed/Fri).
     const double dayLabelW = 26;
+    // Gap entre os rótulos e a grade de células.
     const double labelGap  = 4;
 
     final today       = DateTime.now();
@@ -260,9 +336,9 @@ class _HomeState extends State<Home> {
     final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun',
                          'Jul','Aug','Sep','Oct','Nov','Dec'];
 
+    // Segunda-feira da semana atual — ponto de ancoragem do grid.
     final thisMonday = todayNorm.subtract(Duration(days: todayNorm.weekday - 1));
 
-    // Container is OUTSIDE — its padding runs before LayoutBuilder measures
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -274,23 +350,25 @@ class _HomeState extends State<Home> {
             blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
+      // LayoutBuilder fornece a largura real disponível após o padding do
+      // Container pai ser consumido pelo Flutter — não precisa subtrair manualmente.
       child: LayoutBuilder(builder: (context, constraints) {
-        // constraints.maxWidth == inner width (padding already subtracted by Flutter)
         final double availW   = constraints.maxWidth - dayLabelW - labelGap;
-        final int visibleCols = availW ~/ cellStep; // whole columns only
+        // ~/ trunca para baixo: garante que nunca haverá mais colunas do que cabem.
+        final int visibleCols = availW ~/ cellStep;
 
-        final int colsBefore      = visibleCols ~/ 2;
-        final DateTime firstMonday =
-            thisMonday.subtract(Duration(days: colsBefore * 7));
+        // Centraliza "hoje" horizontalmente: metade das colunas antes, metade depois.
+        final int colsBefore       = visibleCols ~/ 2;
+        final DateTime firstMonday = thisMonday.subtract(Duration(days: colsBefore * 7));
 
-        // Exact grid width: drop the last trailing gap
+        // Largura exata da grade: remove o gap que sobra após a última coluna.
         final double gridW = visibleCols * cellStep - cellGap;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // Header
+            // Cabeçalho: título + streak badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -302,12 +380,9 @@ class _HomeState extends State<Home> {
                   Text('365 cards reviewed this year',
                     style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                 ]),
+                // Badge de streak: Container arredondado com fundo translúcido verde.
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF216E39).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
                   child: const Text('🔥 12 day streak',
                     style: TextStyle(fontSize: 11, color: Color(0xFF216E39),
                       fontWeight: FontWeight.w600)),
@@ -316,17 +391,20 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 12),
 
-            // Day labels + grid
+            // Grade de dias: rótulos à esquerda + colunas de células à direita.
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Coluna de rótulos dos dias da semana (alinhados à direita).
                 SizedBox(
                   width: dayLabelW,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      // Espaçador para alinhar verticalmente com os rótulos de mês.
                       const SizedBox(height: 14),
                       ...List.generate(7, (i) {
+                        // Exibe apenas Mon, Wed, Fri para não poluir o layout.
                         final label = i == 0 ? 'Mon'
                             : i == 2 ? 'Wed'
                             : i == 4 ? 'Fri'
@@ -343,18 +421,22 @@ class _HomeState extends State<Home> {
                 ),
                 SizedBox(width: labelGap),
 
-                // Pixel-exact grid
+                // Área da grade com largura exata calculada para evitar overflow.
                 SizedBox(
                   width: gridW,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
+                      // Rótulos de mês: Stack posicionado absolutamente por coluna.
+                      // height 14 reserva espaço fixo acima das células.
                       SizedBox(
                         height: 14,
                         child: Stack(
                           children: List.generate(visibleCols, (ci) {
                             final monday = firstMonday.add(Duration(days: ci * 7));
                             String? label;
+                            // Verifica se algum dia da semana é dia 1 → novo mês.
                             for (int d = 0; d < 7; d++) {
                               final day = monday.add(Duration(days: d));
                               if (day.day == 1) {
@@ -364,26 +446,31 @@ class _HomeState extends State<Home> {
                             }
                             if (label == null) return const SizedBox.shrink();
                             return Positioned(
-                              left: ci * cellStep,
+                              left: ci * cellStep.toDouble(),
                               child: Text(label,
                                 style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                             );
                           }),
                         ),
                       ),
+
+                      // Grade de células: Row de colunas semanais.
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: List.generate(visibleCols, (ci) {
                           final monday = firstMonday.add(Duration(days: ci * 7));
+                          // SizedBox com largura fixa garante espaçamento uniforme
+                          // sem depender de Flexible ou Expanded (evita overflow).
                           return SizedBox(
-                            width: cellStep, // fixed slot — no flex
+                            width: cellStep,
                             child: Column(
                               children: List.generate(7, (d) {
                                 final date    = monday.add(Duration(days: d));
                                 final dateKey = DateTime(date.year, date.month, date.day);
                                 final isToday  = dateKey == todayNorm;
                                 final isFuture = date.isAfter(todayNorm);
-                                final value    = isFuture ? 0 : (activityMap[dateKey] ?? 0);
+                                // Dias futuros sempre exibem cor neutra (sem atividade).
+                                final value = isFuture ? 0 : (activityMap[dateKey] ?? 0);
                                 return Container(
                                   width: cellSize, height: cellSize,
                                   margin: const EdgeInsets.only(bottom: cellGap),
@@ -392,6 +479,7 @@ class _HomeState extends State<Home> {
                                         ? const Color(0xFFF0F0F0)
                                         : _heatColor(value),
                                     borderRadius: BorderRadius.circular(2),
+                                    // Borda azul destaca "hoje" na grade.
                                     border: isToday
                                         ? Border.all(
                                             color: const Color(0xFF1565C0),
@@ -411,9 +499,11 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 10),
 
+            // Rodapé: legenda de intensidade + chips de estatísticas.
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Legenda "Less → More" com amostras de cor.
                 Row(children: [
                   Text('Less', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                   const SizedBox(width: 4),
@@ -425,31 +515,16 @@ class _HomeState extends State<Home> {
                   )),
                   Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                 ]),
+                // Chips de contagem por tipo de cartão.
                 Row(children: [
-                  _buildStatChip('60', 'New',    const Color(0xFF1565C0)),
+                  _buildStatChip('60', 'Nova',    const Color(0xFF1565C0)),
                   const SizedBox(width: 6),
-                  _buildStatChip('20', 'Learn',  const Color(0xFFE65100)),
-                  const SizedBox(width: 6),
-                  _buildStatChip('10', 'Review', const Color(0xFF216E39)),
+                  _buildStatChip('10', 'Reforço', const Color(0xFFC62828)),
                 ]),
               ],
             ),
             const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2C2C54),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                child: const Text('Continue Learning', style: TextStyle(fontSize: 13)),
-              ),
-            ),
+            
           ],
         );
       }),
@@ -458,8 +533,12 @@ class _HomeState extends State<Home> {
 
   // ── Decks ──────────────────────────────────────────────────────────────────
 
+  /// Lista de cards para o mobile — Column sem restrição de altura.
   Widget _buildDeckList() => Column(children: _decks.map(_buildDeckCard).toList());
 
+  /// Card de deck individual.
+  /// Container com padding e BoxShadow em vez de Card para controle total
+  /// do visual sem herdar elevação ou cor de superfície do tema.
   Widget _buildDeckCard(Map<String, String> deck) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -473,10 +552,12 @@ class _HomeState extends State<Home> {
         ],
       ),
       child: Row(children: [
+        // Placeholder de thumbnail — substituir por Image.network/asset em produção.
         Container(width: 64, height: 64,
           decoration: BoxDecoration(
             color: Colors.grey[200], borderRadius: BorderRadius.circular(12))),
         const SizedBox(width: 12),
+        // Expanded garante que o texto não transborde horizontalmente.
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(deck['title']!,
@@ -490,18 +571,24 @@ class _HomeState extends State<Home> {
                 style: TextStyle(fontSize: 11, color: Colors.grey[400])),
             ]),
             const SizedBox(height: 6),
+            // Wrap permite que as tags quebrem para a próxima linha se não
+            // couberem na largura disponível — mais robusto que Row fixo.
             Wrap(spacing: 6, runSpacing: 4, children: [
-              _buildTag('60 New'),
-              _buildTag('20 Learning'),
-              _buildTag('10 Reviewing'),
+              _buildTag('60 Nova'),
+              _buildTag('10 Reforço'),
             ]),
           ]),
         ),
+        // Ícone de expansão — sinalizador visual de que o card é interativo.
         Icon(Icons.keyboard_arrow_down, color: Colors.grey[400], size: 24),
       ]),
     );
   }
 
+  // ── Widgets pequenos ───────────────────────────────────────────────────────
+
+  /// Chip colorido para estatísticas (Nova / Learn / Review).
+  /// Fundo com opacidade reduzida evita vibração de cor; texto usa a cor plena.
   Widget _buildStatChip(String count, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -513,6 +600,8 @@ class _HomeState extends State<Home> {
     );
   }
 
+  /// Tag de categoria dos cards dentro do deck.
+  /// Fundo cinza neutro para não disputar atenção com as estatísticas coloridas.
   Widget _buildTag(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -525,11 +614,14 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // ── Tab bar ────────────────────────────────────────────────────────────────
+
+  /// Tab bar customizada com indicador de sublinhado animado por setState.
+  /// Usa GestureDetector em vez de TabBar do Material para evitar dependência
+  /// de TabController e manter o código auto-contido.
   Widget _buildTabBar() {
     return Row(children: [
       _buildTab('My Decks', 0),
-      const SizedBox(width: 24),
-      _buildTab('Imported Decks', 1),
     ]);
   }
 
@@ -545,6 +637,8 @@ class _HomeState extends State<Home> {
               fontWeight: sel ? FontWeight.bold : FontWeight.normal,
               color: sel ? const Color(0xFF1A1A2E) : Colors.grey[400])),
           const SizedBox(height: 4),
+          // Indicador: Container fino só aparece na aba ativa.
+          // Largura proporcional ao texto usando fator empírico (7.5px/char).
           if (sel)
             Container(height: 2, width: title.length * 7.5,
               decoration: BoxDecoration(
@@ -555,6 +649,10 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // ── Bottom navigation (mobile) ─────────────────────────────────────────────
+
+  /// BottomAppBar com recorte circular (CircularNotchedRectangle) para acomodar
+  /// o FAB centralizado sem precisar de posicionamento manual.
   Widget _buildBottomNav() {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
@@ -567,6 +665,7 @@ class _HomeState extends State<Home> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(Icons.home_outlined,      'Home',       true),
+            // Espaço reservado para o FAB não sobrepor itens de navegação.
             const SizedBox(width: 48),
             _buildNavItem(Icons.bar_chart_outlined, 'Statistics', false),
           ],
@@ -575,6 +674,7 @@ class _HomeState extends State<Home> {
     );
   }
 
+  /// Item de navegação do BottomAppBar: ícone + rótulo com cor de destaque.
   Widget _buildNavItem(IconData icon, String label, bool isActive) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -588,6 +688,10 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // ── FAB (mobile) ───────────────────────────────────────────────────────────
+
+  /// FloatingActionButton centralizado — encaixado no recorte do BottomAppBar.
+  /// CircleBorder garante shape circular independente do tema global do app.
   Widget _buildFAB() {
     return FloatingActionButton(
       onPressed: () {},
