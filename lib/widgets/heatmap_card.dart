@@ -25,12 +25,10 @@ class HeatmapCard extends StatelessWidget {
     final today       = DateTime.now();
     final todayNorm   = DateTime(today.year, today.month, today.day);
     final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final thisMonday = todayNorm.subtract(Duration(days: todayNorm.weekday % 7));
 
     return Center(
     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 800),
       child: Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       child: LayoutBuilder(builder: (context, constraints) {
         final double availW = constraints.maxWidth - dayLabelW - labelGap;
@@ -43,9 +41,11 @@ class HeatmapCard extends StatelessWidget {
         final int visibleCols = (availW / cellStep).floor().clamp(1, totalCols);
         final double gridW = visibleCols * (cellSize + cellGap);        
         
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        return SizedBox(
+          width: gridW + dayLabelW + labelGap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(
@@ -161,7 +161,7 @@ class HeatmapCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-        );
+        ),);
       }),
     ),), 
     );
