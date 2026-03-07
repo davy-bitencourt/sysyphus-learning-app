@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../styles/text_styles.dart';
+
 class HeatmapCard extends StatelessWidget {
   final Map<DateTime, int> activityMap;  // recebe os dados de fora
 
@@ -50,7 +52,7 @@ class HeatmapCard extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Study Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1A1A2E))),
+                  const Text('Study Activity', style: mediumText),
                   const SizedBox(height: 2),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     const Text('365 questions this day', style: TextStyle(fontSize: 11, color: Colors.grey)),

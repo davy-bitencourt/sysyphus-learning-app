@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../widgets/heatmap_card.dart';
 import '../widgets/bottom_nav.dart';
+import '../styles/text_styles.dart';
 
 import 'setting_screen.dart';
 import 'statistic_screen.dart';
-
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -82,9 +82,7 @@ PreferredSizeWidget _buildAppBar(bool desktop) {
 
           const SizedBox(width: 10),
 
-          const Text('Sysyphus',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, 
-            color: Color(0xFF1A1A2E))),
+          const Text('Sysyphus', style: bigText),
         ]),
 
         IconButton(icon: const Icon(Icons.sync, color: Color(0xFF555555)), onPressed: () {}),
@@ -103,7 +101,12 @@ Widget _buildDrawer(BuildContext context) {
         children: [
           _drawerItem(context, Icons.list, 'Packages', active: true),
           _drawerItem(context, Icons.chrome_reader_mode, 'Questions finder'),
-          _drawerItem(context, Icons.bar_chart, 'Statistics'),
+
+          _drawerItem(context, Icons.bar_chart, 'Statistics', onTap: () {
+            Navigator.pop(context);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const StatisticsScreen()));
+
+          }),
 
           const Divider(color: Color(0xFFE0E0E0), thickness: 1, indent: 16, endIndent: 16),
 
@@ -224,7 +227,7 @@ Widget _drawerItem(BuildContext context, IconData icon, String label, {
 
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Flexible(
-                  child: Text(deck['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1A1A2E))),
+                  child: Text(deck['title']!, style: mediumText),
                 ),
 
                 Icon(Icons.settings, color: Colors.grey[400], size: 22),
@@ -336,7 +339,6 @@ Widget _tableCell(String text, Color color, {
     return Text(cont,
       style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500));
   }
-
 
   Widget _buildFAB() {
     return FloatingActionButton(
