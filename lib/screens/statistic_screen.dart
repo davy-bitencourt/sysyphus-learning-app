@@ -1,24 +1,13 @@
 import 'package:flutter/material.dart';
+import '../widgets/main_scaffold.dart';
 
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
-            onPressed: () => Navigator.pop(context),
-          ),
-        title: const Text('Statistics',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A2E))),
-      ),
+    return MainScaffold(
+      title: "Statistics",
       body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
