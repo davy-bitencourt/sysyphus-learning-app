@@ -5,19 +5,20 @@ class SettingsScreen extends StatelessWidget {
 
   final List<Map<String, dynamic>> _settings = const [
     {'icon': Icons.settings,        'title': 'General',       'sub': 'Language • Studying • System-wide'},
-    {'icon': Icons.school,          'title': 'New study screen', 'sub': 'Screen • Toolbar • Answer buttons'},
     {'icon': Icons.rate_review,     'title': 'Reviewing',     'sub': 'Scheduling • Keep screen on'},
     {'icon': Icons.sync,            'title': 'Sync',          'sub': 'Account • Automatic synchronization'},
     {'icon': Icons.notifications,   'title': 'Notifications', 'sub': 'Notify when • Vibrate • Blink light'},
     {'icon': Icons.palette,         'title': 'Appearance',    'sub': 'Themes • Background'},
     {'icon': Icons.tune,            'title': 'Controls',      'sub': 'Gestures • Keyboard • Bluetooth'},
     {'icon': Icons.accessibility,   'title': 'Accessibility', 'sub': 'Card zoom • Answer button size'},
+    {'icon': Icons.tune,   'title': 'Advanced', 'sub': 'Workrounds • Plugins'},
+    {'icon': Icons.info_outline,   'title': 'About', 'sub': ' '},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F4F7),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -37,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
           Container(
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(color: Colors.black.withValues(alpha: 0.05),
@@ -58,14 +59,6 @@ class SettingsScreen extends StatelessWidget {
 
           // lista de itens
           Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 6, offset: const Offset(0, 2)),
-              ],
-            ),
             child: Column(
               children: List.generate(_settings.length, (i) {
                 final item = _settings[i];
@@ -75,10 +68,6 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: Container(
                         width: 36, height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
                         child: Icon(item['icon'] as IconData,
                           size: 18, color: const Color(0xFF1A1A2E)),
                       ),
