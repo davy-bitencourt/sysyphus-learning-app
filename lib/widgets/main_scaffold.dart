@@ -3,25 +3,41 @@ import 'package:flutter/material.dart';
 import '../styles/text_styles.dart';
 
 import '../screens/setting_screen.dart';
-import '../screens/statistic_screen.dart';
 import '../screens/home.dart';
 
-class MainScaffold extends StatelessWidget implements PreferredSizeWidget {
+class MainScaffold extends StatelessWidget {
   final String title;
   final Widget body;
-  final Widget? bottomNavigationBar;
-  final Widget? floatingActionButton;
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final int currentIndex;        // ← adiciona
+  final ValueChanged<int>? onTap; // ← adiciona
+  final VoidCallback? onStatisticsTap;
 
   const MainScaffold({
     super.key,
     required this.title,
     required this.body,
-    this.bottomNavigationBar,
-    this.floatingActionButton,
-    this.floatingActionButtonLocation
+    this.currentIndex = 0,
+    this.onTap,
+    this.onStatisticsTap
     });
 
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isActive = currentIndex == index;
+    return GestureDetector(
+      onTap: () => onTap?.call(index),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon,
+            color: isActive ? const Color(0xFFFF8F00) : Colors.grey[400], size: 24),
+          Text(label,
+            style: TextStyle(fontSize: 11,
+              color: isActive ? const Color(0xFFFF8F00) : Colors.grey[400])),
+        ],
+      ),
+    );
+  }
 
   Widget _drawerItem(BuildContext context, IconData icon, String label, {
     bool active = false,
@@ -53,7 +69,6 @@ class MainScaffold extends StatelessWidget implements PreferredSizeWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(children: [
-            
               Builder(
                 builder: (ctx) => IconButton(
                   icon: const Icon(Icons.menu, color: Color(0xFF555555)),
@@ -89,8 +104,7 @@ class MainScaffold extends StatelessWidget implements PreferredSizeWidget {
 
                 _drawerItem(context, Icons.bar_chart, 'Statistics', onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StatisticsScreen()));
-
+                  onStatisticsTap?.call();
                 }),
 
                 const Divider(color: Color(0xFFE0E0E0), thickness: 1, indent: 16, endIndent: 16),
@@ -107,10 +121,30 @@ class MainScaffold extends StatelessWidget implements PreferredSizeWidget {
           ),
       ),
       body: body,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.white,
+        elevation: 8,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home_outlined, 'Home', 0),
+              const SizedBox(width: 48),
+              _buildNavItem(Icons.bar_chart_outlined, 'Statistics', 1),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: const Color(0xFFE65100),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
 }
-    
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
