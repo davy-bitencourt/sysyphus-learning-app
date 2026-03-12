@@ -1,16 +1,46 @@
-# sysyphus_learning_app
+# Sisyphus Learning App
 
-A new Flutter project.
+App de estudos com bancos de questões personalizados desenvolvido em Flutter.
 
-## Getting Started
+## O que pretendo fazer
 
-This project is a starting point for a Flutter application.
+MVP:
+- Criar e editar bancos de questões  
+- Fazer sessões de estudo (quantidade de questões, tempo, etc.)  
+- Mostrar resposta certa + explicação logo depois  
+- Feedback imediato  
+- Funciona em Android, iOS, Web e Desktop  
 
-A few resources to get you started if this is your first Flutter project:
+Futuro (se der certo):  
+- Estatísticas de acertos/erros  
+- Importar questões de CSV/JSON  
+- Modo offline completo  
+- Gráficos de progresso  
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Como rodar
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Clone o projeto
+```bash
+git clone https://github.com/davy-bitencourt/sysyphus-learning-app.git
+cd sysyphus-learning-app
+```
+
+2. Instale as dependências
+```bash
+flutter pub get
+```
+
+3. Rode
+```bash
+flutter run
+```
+
+Ou para web:
+```bash
+flutter run -d chrome
+```
+
+## Status
+
+🚧 Em desenvolvimento bem inicial  
+Muita coisa ainda vai mudar.
