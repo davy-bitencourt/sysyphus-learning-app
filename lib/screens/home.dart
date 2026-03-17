@@ -4,6 +4,7 @@ import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
 import '../styles/text_styles.dart';
 import 'statistic_screen.dart';
+import 'questions_screen.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -136,34 +137,49 @@ class _HomeState extends State<Home> {
       Column(children: _decks.map(_buildDeckCard).toList());
 
   Widget _buildDeckCard(Map<String, String> deck) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Flexible(child: Text(deck['title']!, style: mediumText)),
-              Icon(Icons.settings, color: Colors.grey[400], size: 22),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(12),
+    child: Row(children: [
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Flexible(
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QuestionScreen()),
+                ),
+                child: Text(deck['title']!, style: mediumText),
+              ),
+            ),
+            GestureDetector(
+              onTap: () {}, // packages configs
+              child: Icon(Icons.settings, color: Colors.grey[400], size: 22),
+            ),
+          ]),
+
+          const SizedBox(height: 4),
+
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+              const SizedBox(width: 4),
+              Text(deck['lastReview']!,
+                style: TextStyle(fontSize: 11, color: Colors.grey[400])),
             ]),
-            const SizedBox(height: 4),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Row(children: [
-                Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-                const SizedBox(width: 4),
-                Text(deck['lastReview']!,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-              ]),
-              Wrap(spacing: 6, children: [
-                _buildTag('60', const Color(0xFF1565C0)),
-                _buildTag('10', const Color(0xFFC62828)),
-              ]),
+            Wrap(spacing: 6, children: [
+              _buildTag('60', const Color(0xFF1565C0)),
+              _buildTag('10', const Color(0xFFC62828)),
             ]),
           ]),
-        ),
-      ]),
-    );
-  }
+
+        ]),
+      ),
+    ]),
+  );
+}
 
   Widget _buildDeckTable() {
     return Center(
