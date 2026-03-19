@@ -23,11 +23,20 @@ class DatabaseHelper{
       dir = '$dir_db/$file_nane';
     }
 
-    return await openDatabase(dir, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      dir, 
+      version: 1, 
+      onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, 
+      onCreate: _createDB
+    );
   }
 
   Future<void> _createDB(Database db, int version) async {
-    await db.execute(
+    /* batch() é um agrupador  de operações SQLite que, facilitando o debug, 
+     * serão todos enviados e executados através do commit() */
+    final batch = db.batch(); 
+
+    batch.execute(
       """
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,5 +46,77 @@ class DatabaseHelper{
         )
       """
     );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS session (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          time_limit TEXT,
+          total_q INTEGER
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS templates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          template JSON
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS tag (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS package (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id INTEGER,
+          title TEXT,
+          FOREIGN KEY (session_id) REFERENCES session(id)
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS question (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          package_id INTEGER,
+          tag_id INTEGER,
+          template_id INTEGER,
+          enunciado TEXT,
+          questions JSON,
+          extra JSON,
+          description TEXT,
+          FOREIGN KEY (package_id) REFERENCES package(id),
+          FOREIGN KEY (tag_id) REFERENCES tag(id),
+          FOREIGN KEY (template_id) REFERENCES templates(id)
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS revlog (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          package_id INTEGER,
+          data TEXT,
+          time TEXT,
+          FOREIGN KEY (package_id) REFERENCES package(id)
+        )
+      """
+    );
+
+    await batch.commit();
   }
 }
