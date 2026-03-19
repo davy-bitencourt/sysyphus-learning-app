@@ -1,19 +1,19 @@
 import '../../data/database_helper.dart';
-import '../../models/template.dart';
+import '../../models/tag.dart';
 
-class TemplateDao {
-  Future<List<Template>> getAll() async {
+class TagDao {
+  Future<List<Tag>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query('templates');
-    return result.map(Template.fromMap).toList();
+    final result = await db.query('tag');
+    return result.map(Tag.fromMap).toList();
   }
 
-  Future<void> insert(Template template) async {
+  Future<void> insert(Tag tag) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.insert(
-      'templates', 
-      template.toMap()
+      'tag', 
+      tag.toMap()
     );
   }
 
@@ -21,7 +21,7 @@ class TemplateDao {
     final db = await DatabaseHelper.instance.database;
 
     await db.delete(
-      'templates', 
+      'tag', 
       where: 'id = ?', 
       whereArgs: [id]
     );
