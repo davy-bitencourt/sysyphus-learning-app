@@ -1,30 +1,28 @@
 import '../../data/database_helper.dart';
-import '../../models/session.dart';
 
 class SessionDao {
-  Future<List<Session>> getAll() async {
+  Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query('session');
-    return result.map(Session.fromMap).toList();
+    return db.query('session');
   }
 
-  Future<void> insert(Session session) async {
+  Future<void> insert(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.insert(
       'session', 
-      session.toMap()
+      data
     );
   }
 
-  Future<void> update(Session session) async {
+  Future<void> update(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.update(
       'session', 
-      session.toMap(),
+      data,
       where: 'id = ?', 
-      whereArgs: [session.id]
+      whereArgs: [data['id']]
     );
   }
 

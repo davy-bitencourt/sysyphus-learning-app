@@ -1,19 +1,17 @@
 import '../../data/database_helper.dart';
-import '../../models/template.dart';
 
 class TemplateDao {
-  Future<List<Template>> getAll() async {
+  Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query('templates');
-    return result.map(Template.fromMap).toList();
+    return db.query('templates');
   }
 
-  Future<void> insert(Template template) async {
+  Future<void> insert(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.insert(
       'templates', 
-      template.toMap()
+      data
     );
   }
 

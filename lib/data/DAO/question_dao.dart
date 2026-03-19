@@ -1,38 +1,48 @@
 import '../../data/database_helper.dart';
-import '../../models/question.dart';
 
 class QuestionDao {
-  Future<List<Question>> getAll() async {
+  Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query('question');
-    return result.map(Question.fromMap).toList();
+    return db.query('question');
   }
 
-  Future<List<Question>> getByPackage(int packageId) async {
+  Future<List<Map<String, dynamic>>> getByPackage(int packageId) async {
     final db = await DatabaseHelper.instance.database;
 
-    final result = await db.query(
-      'question', 
-      where: 'package_id = ?', 
-      whereArgs: [packageId]
+    return db.query(
+      'question',
+      where: 'package_id = ?',
+      whereArgs: [packageId],
     );
-
-    return result.map(Question.fromMap).toList();
   }
 
-  Future<void> insert(Question question) async {
+  Future<void> insert(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
-    await db.insert('question', question.toMap());
+
+    await db.insert(
+      'question', 
+      data
+    );
   }
 
-  Future<void> update(Question question) async {
+  Future<void> update(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
-    await db.update('question', question.toMap(),
-      where: 'id = ?', whereArgs: [question.id]);
+
+    await db.update(
+      'question', 
+      data,
+      where: 'id = ?', 
+      whereArgs: [data['id']]
+    );
   }
 
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete('question', where: 'id = ?', whereArgs: [id]);
+
+    await db.delete(
+      'question', 
+      where: 'id = ?', 
+      whereArgs: [id]
+    );
   }
 }

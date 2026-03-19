@@ -1,19 +1,17 @@
 import 'package:sysyphus_learning_app/data/database_helper.dart';
-import 'package:sysyphus_learning_app/models/user.dart';
 
 class UserDao {
-  Future<List<User>> getAll() async {
+  Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query("user");
-    return result.map(User.fromMap).toList();
+    return db.query("user");
   }
 
-  Future<void> insert(User user) async {
+  Future<void> insert(Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.insert(
       "users", 
-      user.toMap()
+      data
     );
   }
 }
