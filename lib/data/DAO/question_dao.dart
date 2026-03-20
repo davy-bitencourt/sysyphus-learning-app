@@ -6,13 +6,22 @@ class QuestionDao {
     return db.query('question');
   }
 
-  Future<List<Map<String, dynamic>>> getByPackage(int packageId) async {
+  /* retorna um bloco de questões */
+  Future<List<Map<String, dynamic>>> getByPackage(int packageId, int limit) async {
     final db = await DatabaseHelper.instance.database;
 
-    return db.query(
-      'question',
-      where: 'package_id = ?',
-      whereArgs: [packageId],
+    if(limit > 60){
+      limit = 60;
+    }
+
+    return db.rawQuery(
+      '''
+        SELECT template_id, enunciado, questions, extra, description 
+        FROM question 
+        WHERE package_id = ?
+        ORDER BY RANDOM() 
+        LIMIT ?
+      ''', [packageId, limit]
     );
   }
 

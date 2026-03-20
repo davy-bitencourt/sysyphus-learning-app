@@ -15,6 +15,19 @@ class TemplateDao {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getTemplateById(int templateId) async {
+    final db = await DatabaseHelper.instance.database;
+
+    return db.rawQuery(
+      '''
+        SELECT template
+        FROM templates
+        WHERE id = ?
+      ''', [templateId]
+    );
+  }
+
+  
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
 
