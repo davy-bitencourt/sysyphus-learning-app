@@ -38,11 +38,23 @@ class DatabaseHelper{
 
     batch.execute(
       """
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS account (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT NOT NULL,
           email TEXT UNIQUE,
-          password TEXT
+          senha TEXT
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS profile (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL,
+          package_id INTEGER,
+          name TEXT,
+          FOREIGN KEY (account_id) REFERENCES account(id),
+          FOREIGN KEY (package_id) REFERENCES package(id)
         )
       """
     );
@@ -109,10 +121,23 @@ class DatabaseHelper{
       """
         CREATE TABLE IF NOT EXISTS revlog (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          package_id INTEGER,
+          question_id INTEGER NOT NULL,
           data TEXT,
           time TEXT,
-          FOREIGN KEY (package_id) REFERENCES package(id)
+          FOREIGN KEY (question_id) REFERENCES question(id)
+        )
+      """
+    );
+
+    batch.execute(
+      """
+        CREATE TABLE IF NOT EXISTS state (
+          question_id INTEGER NOT NULL,
+          state TEXT DEFAULT 'new',
+          interval_days INTEGER DEFAULT 0,
+          ease_factor REAL DEFAULT 2.4,
+          due_date TEXT DEFAULT CURRENT_DATE,
+          FOREIGN KEY (question_id) REFERENCES question(id)
         )
       """
     );
