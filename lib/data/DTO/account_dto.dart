@@ -1,4 +1,3 @@
-import 'package:sysyphus_learning_app/data/DAO/account_dao.dart';
 
 class AccountDto {
   final String email;
