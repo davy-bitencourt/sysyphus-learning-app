@@ -5,6 +5,18 @@ class TemplateSchema {
    * template_id, mantendo uma espécie de cache */
   Map<int, Map<String, dynamic>> template_schema = {};
 
+  /* inicializando o template */
+  void getTemplateData() async {
+    TemplateDao dao = TemplateDao();
+    List<Map<String, dynamic>> result = await dao.getRandomLimit(5);
+
+    for( final item in result ) {
+      template_schema[item['id']] = item['template']; 
+    };
+  }
+
+
+  /* lóica do cache */
   void add(int id, Map<String, dynamic> template){
     template_schema[id] = template;
   }
@@ -12,8 +24,8 @@ class TemplateSchema {
   Future<void> isOnCache(int templateId_atual) async {
     
     if(!template_schema.containsKey(templateId_atual)){
-      TemplateDao template_dao = TemplateDao(); 
-      List<Map<String, dynamic>> template = await template_dao.getTemplateById(templateId_atual);
+      TemplateDao dao = TemplateDao(); 
+      List<Map<String, dynamic>> template = await dao.getTemplateById(templateId_atual);
       add(templateId_atual, template[0]);
     }
 

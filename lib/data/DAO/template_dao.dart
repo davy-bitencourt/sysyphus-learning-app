@@ -1,9 +1,16 @@
 import '../../data/database_helper.dart';
 
 class TemplateDao {
-  Future<List<Map<String, dynamic>>> getAll() async {
+  Future<List<Map<String, dynamic>>> getRandomLimit(int limit) async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('templates');
+    return db.rawQuery(
+      """
+        SELECT  id, template
+        FROM templates
+        ORDER BY RANDOM()
+        LIMIT ?
+      """, [limit]
+    );
   }
 
   Future<void> insert(Map<String, dynamic> data) async {
