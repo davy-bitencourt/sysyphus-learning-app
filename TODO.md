@@ -3,11 +3,11 @@
 ## BACK-END (FOCO ATUAL)
 
 ### Schemas
-- [ ] Criar tag_schema.dart
-- [ ] Criar session_schema.dart
-- [ ] Criar revlog_schema.dart (heavy log)
-- [ ] Criar question_schema.dart
-- [ ] Criar package_schema.dart
+- [x] Criar tag_schema.dart
+- [x] Criar session_schema.dart
+- [x] Criar revlog_schema.dart (heavy log)
+- [x] Criar question_schema.dart
+- [x] Criar package_schema.dart
 - [ ] Revisar template_schema.dart
 
 ### Database
