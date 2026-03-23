@@ -16,7 +16,7 @@ class TemplateSchema {
   }
 
 
-  /* lóica do cache */
+  /* lóica do cache local */
   void add(int id, Map<String, dynamic> template){
     template_schema[id] = template;
   }
