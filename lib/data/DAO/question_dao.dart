@@ -1,4 +1,5 @@
 import '../../data/database_helper.dart';
+import 'package:sysyphus_learning_app/data/DTO/question_dto.dart';
 
 class QuestionDao {
   Future<List<Map<String, dynamic>>> getAll() async {
@@ -25,18 +26,18 @@ class QuestionDao {
     );
   }
 
-Future<void> insert(int packageId, int tagId, int templateId, String enunciado, String questions, String extra, String description) async {
+Future<void> insert(QuestionDto dto) async {
   final db = await DatabaseHelper.instance.database;
 
   await db.rawInsert(
     '''
       INSERT INTO question (package_id, tag_id, template_id, enunciado, questions, extra, description)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', [packageId, tagId, templateId, enunciado, questions, extra, description]
+    ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description]
   );
 }
 
-Future<void> update(int id, int packageId, int tagId, int templateId, String enunciado, String questions, String extra, String description) async {
+Future<void> update(int id, QuestionDto dto) async {
   final db = await DatabaseHelper.instance.database;
 
   await db.rawUpdate(
@@ -44,7 +45,7 @@ Future<void> update(int id, int packageId, int tagId, int templateId, String enu
       UPDATE question
       SET package_id = ?, tag_id = ?, template_id = ?, enunciado = ?, questions = ?, extra = ?, description = ?
       WHERE id = ?
-    ''', [packageId, tagId, templateId, enunciado, questions, extra, description, id]
+    ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description, id]
   );
 }
 
