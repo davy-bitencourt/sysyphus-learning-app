@@ -25,33 +25,37 @@ class QuestionDao {
     );
   }
 
-  Future<void> insert(Map<String, dynamic> data) async {
-    final db = await DatabaseHelper.instance.database;
+Future<void> insert(int packageId, int tagId, int templateId, String enunciado, String questions, String extra, String description) async {
+  final db = await DatabaseHelper.instance.database;
 
-    await db.insert(
-      'question', 
-      data
-    );
-  }
+  await db.rawInsert(
+    '''
+      INSERT INTO question (package_id, tag_id, template_id, enunciado, questions, extra, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', [packageId, tagId, templateId, enunciado, questions, extra, description]
+  );
+}
 
-  Future<void> update(Map<String, dynamic> data) async {
-    final db = await DatabaseHelper.instance.database;
+Future<void> update(int id, int packageId, int tagId, int templateId, String enunciado, String questions, String extra, String description) async {
+  final db = await DatabaseHelper.instance.database;
 
-    await db.update(
-      'question', 
-      data,
-      where: 'id = ?', 
-      whereArgs: [data['id']]
-    );
-  }
+  await db.rawUpdate(
+    '''
+      UPDATE question
+      SET package_id = ?, tag_id = ?, template_id = ?, enunciado = ?, questions = ?, extra = ?, description = ?
+      WHERE id = ?
+    ''', [packageId, tagId, templateId, enunciado, questions, extra, description, id]
+  );
+}
 
-  Future<void> delete(int id) async {
-    final db = await DatabaseHelper.instance.database;
+Future<void> delete(int id) async {
+  final db = await DatabaseHelper.instance.database;
 
-    await db.delete(
-      'question', 
-      where: 'id = ?', 
-      whereArgs: [id]
-    );
-  }
+  await db.rawDelete(
+    '''
+      DELETE FROM question
+      WHERE id = ?
+    ''', [id]
+  );
+}
 }
