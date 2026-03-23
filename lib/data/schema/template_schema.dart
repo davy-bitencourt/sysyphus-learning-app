@@ -5,7 +5,7 @@ class TemplateSchema {
    * template_id, mantendo uma espécie de cache */
   Map<int, Map<String, dynamic>> template_schema = {};
 
-  /* inicializando o template */
+  /* inicializando o cache do template com 5 itens randômicos */
   void getTemplateData() async {
     TemplateDao dao = TemplateDao();
     List<Map<String, dynamic>> result = await dao.getRandomLimit(5);

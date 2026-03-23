@@ -13,14 +13,16 @@ class TemplateDao {
     );
   }
 
-  Future<void> insert(Map<String, dynamic> data) async {
-    final db = await DatabaseHelper.instance.database;
+Future<void> insert(String template) async {
+  final db = await DatabaseHelper.instance.database;
 
-    await db.insert(
-      'templates', 
-      data
-    );
-  }
+  await db.rawInsert(
+    '''
+      INSERT INTO templates (template)
+      VALUES (?)
+    ''', [template]
+  );
+}
 
   Future<List<Map<String, dynamic>>> getTemplateById(int templateId) async {
     final db = await DatabaseHelper.instance.database;
@@ -38,10 +40,11 @@ class TemplateDao {
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
 
-    await db.delete(
-      'templates', 
-      where: 'id = ?', 
-      whereArgs: [id]
+    await db.rawDelete(
+      '''
+        DELETE FROM templates
+        WHERE id = ?
+      ''', [id]
     );
   }
 }
