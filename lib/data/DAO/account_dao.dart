@@ -1,19 +1,46 @@
-import 'package:sysyphus_learning_app/data/database_helper.dart';
-import 'package:sysyphus_learning_app/data/DTO/account_dto.dart';
+import '../../data/database_helper.dart';
+import '../../data/DTO/account_dto.dart';
 
 class AccountDao {
-  Future<List<AccountDto>> getAll() async {
+
+  Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
-    final result = await db.query("account");
-    return result.map(AccountDto.fromMap).toList();
+    return db.rawQuery(
+      '''
+        SELECT id, email, senha
+        FROM account
+      '''
+    );
   }
 
   Future<void> insert(AccountDto dto) async {
     final db = await DatabaseHelper.instance.database;
+    await db.rawInsert(
+      '''
+        INSERT INTO account (email, senha)
+        VALUES (?, ?)
+      ''', [dto.email, dto.senha]
+    );
+  }
 
-    await db.insert(
-      "account", 
-      dto.toMap() 
+  Future<void> update(int id, AccountDto dto) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.rawUpdate(
+      '''
+        UPDATE account
+        SET email = ?, senha = ?
+        WHERE id = ?
+      ''', [dto.email, dto.senha, id]
+    );
+  }
+
+  Future<void> delete(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.rawDelete(
+      '''
+        DELETE FROM account
+        WHERE id = ?
+      ''', [id]
     );
   }
 }

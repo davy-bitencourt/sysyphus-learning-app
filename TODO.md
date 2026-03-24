@@ -26,9 +26,9 @@
 - [ ] Revisar user_dao.dart
 
 ### User System (Refatoração)
-- [ ] Separar User em:
-  - [ ] profile (dados do usuário dentro do app)
-  - [ ] account (login / autenticação futura)
+- [X] Separar User em:
+  - [x] profile (dados do usuário dentro do app)
+  - [x] account (login / autenticação futura)
 - [ ] Criar profile_schema.dart
 - [ ] Criar account_schema.dart
 - [ ] Ajustar DAOs para suportar essa separação
