@@ -8,7 +8,7 @@
 - [x] Criar revlog_schema.dart (heavy log)
 - [x] Criar question_schema.dart
 - [x] Criar package_schema.dart
-- [ ] Revisar template_schema.dart
+- [X] Revisar template_schema.dart
 
 ### Database
 - [ ] Revisar DatabaseHelper
