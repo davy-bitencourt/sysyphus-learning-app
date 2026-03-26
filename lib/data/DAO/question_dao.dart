@@ -26,37 +26,39 @@ class QuestionDao {
     );
   }
 
-Future<void> insert(QuestionDto dto) async {
-  final db = await DatabaseHelper.instance.database;
+  // Future<void> getQuestionStateById(int question_id){} // TODO: make this thing
 
-  await db.rawInsert(
-    '''
-      INSERT INTO question (package_id, tag_id, template_id, enunciado, questions, extra, description)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description]
-  );
-}
+  Future<void> insert(QuestionDto dto) async {
+    final db = await DatabaseHelper.instance.database;
 
-Future<void> update(int id, QuestionDto dto) async {
-  final db = await DatabaseHelper.instance.database;
+    await db.rawInsert(
+      '''
+        INSERT INTO question (package_id, tag_id, template_id, enunciado, questions, extra, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description]
+    );
+  }
 
-  await db.rawUpdate(
-    '''
-      UPDATE question
-      SET package_id = ?, tag_id = ?, template_id = ?, enunciado = ?, questions = ?, extra = ?, description = ?
-      WHERE id = ?
-    ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description, id]
-  );
-}
+  Future<void> update(int id, QuestionDto dto) async {
+    final db = await DatabaseHelper.instance.database;
 
-Future<void> delete(int id) async {
-  final db = await DatabaseHelper.instance.database;
+    await db.rawUpdate(
+      '''
+        UPDATE question
+        SET package_id = ?, tag_id = ?, template_id = ?, enunciado = ?, questions = ?, extra = ?, description = ?
+        WHERE id = ?
+      ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description, id]
+    );
+  }
 
-  await db.rawDelete(
-    '''
-      DELETE FROM question
-      WHERE id = ?
-    ''', [id]
-  );
-}
+  Future<void> delete(int id) async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.rawDelete(
+      '''
+        DELETE FROM question
+        WHERE id = ?
+      ''', [id]
+    );
+  }
 }

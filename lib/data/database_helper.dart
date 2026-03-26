@@ -132,13 +132,13 @@ class DatabaseHelper{
     batch.execute(
       """
         CREATE TABLE IF NOT EXISTS state (
-          question_id INTEGER NOT NULL,
+          question_id INTEGER PRIMARY KEY,
           state TEXT DEFAULT 'new',
           interval_days INTEGER DEFAULT 0,
           ease_factor REAL DEFAULT 2.4,
           due_date TEXT DEFAULT CURRENT_DATE,
-          FOREIGN KEY (question_id) REFERENCES question(id)
-        )
+          FOREIGN KEY (question_id) REFERENCES question(id) ON DELETE CASCADE
+        );
       """
     );
 
