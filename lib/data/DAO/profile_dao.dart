@@ -12,6 +12,16 @@ class ProfileDao {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getAllProfiles() async {
+    final db = await DatabaseHelper.instance.database;
+    return db.rawQuery(
+      '''
+        SELECT id, name
+        FROM profile
+      '''
+    );
+  }
+
   Future<void> insert(int accountId, int? packageId, String name) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawInsert(

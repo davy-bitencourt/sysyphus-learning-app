@@ -12,6 +12,20 @@ class PackageDao {
     );
   }
 
+  /* deve ser executada quando escolher o profile */
+  Future<List<Map<String, dynamic>>> getProfilePackages(int profile_id) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.rawQuery(
+      '''
+        SELECT package.title
+        FROM profile
+        INNER JOIN package
+        ON profile.package_id = package.id
+        WHERE profile.id = ?
+      ''', [profile_id]
+    );
+  } 
+
   Future<void> insert(int? sessionId, String title) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawInsert(
