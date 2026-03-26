@@ -9,6 +9,11 @@
 - [x] Criar question_schema.dart
 - [x] Criar package_schema.dart
 - [X] Revisar template_schema.dart
+- [x] Revisar tag_schema.dart
+- [ ] Revisar session_schema.dart
+- [ ] Revisar revlog_schema.dart (heavy log)
+- [x] Revisar question_schema.dart
+- [x] Revisar package_schema.dart
 
 ### Database
 - [ ] Revisar DatabaseHelper
@@ -18,7 +23,7 @@
 
 ### DAOs
 - [ ] Revisar package_dao.dart
-- [ ] Revisar question_dao.dart
+- [x] Revisar question_dao.dart
 - [ ] Revisar revlog_dao.dart
 - [ ] Revisar session_dao.dart
 - [ ] Revisar tag_dao.dart
