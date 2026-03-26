@@ -1,3 +1,5 @@
+import 'package:sysyphus_learning_app/data/DTO/session_dto.dart';
+
 import '../../data/database_helper.dart';
 
 class SessionDao {
@@ -6,30 +8,30 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery(
       '''
-        SELECT id, title, time_limit, total_q
+        SELECT id, dto.title, time_limit, total_q
         FROM session
       '''
     );
   }
 
-  Future<void> insert(String title, String? timeLimit, int? totalQ) async {
+  Future<void> insert(SessionDto dto) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawInsert(
       '''
-        INSERT INTO session (title, time_limit, total_q)
+        INSERT INTO session (dto.title, time_limit, total_q)
         VALUES (?, ?, ?)
-      ''', [title, timeLimit, totalQ]
+      ''', [dto.title, dto.time_limit, dto.total_q]
     );
   }
 
-  Future<void> update(int id, String title, String? timeLimit, int? totalQ) async {
+  Future<void> update(SessionDto dto) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawUpdate(
       '''
         UPDATE session
-        SET title = ?, time_limit = ?, total_q = ?
+        SET dto.title = ?, time_limit = ?, total_q = ?
         WHERE id = ?
-      ''', [title, timeLimit, totalQ, id]
+''', [dto.title, dto.time_limit, dto.total_q, dto.id]
     );
   }
 
