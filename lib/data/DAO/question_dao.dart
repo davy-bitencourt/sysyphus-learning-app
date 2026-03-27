@@ -26,8 +26,6 @@ class QuestionDao {
     );
   }
 
-  // Future<void> getQuestionStateById(int question_id){} // TODO: make this thing
-
   Future<void> insert(QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 
