@@ -10,8 +10,8 @@
 - [x] Criar package_schema.dart
 - [X] Revisar template_schema.dart
 - [x] Revisar tag_schema.dart
-- [ ] Revisar session_schema.dart
-- [ ] Revisar revlog_schema.dart (heavy log)
+- [x] Revisar session_schema.dart
+- [x] Revisar revlog_schema.dart (heavy log)
 - [x] Revisar question_schema.dart
 - [x] Revisar package_schema.dart
 
