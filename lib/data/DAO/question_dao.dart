@@ -1,5 +1,5 @@
 import '../../data/database_helper.dart';
-import 'package:sysyphus_learning_app/data/DTO/question_dto.dart';
+import '../../data/DTO/question_dto.dart';
 
 class QuestionDao {
   Future<List<Map<String, dynamic>>> getAll() async {
@@ -38,7 +38,7 @@ class QuestionDao {
     );
   }
 
-  Future<void> update(int id, QuestionDto dto) async {
+  Future<void> updateQuestion(int id, QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.rawUpdate(
@@ -49,6 +49,16 @@ class QuestionDao {
       ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description, id]
     );
   }
+
+  /* alterações de estado */
+  Future<void> updateQuestionState(int id, String state) async {}
+
+  Future<void> updateQuestionIntervalDays(int id, int interval_days) async {}
+
+  Future<void> updateQuestionEaseFactor(int id, double ease_factor) async {}
+
+  Future<void> updateQuestionDueDate(int id, String due_date) async {}
+
 
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
