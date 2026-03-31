@@ -17,10 +17,11 @@ class QuestionDao {
 
     return db.rawQuery(
       '''
-        SELECT template_id, enunciado, questions, extra, description 
-        FROM question 
-        WHERE package_id = ?
-        ORDER BY RANDOM() 
+        SELECT q.id, q.template_id, q.enunciado, q.questions, q.extra, q.description, s.state, s.interval_days, s.ease_factor, s.due_date
+        FROM question q
+        LEFT JOIN state s ON s.question_id = q.id
+        WHERE q.package_id = ?
+        ORDER BY RANDOM()
         LIMIT ?
       ''', [packageId, limit]
     );
