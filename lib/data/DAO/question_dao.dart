@@ -51,45 +51,25 @@ class QuestionDao {
   }
 
   /* alterações de estado */
-  Future<void> updateQuestionState(int id, String state) async {
-  final db = await DatabaseHelper.instance.database;
-  await db.rawUpdate('''
-    UPDATE state
-    SET state = ?
-    WHERE question_id = ?
-  ''', [state, id]);
-  }
-
-  Future<void> updateQuestionIntervalDays(int id, int interval_days) async {
+  Future<void> updateStateReview(int questionId, int intervalDays, double easeFactor, String dueDate) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawUpdate(
       '''
         UPDATE state
-        SET interval_days = ?
+        SET state = 'review', interval_days = ?, ease_factor = ?, due_date = ?
         WHERE question_id = ?
-      ''', [interval_days, id]
+      ''', [intervalDays, easeFactor, dueDate, questionId]
     );
   }
 
-  Future<void> updateQuestionEaseFactor(int id, double ease_factor) async {
+  Future<void> updateStateNeutral(int questionId) async {
     final db = await DatabaseHelper.instance.database;
     await db.rawUpdate(
       '''
         UPDATE state
-        SET ease_factor = ?
+        SET state = 'neutral', interval_days = 0, ease_factor = 2.4, due_date = CURRENT_DATE
         WHERE question_id = ?
-      ''', [ease_factor, id]
-    );
-  }
-
-  Future<void> updateQuestionDueDate(int id, String due_date) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.rawUpdate(
-      '''
-        UPDATE state
-        SET due_date = ?
-        WHERE question_id = ?
-      ''', [due_date, id]
+      ''', [questionId]
     );
   }
 
