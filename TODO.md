@@ -34,10 +34,10 @@
 - [X] Separar User em:
   - [x] profile (dados do usuário dentro do app)
   - [x] account (login / autenticação futura)
-- [ ] Criar profile_schema.dart
-- [ ] Criar account_schema.dart
-- [ ] Ajustar DAOs para suportar essa separação
-- [ ] Planejar relação account → múltiplos profiles
+- [x] Criar profile_schema.dart
+- [x] Criar account_schema.dart
+- [x] Ajustar DAOs para suportar essa separação
+- [x] Planejar relação account → múltiplos profiles
 
 ### Integração
 - [ ] Conectar DAOs com a lógica do app
