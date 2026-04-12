@@ -1,4 +1,4 @@
-import 'package:sysyphus_learning_app/data/DAO/question_dao.dart';
+import '../DAO/question_state_dao.dart';
 
 class QuestionSchema {
   /* os items serão acessados por meio de iteração, 
