@@ -102,7 +102,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F4F7),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -144,10 +144,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 6, offset: const Offset(0, 2)),
-                ],
               ),
               child: Text(
                 _question.statement,
@@ -195,7 +191,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             border: Border.all(color: const Color(0xFFE0E0E0)),
           ),
           child: const Text(
-            'Questão aberta — responda mentalmente ou por escrito.',
+            'Questão aberta',
             style: TextStyle(fontSize: 13, color: Colors.grey),
           ),
         ),
@@ -212,10 +208,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('💡 Sugestão de resposta',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                    color: Color(0xFF1565C0))),
-                const SizedBox(height: 6),
                 Text(_question.suggestion!,
                   style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E))),
               ],
@@ -236,20 +228,18 @@ class _QuestionScreenState extends State<QuestionScreen> {
         Color borderColor = const Color(0xFFE0E0E0);
         Color bgColor = Colors.white;
         Widget? trailingIcon;
-
+        
         if (_answered) {
           if (option.correct) {
             borderColor = const Color(0xFF2E7D32);
             bgColor = const Color(0xFF2E7D32).withValues(alpha: 0.08);
-            trailingIcon = const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 20);
           } else if (selected && !option.correct) {
             borderColor = const Color(0xFFC62828);
             bgColor = const Color(0xFFC62828).withValues(alpha: 0.08);
-            trailingIcon = const Icon(Icons.cancel, color: Color(0xFFC62828), size: 20);
           }
         } else if (selected) {
-          borderColor = const Color(0xFFE65100);
-          bgColor = const Color(0xFFE65100).withValues(alpha: 0.06);
+          borderColor = const Color(0xFF2E7D32);
+          bgColor = const Color(0xFF2E7D32).withValues(alpha: 0.08);
         }
 
         return GestureDetector(
@@ -277,66 +267,53 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
   
-  Widget _buildVof() {
-    return Column(
-      children: List.generate(_question.options.length, (i) {
-        final option = _question.options[i];
-        final userAnswer = _vofAnswers[i]; 
+Widget _buildVof() {
+  return Column(
+    children: List.generate(_question.options.length, (i) {
+      final option = _question.options[i];
+      final isMarked = _vofAnswers[i] == true;
 
-        return Container(
+      Color borderColor = const Color(0xFFE0E0E0);
+      Color bgColor = Colors.white;
+
+      if (_answered) {
+        borderColor = option.correct
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFFC62828);
+        bgColor = isMarked
+            ? const Color(0xFF2E7D32).withValues(alpha: 0.08)
+            : const Color(0xFFC62828).withValues(alpha: 0.08);
+      } else if (isMarked) {
+        borderColor = const Color(0xFF2E7D32);
+        bgColor = const Color(0xFF2E7D32).withValues(alpha: 0.08);
+      }
+
+      return GestureDetector(
+        onTap: _answered
+            ? null
+            : () => setState(() {
+                  if (_vofAnswers[i] == true) {
+                    _vofAnswers.remove(i);
+                  } else {
+                    _vofAnswers[i] = true;
+                  }
+                }),
+        child: Container(
+          width: double.infinity,
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: bgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE0E0E0)),
+            border: Border.all(color: borderColor, width: 1.5),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(option.text,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
-              ),
-              if (_answered)
-                Icon(
-                  option.correct ? Icons.check_circle : Icons.cancel,
-                  color: option.correct ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                  size: 20,
-                )
-              else
-                Row(children: [
-                  _vofButton(i, true,  'V', userAnswer == true),
-                  const SizedBox(width: 8),
-                  _vofButton(i, false, 'F', userAnswer == false),
-                ]),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _vofButton(int index, bool value, String label, bool selected) {
-    return GestureDetector(
-      onTap: () => setState(() => _vofAnswers[index] = value),
-      child: Container(
-        width: 32, height: 32,
-        decoration: BoxDecoration(
-          color: selected
-              ? (value ? const Color(0xFF2E7D32) : const Color(0xFFC62828))
-              : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(8),
+          child: Text(option.text,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
         ),
-        child: Center(
-          child: Text(label,
-            style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.bold,
-              color: selected ? Colors.white : Colors.grey,
-            )),
-        ),
-      ),
-    );
-  }
+      );
+    }),
+  );
+}
   
   Widget _buildExtraComments() {
     return Container(
@@ -350,10 +327,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('📝 Comentários',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-              color: Color(0xFFE65100))),
-          const SizedBox(height: 6),
           Text(_question.extraComments,
             style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E))),
         ],
@@ -370,30 +343,15 @@ class _QuestionScreenState extends State<QuestionScreen> {
               
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _next(false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFC62828),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('✗  Errei', style: TextStyle(fontSize: 15)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              
-              Expanded(
-                child: ElevatedButton(
                   onPressed: () => _next(true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
+                    backgroundColor: const Color(0xFFE65100),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('✓  Acertei', style: TextStyle(fontSize: 15)),
+                  child: const Text('Continuar', style: TextStyle(fontSize: 15)),
                 ),
               ),
             ])
