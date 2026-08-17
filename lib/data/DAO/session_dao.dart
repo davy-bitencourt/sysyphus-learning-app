@@ -8,7 +8,7 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery(
       '''
-        SELECT id, dto.title, time_limit, total_q
+        SELECT id, title, time_limit, total_q
         FROM session
       '''
     );
@@ -18,7 +18,7 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     await db.rawInsert(
       '''
-        INSERT INTO session (dto.title, time_limit, total_q)
+        INSERT INTO session (title, time_limit, total_q)
         VALUES (?, ?, ?)
       ''', [dto.title, dto.time_limit, dto.total_q]
     );
@@ -29,9 +29,9 @@ class SessionDao {
     await db.rawUpdate(
       '''
         UPDATE session
-        SET dto.title = ?, time_limit = ?, total_q = ?
+        SET title = ?, time_limit = ?, total_q = ?
         WHERE id = ?
-''', [dto.title, dto.time_limit, dto.total_q, dto.id]
+      ''', [dto.title, dto.time_limit, dto.total_q, dto.id]
     );
   }
 

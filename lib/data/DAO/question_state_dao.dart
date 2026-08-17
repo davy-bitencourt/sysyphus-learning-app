@@ -17,7 +17,7 @@ class QuestionDao {
 
     return db.rawQuery(
       '''
-        SELECT q.id, q.template_id, q.enunciado, q.questions, q.extra, q.description, s.state, s.interval_days, s.ease_factor, s.due_date
+        SELECT q.id, q.template_id, q.tag_id, q.enunciado, q.questions, q.extra, q.description, s.state, s.interval_days, s.ease_factor, s.due_date
         FROM question q
         LEFT JOIN state s ON s.question_id = q.id
         WHERE q.package_id = ?
@@ -27,15 +27,26 @@ class QuestionDao {
     );
   }
 
-  Future<void> insert(QuestionDto dto) async {
+  Future<int> insert(QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 
-    await db.rawInsert(
+    final id = await db.rawInsert(
       '''
         INSERT INTO question (package_id, tag_id, template_id, enunciado, questions, extra, description)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       ''', [dto.packageId, dto.tagId, dto.templateId, dto.enunciado, dto.questions, dto.extra, dto.description]
     );
+
+    /* garante que toda questão nova já tenha uma linha de estado,
+     * evitando que o LEFT JOIN em getByPackage volte tudo nulo */
+    await db.rawInsert(
+      '''
+        INSERT INTO state (question_id)
+        VALUES (?)
+      ''', [id]
+    );
+
+    return id;
   }
 
   Future<void> updateQuestion(int id, QuestionDto dto) async {

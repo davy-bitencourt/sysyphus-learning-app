@@ -1,9 +1,9 @@
 
-/* só para insert */
+/* só para insert/update */
 class QuestionDto {
 
   final int packageId;
-  final int tagId;
+  final int? tagId; // opcional: nem toda questão precisa de tag
   final int templateId;
   final String enunciado;
   final String questions;
@@ -12,7 +12,7 @@ class QuestionDto {
 
   QuestionDto({
     required this.packageId,
-    required this.tagId,
+    this.tagId,
     required this.templateId,
     required this.enunciado,
     required this.questions,

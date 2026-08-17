@@ -13,16 +13,39 @@ class TemplateDao {
     );
   }
 
-Future<void> insert(String template) async {
-  final db = await DatabaseHelper.instance.database;
+  /* lista todos os templates, usada nas telas de gerenciamento/seleção */
+  Future<List<Map<String, dynamic>>> getAll() async {
+    final db = await DatabaseHelper.instance.database;
+    return db.rawQuery(
+      """
+        SELECT id, template
+        FROM templates
+      """
+    );
+  }
 
-  await db.rawInsert(
-    '''
-      INSERT INTO templates (template)
-      VALUES (?)
-    ''', [template]
-  );
-}
+  Future<int> insert(String template) async {
+    final db = await DatabaseHelper.instance.database;
+
+    return db.rawInsert(
+      '''
+        INSERT INTO templates (template)
+        VALUES (?)
+      ''', [template]
+    );
+  }
+
+  Future<void> update(int id, String template) async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.rawUpdate(
+      '''
+        UPDATE templates
+        SET template = ?
+        WHERE id = ?
+      ''', [template, id]
+    );
+  }
 
   Future<List<Map<String, dynamic>>> getTemplateById(int templateId) async {
     final db = await DatabaseHelper.instance.database;

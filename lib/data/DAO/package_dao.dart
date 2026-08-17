@@ -17,7 +17,7 @@ class PackageDao {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery(
       '''
-        SELECT package.title
+        SELECT package.id, package.title AS name
         FROM profile
         INNER JOIN package
         ON profile.package_id = package.id

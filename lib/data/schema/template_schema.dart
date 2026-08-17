@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:sysyphus_learning_app/data/DAO/template_dao.dart';
 
 class TemplateSchema {
@@ -6,12 +7,13 @@ class TemplateSchema {
   Map<int, Map<String, dynamic>> template_schema = {};
 
   /* inicializando o cache do template com 5 itens randômicos */
-  void getTemplateData() async {
+  Future<void> getTemplateData() async {
     TemplateDao dao = TemplateDao();
     List<Map<String, dynamic>> result = await dao.getRandomLimit(5);
 
     for( final item in result ) {
-      template_schema[item['id']] = item['template']; 
+      template_schema[item['id'] as int] =
+          jsonDecode(item['template'] as String) as Map<String, dynamic>;
     };
   }
 
@@ -26,7 +28,9 @@ class TemplateSchema {
     if(!template_schema.containsKey(templateId_atual)){
       TemplateDao dao = TemplateDao(); 
       List<Map<String, dynamic>> template = await dao.getTemplateById(templateId_atual);
-      add(templateId_atual, template[0]);
+
+      final decoded = jsonDecode(template[0]['template'] as String) as Map<String, dynamic>;
+      add(templateId_atual, decoded);
     }
 
     if(template_schema.length >= 5){

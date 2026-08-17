@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
 import '../styles/text_styles.dart';
+import '../data/schema/package_schema.dart';
+import '../data/schema/revlog_schema.dart';
 import 'statistic_screen.dart';
 import 'questions_screen.dart';
 
 class Home extends StatefulWidget {
-  const Home({super.key});
+  // TODO: substituir por um profile real assim que a tela de seleção
+  // de perfil existir. Por enquanto assume o profile de id 1.
+  final int profileId;
+
+  const Home({super.key, this.profileId = 1});
 
   @override
   State<Home> createState() => _HomeState();
@@ -17,28 +23,37 @@ class _HomeState extends State<Home> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
 
-  final List<Map<String, String>> _decks = [
-    {'title': 'Concurso da Polícia Militar',                  'lastReview': 'Última revisão há 30 dias'},
-    {'title': 'Curso de Proficiência em Inglês',              'lastReview': 'Última revisão há 4 dias'},
-    {'title': 'Questões do Vestibular da UFMS (2000 - 2020)', 'lastReview': 'Última revisão há 2 dias'},
-    {'title': 'Questões de Gramática em Francês',             'lastReview': 'Última revisão há 1 mês'},
-  ];
+  final PackageSchema _packageSchema = PackageSchema();
+  final RevlogSchema _revlogSchema = RevlogSchema();
+
+  Map<int, String> _packages = {};
+  Map<DateTime, int> _activityMap = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+
+    await _packageSchema.getPackageDataByProfile(widget.profileId);
+    final heatmap = await _revlogSchema.getHeatmapData();
+
+    if (!mounted) return;
+    setState(() {
+      _packages = _packageSchema.package_schema;
+      _activityMap = heatmap;
+      _loading = false;
+    });
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
-  }
-
-  Map<DateTime, int> _buildActivityMap() {
-    final map = <DateTime, int>{};
-    final today = DateTime.now();
-    final pattern = [0, 1, 2, 3, 4, 2, 1, 3, 0, 4, 2, 1, 3, 2, 4, 0, 1, 2];
-    for (int i = 0; i < 365; i++) {
-      final d = today.subtract(Duration(days: i));
-      map[DateTime(d.year, d.month, d.day)] = pattern[i % pattern.length];
-    }
-    return map;
   }
 
   @override
@@ -64,24 +79,36 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildMobileBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 10),
-          HeatmapCard(activityMap: _buildActivityMap()),
-          const SizedBox(height: 20),
-          _sectionLabel('My Packages'),
-          const SizedBox(height: 12),
-          _buildDeckList(),
-          const SizedBox(height: 80),
-        ],
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
+            HeatmapCard(activityMap: _activityMap),
+            const SizedBox(height: 20),
+            _sectionLabel('My Packages'),
+            const SizedBox(height: 12),
+            _buildDeckList(),
+            const SizedBox(height: 80),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDesktopBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         Expanded(
@@ -91,7 +118,7 @@ class _HomeState extends State<Home> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                HeatmapCard(activityMap: _buildActivityMap()),
+                HeatmapCard(activityMap: _activityMap),
                 const SizedBox(height: 24),
                 _buildDeckTable(),
               ],
@@ -133,55 +160,52 @@ class _HomeState extends State<Home> {
     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
       color: Color(0xFF1A1A2E)));
 
-  Widget _buildDeckList() =>
-      Column(children: _decks.map(_buildDeckCard).toList());
+  Widget _buildDeckList() {
+    if (_packages.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text('Nenhum pacote ainda para este profile.',
+          style: TextStyle(color: Colors.grey[500])),
+      );
+    }
+    return Column(
+      children: _packages.entries.map(_buildDeckCard).toList(),
+    );
+  }
 
-  Widget _buildDeckCard(Map<String, String> deck) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(12),
-    child: Row(children: [
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Flexible(
-              child: GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const QuestionScreen()),
+  Widget _buildDeckCard(MapEntry<int, String> deck) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      child: Row(children: [
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => QuestionScreen(packageId: deck.key),
+                    ),
+                  ),
+                  child: Text(deck.value, style: mediumText),
                 ),
-                child: Text(deck['title']!, style: mediumText),
               ),
-            ),
-            GestureDetector(
-              onTap: () {}, // packages configs
-              child: Icon(Icons.settings, color: Colors.grey[400], size: 22),
-            ),
-          ]),
-
-          const SizedBox(height: 4),
-
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Row(children: [
-              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-              const SizedBox(width: 4),
-              Text(deck['lastReview']!,
-                style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-            ]),
-            Wrap(spacing: 6, children: [
-              _buildTag('60', const Color(0xFF1565C0)),
-              _buildTag('10', const Color(0xFFC62828)),
-            ]),
-          ]),
-
-        ]),
-      ),
-    ]),
-  );
-}
+              GestureDetector(
+                onTap: () {}, // TODO: tela de configuração/edição do pacote
+                child: Icon(Icons.settings, color: Colors.grey[400], size: 22),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
 
   Widget _buildDeckTable() {
+    final entries = _packages.entries.toList();
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 700),
@@ -197,9 +221,7 @@ class _HomeState extends State<Home> {
           child: Table(
             columnWidths: const {
               0: FlexColumnWidth(),
-              1: FixedColumnWidth(100),
-              2: FixedColumnWidth(100),
-              3: FixedColumnWidth(40),
+              1: FixedColumnWidth(40),
             },
             children: [
               TableRow(
@@ -207,22 +229,18 @@ class _HomeState extends State<Home> {
                   border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0)))),
                 children: [
                   _tableCell('Packages', Colors.grey[400]!, isHeader: true),
-                  _tableCell('Novo',     Colors.grey[400]!, isHeader: true, center: true),
-                  _tableCell('Reforço',  Colors.grey[400]!, isHeader: true, center: true),
                   const SizedBox(),
                 ],
               ),
-              ...List.generate(_decks.length, (i) {
-                final deck = _decks[i];
+              ...List.generate(entries.length, (i) {
+                final deck = entries[i];
                 final isEven = i % 2 == 0;
                 return TableRow(
                   decoration: BoxDecoration(
                     color: isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF5F5F5),
                   ),
                   children: [
-                    _tableCell(deck['title']!, const Color(0xFF1A1A2E)),
-                    _tableCell('60', const Color(0xFF1565C0), center: true, bold: true),
-                    _tableCell('20', const Color(0xFFE65100), center: true, bold: true),
+                    _tableCell(deck.value, const Color(0xFF1A1A2E)),
                     TableCell(
                       verticalAlignment: TableCellVerticalAlignment.middle,
                       child: IconButton(
@@ -257,10 +275,5 @@ class _HomeState extends State<Home> {
           fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal,
         )),
     );
-  }
-
-  Widget _buildTag(String cont, Color color) {
-    return Text(cont,
-      style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500));
   }
 }
