@@ -33,21 +33,30 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    print('home está criado');
     _loadData();
   }
 
   Future<void> _loadData() async {
+    print('1 - começou _loadData');
     setState(() => _loading = true);
 
+    print('2 - buscando packages');
     await _packageSchema.getPackageDataByProfile(widget.profileId);
+
+    print('3 - packages carregados');
     final heatmap = await _revlogSchema.getHeatmapData();
 
+    print('4 - heatmap carregado');
     if (!mounted) return;
+
     setState(() {
       _packages = _packageSchema.package_schema;
       _activityMap = heatmap;
       _loading = false;
     });
+
+    print('5 - loading false');
   }
 
   @override

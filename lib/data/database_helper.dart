@@ -8,14 +8,24 @@ class DatabaseHelper{
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if(_database != null) return _database!;
+    print('DB GETTER 1');
+
+    if (_database != null) {
+      print('DB GETTER 2 - database já existe');
+      return _database!;
+    }
+
+    print('DB GETTER 3 - chamando _initDB');
     _database = await _initDB('sysy_app.db');
-    return _database!; 
+
+    print('DB GETTER 4 - _initDB terminou');
+    return _database!;
   }
 
   Future<Database> _initDB(String file_nane) async {
     final dir_db = await getDatabasesPath();
-    
+    print('DB: $dir_db');    
+
     final String dir;
     if(Platform.isWindows){
       dir = '$dir_db\\$file_nane';
