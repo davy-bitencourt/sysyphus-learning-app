@@ -78,6 +78,9 @@ class _HomeState extends State<Home> {
         curve: Curves.easeInOut,
       ),
       onStatisticsTap: () => _pageController.animateToPage(1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
+      
+      onCreateTap: _showCreateMenu,
+
       body: PageView(
         controller: _pageController,
         onPageChanged: (i) => setState(() => _currentIndex = i),
@@ -109,10 +112,6 @@ class _HomeState extends State<Home> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _sectionLabel('My Packages'),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Color(0xFFE65100)),
-                  onPressed: _showCreateMenu,
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -124,10 +123,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // ---------------------------------------------------------------
   // Menu de criação (botão +)
-  // ---------------------------------------------------------------
-
   Future<void> _showCreateMenu() async {
     final action = await showModalBottomSheet<String>(
       context: context,

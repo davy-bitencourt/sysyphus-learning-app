@@ -8,9 +8,10 @@ import '../screens/home.dart';
 class MainScaffold extends StatelessWidget {
   final String title;
   final Widget body;
-  final int currentIndex;        // ← adiciona
-  final ValueChanged<int>? onTap; // ← adiciona
+  final int currentIndex;
+  final ValueChanged<int>? onTap;
   final VoidCallback? onStatisticsTap;
+  final VoidCallback? onCreateTap;
 
   const MainScaffold({
     super.key,
@@ -18,7 +19,8 @@ class MainScaffold extends StatelessWidget {
     required this.body,
     this.currentIndex = 0,
     this.onTap,
-    this.onStatisticsTap
+    this.onStatisticsTap,
+    this.onCreateTap,
     });
 
 
@@ -139,12 +141,16 @@ class MainScaffold extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: const Color(0xFFE65100),
-        elevation: 0,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      onPressed: onCreateTap,
+      backgroundColor: const Color(0xFFE65100),
+      elevation: 0,
+      shape: const CircleBorder(),
+      child: const Icon(
+        Icons.add,
+        color: Colors.white,
+        size: 28,
       ),
+    ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
 }

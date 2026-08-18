@@ -11,7 +11,7 @@ class DatabaseHelper{
     print('DB GETTER 1');
 
     if (_database != null) {
-      print('DB GETTER 2 - database já existe');
+      print('DB GETTER 2 - database existe');
       return _database!;
     }
 
