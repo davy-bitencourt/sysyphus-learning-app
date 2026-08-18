@@ -25,6 +25,7 @@ class SessionDao {
   }
 
   Future<void> update(SessionDto dto) async {
+    assert(dto.id != null, 'SessionDto.id é obrigatório para update');
     final db = await DatabaseHelper.instance.database;
     await db.rawUpdate(
       '''

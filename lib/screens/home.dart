@@ -3,14 +3,20 @@ import 'package:flutter/material.dart';
 import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
 import '../styles/text_styles.dart';
-import '../data/schema/package_schema.dart';
+import '../data/DAO/package_dao.dart';
+import '../data/DAO/tag_dao.dart';
+import '../data/DAO/session_dao.dart';
+import '../data/DTO/session_dto.dart';
 import '../data/schema/revlog_schema.dart';
 import 'statistic_screen.dart';
 import 'questions_screen.dart';
+import 'questions_edit_screen.dart';
+import 'templaate_edit_screen.dart';
+import 'package_edit_screen.dart';
 
 class Home extends StatefulWidget {
   // TODO: substituir por um profile real assim que a tela de seleção
-  // de perfil existir. Por enquanto assume o profile de id 1.
+  // de perfil existir.
   final int profileId;
 
   const Home({super.key, this.profileId = 1});
@@ -23,7 +29,6 @@ class _HomeState extends State<Home> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
 
-  final PackageSchema _packageSchema = PackageSchema();
   final RevlogSchema _revlogSchema = RevlogSchema();
 
   Map<int, String> _packages = {};
@@ -33,30 +38,27 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    print('home está criado');
     _loadData();
   }
 
   Future<void> _loadData() async {
-    print('1 - começou _loadData');
     setState(() => _loading = true);
 
-    print('2 - buscando packages');
-    await _packageSchema.getPackageDataByProfile(widget.profileId);
-
-    print('3 - packages carregados');
+    /* usa todos os pacotes por enquanto: o schema atual só liga um
+     * profile a UM pacote (profile.package_id), o que não sustenta
+     * uma lista de "meus pacotes" -- listar tudo aqui até a
+     * modelagem de dono do pacote ser revista. */
+    final packageRows = await PackageDao().getAll();
     final heatmap = await _revlogSchema.getHeatmapData();
 
-    print('4 - heatmap carregado');
     if (!mounted) return;
-
     setState(() {
-      _packages = _packageSchema.package_schema;
+      _packages = {
+        for (final row in packageRows) row['id'] as int: row['title'] as String
+      };
       _activityMap = heatmap;
       _loading = false;
     });
-
-    print('5 - loading false');
   }
 
   @override
@@ -103,7 +105,16 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 10),
             HeatmapCard(activityMap: _activityMap),
             const SizedBox(height: 20),
-            _sectionLabel('My Packages'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _sectionLabel('My Packages'),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline, color: Color(0xFFE65100)),
+                  onPressed: _showCreateMenu,
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             _buildDeckList(),
             const SizedBox(height: 80),
@@ -112,6 +123,133 @@ class _HomeState extends State<Home> {
       ),
     );
   }
+
+  // ---------------------------------------------------------------
+  // Menu de criação (botão +)
+  // ---------------------------------------------------------------
+
+  Future<void> _showCreateMenu() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _menuTile(Icons.folder_outlined, 'Novo pacote', 'package'),
+            _menuTile(Icons.quiz_outlined, 'Nova questão', 'question'),
+            _menuTile(Icons.dashboard_customize_outlined, 'Novo template', 'template'),
+            _menuTile(Icons.label_outline, 'Nova tag', 'tag'),
+            _menuTile(Icons.timer_outlined, 'Nova sessão', 'session'),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || action == null) return;
+    await _handleCreateAction(action);
+  }
+
+  Widget _menuTile(IconData icon, String label, String action) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFE65100)),
+      title: Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
+      onTap: () => Navigator.pop(context, action),
+    );
+  }
+
+  Future<void> _handleCreateAction(String action) async {
+    switch (action) {
+      case 'package':
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PackageEditScreen()),
+        );
+        if (result == true) _loadData();
+        break;
+
+      case 'question':
+        // sem pacote pré-selecionado: o usuário escolhe dentro da tela
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const QuestionsEditScreen()),
+        );
+        break;
+
+      case 'template':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TemplateEditScreen()),
+        );
+        break;
+
+      case 'tag':
+        await _showQuickTextDialog(
+          title: 'Nova tag',
+          hint: 'Nome da tag',
+          onConfirm: (text) => TagDao().insert(text),
+        );
+        break;
+
+      case 'session':
+        await _showQuickTextDialog(
+          title: 'Nova sessão',
+          hint: 'Nome da sessão',
+          onConfirm: (text) => SessionDao().insert(SessionDto(title: text)),
+        );
+        break;
+    }
+  }
+
+  Future<void> _showQuickTextDialog({
+    required String title,
+    required String hint,
+    required Future<void> Function(String text) onConfirm,
+  }) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: hint),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    final text = controller.text.trim();
+    if (confirmed == true && text.isNotEmpty) {
+      await onConfirm(text);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Desktop
+  // ---------------------------------------------------------------
 
   Widget _buildDesktopBody() {
     if (_loading) {
@@ -140,11 +278,11 @@ class _HomeState extends State<Home> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildDesktopButton('New Package'),
+              _buildDesktopButton('New Package', () => _handleCreateAction('package')),
               const SizedBox(width: 10),
-              _buildDesktopButton('Add Question'),
+              _buildDesktopButton('Add Question', () => _handleCreateAction('question')),
               const SizedBox(width: 10),
-              _buildDesktopButton('New Session'),
+              _buildDesktopButton('New Session', () => _handleCreateAction('session')),
             ],
           ),
         ),
@@ -152,9 +290,10 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildDesktopButton(String title) {
+  Widget _buildDesktopButton(String title, VoidCallback onPressed) {
     return ElevatedButton.icon(
-      onPressed: () {},
+      onPressed: onPressed,
+      icon: const Icon(Icons.add, size: 18),
       label: Text(title),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFE65100),
@@ -173,7 +312,7 @@ class _HomeState extends State<Home> {
     if (_packages.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('Nenhum pacote ainda para este profile.',
+        child: Text('Nenhum pacote ainda. Toque no + para criar o primeiro.',
           style: TextStyle(color: Colors.grey[500])),
       );
     }
@@ -203,7 +342,18 @@ class _HomeState extends State<Home> {
                 ),
               ),
               GestureDetector(
-                onTap: () {}, // TODO: tela de configuração/edição do pacote
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PackageEditScreen(
+                        packageId: deck.key,
+                        initialTitle: deck.value,
+                      ),
+                    ),
+                  );
+                  if (result == true) _loadData();
+                },
                 child: Icon(Icons.settings, color: Colors.grey[400], size: 22),
               ),
             ],
@@ -253,7 +403,18 @@ class _HomeState extends State<Home> {
                     TableCell(
                       verticalAlignment: TableCellVerticalAlignment.middle,
                       child: IconButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PackageEditScreen(
+                                packageId: deck.key,
+                                initialTitle: deck.value,
+                              ),
+                            ),
+                          );
+                          if (result == true) _loadData();
+                        },
                         icon: Icon(Icons.settings, size: 16, color: Colors.grey[400]),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
