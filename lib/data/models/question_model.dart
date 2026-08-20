@@ -1,97 +1,23 @@
 import 'dart:convert';
+import 'field_model.dart';
 
-enum QuestionType { open, multiple, vof }
-
-QuestionType questionTypeFromString(String value) {
-  switch (value) {
-    case 'multiple':
-      return QuestionType.multiple;
-    case 'vof':
-      return QuestionType.vof;
-    case 'open':
-    default:
-      return QuestionType.open;
-  }
-}
-
-String questionTypeToString(QuestionType type) {
-  switch (type) {
-    case QuestionType.multiple:
-      return 'multiple';
-    case QuestionType.vof:
-      return 'vof';
-    case QuestionType.open:
-      return 'open';
-  }
-}
-
-/// Representa um Template (tabela `templates`): define o FORMATO
-/// reutilizável de uma questão -- o tipo de interação (aberta / múltipla
-/// escolha / verdadeiro-falso) e, quando aplicável, quantas opções ela
-/// deve ter. O conteúdo real (textos, respostas certas) fica na questão.
-class TemplateModel {
-  final int? id;
-  final QuestionType type;
-  final int optionCount;
-
-  const TemplateModel({
-    this.id,
-    required this.type,
-    this.optionCount = 4,
-  });
-
-  factory TemplateModel.fromJson(int id, String rawJson) {
-    final map = jsonDecode(rawJson) as Map<String, dynamic>;
-    return TemplateModel(
-      id: id,
-      type: questionTypeFromString(map['type'] as String? ?? 'open'),
-      optionCount: map['optionCount'] as int? ?? 4,
-    );
-  }
-
-  String toJsonString() => jsonEncode({
-    'type': questionTypeToString(type),
-    'optionCount': optionCount,
-  });
-
-  String get label {
-    switch (type) {
-      case QuestionType.open:
-        return 'Questão aberta';
-      case QuestionType.multiple:
-        return 'Múltipla escolha ($optionCount opções)';
-      case QuestionType.vof:
-        return 'Verdadeiro ou Falso ($optionCount afirmações)';
-    }
-  }
-}
-
-class QuestionOption {
-  final String text;
-  final bool correct;
-  const QuestionOption({required this.text, this.correct = false});
-
-  factory QuestionOption.fromMap(Map<String, dynamic> map) => QuestionOption(
-    text: map['text'] as String? ?? '',
-    correct: map['correct'] as bool? ?? false,
-  );
-
-  Map<String, dynamic> toMap() => {'text': text, 'correct': correct};
-}
-
-/// Questão pronta para exibição/edição, já combinando a linha da tabela
-/// `question` com o [TemplateModel] referenciado por `template_id`.
+/// Uma questão "crua", como ela existe no banco: enunciado fixo +
+/// um mapa de valores (um por campo do template, indexado por field.id).
 class Question {
   final int? id;
   final int? templateId;
   final int? tagId;
   final int? packageId;
   final String statement;
-  final QuestionType type;
-  final List<QuestionOption> options;
-  final String? suggestion;
   final String extraComments;
   final String description;
+  final Map<String, dynamic> values;
+
+  /* dados de repetição espaçada (tabela `state`) */
+  final String? state;
+  final int? intervalDays;
+  final double? easeFactor;
+  final String? dueDate;
 
   const Question({
     this.id,
@@ -99,51 +25,51 @@ class Question {
     this.tagId,
     this.packageId,
     required this.statement,
-    required this.type,
-    this.options = const [],
-    this.suggestion,
+    this.values = const {},
     this.extraComments = '',
     this.description = '',
+    this.state,
+    this.intervalDays,
+    this.easeFactor,
+    this.dueDate,
   });
 
-  /// Monta a partir de uma linha de `question_state_dao.getByPackage`
-  /// + do [TemplateModel] já resolvido (via TemplateSchema.isOnCache).
-  factory Question.fromDb(Map<String, dynamic> row, TemplateModel template) {
+  /// Monta a partir de uma linha de `question_state_dao.getByPackage`.
+  factory Question.fromDb(Map<String, dynamic> row) {
     final rawQuestions = row['questions'] as String?;
-    final content = (rawQuestions != null && rawQuestions.isNotEmpty)
+    final values = (rawQuestions != null && rawQuestions.isNotEmpty)
         ? jsonDecode(rawQuestions) as Map<String, dynamic>
         : <String, dynamic>{};
-
-    List<QuestionOption> options = const [];
-    String? suggestion;
-
-    if (template.type == QuestionType.open) {
-      suggestion = content['suggestion'] as String?;
-    } else {
-      final rawOptions = (content['options'] as List?) ?? [];
-      options = rawOptions
-          .map((o) => QuestionOption.fromMap(o as Map<String, dynamic>))
-          .toList();
-    }
 
     return Question(
       id: row['id'] as int?,
       templateId: row['template_id'] as int?,
       tagId: row['tag_id'] as int?,
       statement: row['enunciado'] as String? ?? '',
-      type: template.type,
-      options: options,
-      suggestion: suggestion,
+      values: values,
       extraComments: row['extra'] as String? ?? '',
       description: row['description'] as String? ?? '',
+      state: row['state'] as String?,
+      intervalDays: row['interval_days'] as int?,
+      easeFactor: (row['ease_factor'] as num?)?.toDouble(),
+      dueDate: row['due_date'] as String?,
     );
   }
 
-  /// Serializa o conteúdo respondível -- o que vai na coluna `questions`.
-  String toQuestionsJson() {
-    if (type == QuestionType.open) {
-      return jsonEncode({'suggestion': suggestion ?? ''});
-    }
-    return jsonEncode({'options': options.map((o) => o.toMap()).toList()});
+  /// Lê o valor de um campo 'options'/'vof' já decodificado.
+  List<OptionValue> optionsFor(String fieldId) {
+    final raw = (values[fieldId] as List?) ?? [];
+    return raw.map((o) => OptionValue.fromMap(o as Map<String, dynamic>)).toList();
   }
+
+  String? textFor(String fieldId) => values[fieldId] as String?;
+}
+
+/// Uma questão já combinada com o [TemplateModel] que ela usa --
+/// é o que as telas de estudo/edição efetivamente consomem, já que
+/// renderizar uma questão exige saber os campos do template.
+class LoadedQuestion {
+  final Question question;
+  final TemplateModel template;
+  const LoadedQuestion({required this.question, required this.template});
 }

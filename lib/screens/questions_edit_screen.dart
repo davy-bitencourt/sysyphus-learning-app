@@ -1,10 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sysyphus_learning_app/data/DAO/question_state_dao.dart';
 import 'package:sysyphus_learning_app/data/DAO/template_dao.dart';
 import 'package:sysyphus_learning_app/data/DAO/tag_dao.dart';
 import 'package:sysyphus_learning_app/data/DAO/package_dao.dart';
 import 'package:sysyphus_learning_app/data/DTO/question_dto.dart';
+import 'package:sysyphus_learning_app/data/models/field_model.dart';
 import 'package:sysyphus_learning_app/data/models/question_model.dart';
+import 'package:sysyphus_learning_app/data/services/media_storage_service.dart';
 import 'templaate_edit_screen.dart';
 
 class QuestionsEditScreen extends StatefulWidget {
@@ -18,13 +22,10 @@ class QuestionsEditScreen extends StatefulWidget {
 }
 
 class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
-  final _statementController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _extraController = TextEditingController();
-  final _suggestionController = TextEditingController();
-
-  List<TextEditingController> _optionControllers = [];
-  List<bool> _optionCorrect = [];
+  Map<String, TextEditingController> _textControllers = {};
+  Map<String, String?> _mediaPaths = {};
+  Map<String, List<TextEditingController>> _optionControllers = {};
+  Map<String, List<bool>> _optionCorrect = {};
 
   List<TemplateModel> _templates = [];
   List<Map<String, dynamic>> _tags = [];
@@ -59,10 +60,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
     final q = widget.question;
     if (q != null) {
-      _statementController.text = q.statement;
-      _descriptionController.text = q.description;
-      _extraController.text = q.extraComments;
-      _suggestionController.text = q.suggestion ?? '';
       _selectedTagId = q.tagId;
       _selectedPackageId = q.packageId ?? widget.packageId;
 
@@ -74,28 +71,55 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         }
       }
       _selectedTemplate = match ?? (_templates.isNotEmpty ? _templates.first : null);
-      _setupOptionControllers(initial: q.options);
+      if (_selectedTemplate != null) {
+        _setupControllersForTemplate(_selectedTemplate!, initialValues: q.values);
+      }
     } else if (_templates.isNotEmpty) {
       _selectedTemplate = _templates.first;
-      _setupOptionControllers();
+      _setupControllersForTemplate(_selectedTemplate!);
     }
 
     if (mounted) setState(() => _loading = false);
   }
 
-  void _setupOptionControllers({List<QuestionOption>? initial}) {
-    final count = _selectedTemplate?.optionCount ?? 4;
-    _optionControllers = List.generate(count, (i) {
-      final controller = TextEditingController();
-      if (initial != null && i < initial.length) {
-        controller.text = initial[i].text;
+  void _setupControllersForTemplate(TemplateModel template, {Map<String, dynamic>? initialValues}) {
+    for (final c in _textControllers.values) {
+      c.dispose();
+    }
+    for (final list in _optionControllers.values) {
+      for (final c in list) {
+        c.dispose();
       }
-      return controller;
-    });
-    _optionCorrect = List.generate(count, (i) {
-      if (initial != null && i < initial.length) return initial[i].correct;
-      return false;
-    });
+    }
+
+    _textControllers = {};
+    _mediaPaths = {};
+    _optionControllers = {};
+    _optionCorrect = {};
+
+    for (final field in template.fields) {
+      final raw = initialValues?[field.id];
+      switch (field.type) {
+        case FieldType.text:
+          _textControllers[field.id] = TextEditingController(text: raw?.toString() ?? '');
+          break;
+        case FieldType.image:
+        case FieldType.audio:
+          _mediaPaths[field.id] = raw as String?;
+          break;
+        case FieldType.options:
+        case FieldType.vof:
+          final options = (raw as List?)
+                  ?.map((o) => OptionValue.fromMap(o as Map<String, dynamic>))
+                  .toList() ??
+              const <OptionValue>[];
+          _optionControllers[field.id] = List.generate(field.optionCount, (i) =>
+            TextEditingController(text: i < options.length ? options[i].text : ''));
+          _optionCorrect[field.id] = List.generate(field.optionCount, (i) =>
+            i < options.length ? options[i].correct : false);
+          break;
+      }
+    }
   }
 
   Future<void> _openNewTemplate() async {
@@ -109,16 +133,52 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
   }
 
+  Future<void> _pickImage(String fieldId, {required bool fromCamera}) async {
+    final path = await MediaStorageService.pickImage(fromCamera: fromCamera);
+    if (path != null) setState(() => _mediaPaths[fieldId] = path);
+  }
+
+  Future<void> _pickAudio(String fieldId) async {
+    final path = await MediaStorageService.pickAudio();
+    if (path != null) setState(() => _mediaPaths[fieldId] = path);
+  }
+
+  void _clearMedia(String fieldId) => setState(() => _mediaPaths[fieldId] = null);
+
   @override
   void dispose() {
-    _statementController.dispose();
-    _descriptionController.dispose();
-    _extraController.dispose();
-    _suggestionController.dispose();
-    for (final c in _optionControllers) {
+    for (final c in _textControllers.values) {
       c.dispose();
     }
+    for (final list in _optionControllers.values) {
+      for (final c in list) {
+        c.dispose();
+      }
+    }
     super.dispose();
+  }
+
+  Map<String, dynamic> _collectValues(TemplateModel template) {
+    final values = <String, dynamic>{};
+    for (final field in template.fields) {
+      switch (field.type) {
+        case FieldType.text:
+          values[field.id] = _textControllers[field.id]?.text.trim() ?? '';
+          break;
+        case FieldType.image:
+        case FieldType.audio:
+          values[field.id] = _mediaPaths[field.id];
+          break;
+        case FieldType.options:
+        case FieldType.vof:
+          final controllers = _optionControllers[field.id] ?? [];
+          final corrects = _optionCorrect[field.id] ?? [];
+          values[field.id] = List.generate(controllers.length, (i) =>
+            OptionValue(text: controllers[i].text.trim(), correct: corrects[i]).toMap());
+          break;
+      }
+    }
+    return values;
   }
 
   Future<void> _save() async {
@@ -130,37 +190,16 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       _showError('Escolha um pacote antes de salvar.');
       return;
     }
-    if (_statementController.text.trim().isEmpty) {
-      _showError('O enunciado não pode ficar vazio.');
-      return;
-    }
 
     setState(() => _saving = true);
 
-    final options = List.generate(_optionControllers.length, (i) =>
-      QuestionOption(text: _optionControllers[i].text.trim(), correct: _optionCorrect[i]));
-
-    final question = Question(
-      id: widget.question?.id,
-      templateId: _selectedTemplate!.id,
-      tagId: _selectedTagId,
-      packageId: _selectedPackageId,
-      statement: _statementController.text.trim(),
-      type: _selectedTemplate!.type,
-      options: options,
-      suggestion: _suggestionController.text.trim(),
-      extraComments: _extraController.text.trim(),
-      description: _descriptionController.text.trim(),
-    );
+    final values = _collectValues(_selectedTemplate!);
 
     final dto = QuestionDto(
-      packageId: question.packageId!,
-      tagId: question.tagId,
-      templateId: question.templateId!,
-      enunciado: question.statement,
-      questions: question.toQuestionsJson(),
-      extra: question.extraComments,
-      description: question.description,
+      packageId: _selectedPackageId!,
+      tagId: _selectedTagId,
+      templateId: _selectedTemplate!.id!,
+      questions: jsonEncode(values),
     );
 
     final dao = QuestionDao();
@@ -229,7 +268,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Nenhum template cadastrado ainda. Crie um template antes de adicionar questões.',
+              'Nenhum template cadastrado ainda. Crie um template (com os campos que quiser: texto, imagem, áudio, alternativas...) antes de adicionar questões.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -249,6 +288,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   }
 
   Widget _buildForm() {
+    final template = _selectedTemplate;
+    final questionFields = template?.questionFields ?? const [];
+    final answerFields = template?.answerFields ?? const [];
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -278,12 +321,15 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                 label: 'Template',
                 value: _selectedTemplate,
                 items: _templates
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
                     .toList(),
-                onChanged: (t) => setState(() {
-                  _selectedTemplate = t;
-                  _setupOptionControllers();
-                }),
+                onChanged: (t) {
+                  if (t == null) return;
+                  setState(() {
+                    _selectedTemplate = t;
+                    _setupControllersForTemplate(t);
+                  });
+                },
               ),
             ),
             IconButton(
@@ -293,14 +339,33 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        _buildTextField(_statementController, 'Enunciado', maxLines: 3),
+        if (template != null) ...[
+          // Lista de campos antes de responder
+          ...questionFields.map((f) => Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _buildFieldInput(f),
+              )),
+
+          if (answerFields.isNotEmpty) ...[
+            // Divisor contínuo/único
+            const Divider(
+              color: Color(0xFFE0E0E0), 
+              thickness: 1.5,
+              height: 1.5,
+            ),
+            
+            // Espaçamento uniforme após a linha
+            const SizedBox(height: 20),
+
+            // Lista de campos depois de responder
+            ...answerFields.map((f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _buildFieldInput(f),
+                )),
+          ],
+        ],
+
         const SizedBox(height: 16),
-        _buildTextField(_descriptionController, 'Descrição (opcional)', maxLines: 2),
-        const SizedBox(height: 16),
-        _buildTextField(_extraController, 'Comentário extra (mostrado após responder)', maxLines: 2),
-        const SizedBox(height: 20),
-        _buildContentFields(),
-        const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -319,55 +384,121 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
   }
 
-  Widget _buildContentFields() {
-    if (_selectedTemplate == null) return const SizedBox.shrink();
-
-    if (_selectedTemplate!.type == QuestionType.open) {
-      return _buildTextField(_suggestionController, 'Sugestão de resposta', maxLines: 3);
+  Widget _buildFieldInput(FieldDefinition field) {
+    switch (field.type) {
+      case FieldType.text:
+        return _buildTextField(_textControllers[field.id]!, field.label, maxLines: 3);
+      case FieldType.image:
+        return _buildMediaField(field, isImage: true);
+      case FieldType.audio:
+        return _buildMediaField(field, isImage: false);
+      case FieldType.options:
+      case FieldType.vof:
+        return _buildOptionsField(field);
+      default:
+        return const SizedBox.shrink();
     }
+  }
 
+  Widget _buildMediaField(FieldDefinition field, {required bool isImage}) {
+    final path = _mediaPaths[field.id];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _selectedTemplate!.type == QuestionType.multiple
-              ? 'Alternativas (marque a correta)'
-              : 'Afirmações (marque as verdadeiras)',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
-        ),
+        Text(field.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
         const SizedBox(height: 8),
-        ...List.generate(_optionControllers.length, (i) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: _optionCorrect[i],
-                  onChanged: (v) => setState(() => _optionCorrect[i] = v ?? false),
-                  activeColor: const Color(0xFF2E7D32),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _optionControllers[i],
-                    decoration: InputDecoration(
-                      hintText: 'Opção ${i + 1}',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+        if (path != null) ...[
+          if (isImage)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.file(File(path), height: 140, fit: BoxFit.cover, width: double.infinity),
+            )
+          else
+            Row(children: [
+              const Icon(Icons.audiotrack, color: Color(0xFFE65100)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(path.split(Platform.pathSeparator).last, overflow: TextOverflow.ellipsis)),
+            ]),
+          const SizedBox(height: 8),
+        ],
+        Wrap(
+          spacing: 4,
+          children: [
+            if (isImage) ...[
+              TextButton.icon(
+                onPressed: () => _pickImage(field.id, fromCamera: false),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Galeria'),
+              ),
+              TextButton.icon(
+                onPressed: () => _pickImage(field.id, fromCamera: true),
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: const Text('Câmera'),
+              ),
+            ] else
+              TextButton.icon(
+                onPressed: () => _pickAudio(field.id),
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Escolher áudio'),
+              ),
+            if (path != null)
+              IconButton(
+                onPressed: () => _clearMedia(field.id),
+                icon: const Icon(Icons.close, color: Color(0xFFC62828)),
+              ),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {int maxLines = 1}) {
+  Widget _buildOptionsField(FieldDefinition field) {
+    final controllers = _optionControllers[field.id] ?? [];
+    final corrects = _optionCorrect[field.id] ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          field.type == FieldType.options
+              ? '${field.label} (marque a correta)'
+              : '${field.label} (marque as verdadeiras)',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(controllers.length, (i) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Checkbox(
+                value: corrects[i],
+                onChanged: (v) => setState(() => _optionCorrect[field.id]![i] = v ?? false),
+                activeColor: const Color(0xFF2E7D32),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: controllers[i],
+                  decoration: InputDecoration(
+                    hintText: 'Opção ${i + 1}',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
