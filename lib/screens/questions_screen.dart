@@ -38,7 +38,24 @@ class _QuestionScreenState extends State<QuestionScreen> {
   final Map<String, int?> _selectedOptionByField = {};
   final Map<String, Map<int, bool>> _vofAnswersByField = {};
 
+  // Embaralha as alternativas de múltipla escolha para efetivar o estudo.
+  // A chave inclui o índice da questão para que o embaralhamento seja
+  // recalculado a cada nova questão, mas fique estável durante rebuilds.
+  final Map<String, List<OptionValue>> _shuffledOptionsCache = {};
+
   LoadedQuestion get _current => _questions[_currentQuestion];
+
+  List<OptionValue> _optionsFor(FieldDefinition field) {
+    final base = _current.question.optionsFor(field.id);
+    if (field.type != FieldType.options) return base;
+
+    final key = '$_currentQuestion:${field.id}';
+    return _shuffledOptionsCache.putIfAbsent(key, () {
+      final shuffled = List<OptionValue>.from(base);
+      shuffled.shuffle();
+      return shuffled;
+    });
+  }
 
   @override
   void initState() {
@@ -75,6 +92,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     setState(() {
       _questions = loaded;
       _currentQuestion = 0;
+      _shuffledOptionsCache.clear();
       _resetAnswerState();
       _loading = false;
     });
@@ -95,7 +113,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     for (final field in q.template.fields) {
       if (field.type == FieldType.options) {
         anyGraded = true;
-        final options = q.question.optionsFor(field.id);
+        final options = _optionsFor(field);
         final selected = _selectedOptionByField[field.id];
         if (selected == null || selected >= options.length || !options[selected].correct) {
           return false;
@@ -241,8 +259,25 @@ class _QuestionScreenState extends State<QuestionScreen> {
           icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('${_currentQuestion + 1} / ${_questions.length}',
-          style: const TextStyle(fontSize: 14, color: Color(0xFF555555))),
+        // Contador de questão e barra de progresso ficam juntos e
+        // centralizados na app bar; os ícones de ação vão à direita.
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('${_currentQuestion + 1} / ${_questions.length}',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF555555))),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 70,
+              child: LinearProgressIndicator(
+                value: (_currentQuestion + 1) / _questions.length,
+                backgroundColor: const Color(0xFFE0E0E0),
+                color: const Color(0xFFE65100),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -252,18 +287,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
           IconButton(
             icon: const Icon(Icons.add, color: Color(0xFF1A1A2E)),
             onPressed: _openNewQuestion,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16, top: 16, bottom: 16),
-            child: SizedBox(
-              width: 80,
-              child: LinearProgressIndicator(
-                value: (_currentQuestion + 1) / _questions.length,
-                backgroundColor: const Color(0xFFE0E0E0),
-                color: const Color(0xFFE65100),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
           ),
         ],
       ),
@@ -353,7 +376,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 
   Widget _buildOptionsDisplay(FieldDefinition field) {
-    final options = _current.question.optionsFor(field.id);
+    final options = _optionsFor(field);
     final selected = _selectedOptionByField[field.id];
 
     return Column(
@@ -380,6 +403,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
         return GestureDetector(
           onTap: _answered ? null : () => setState(() => _selectedOptionByField[field.id] = i),
           child: Container(
+            // Expande horizontalmente até a margem; só cresce verticalmente
+            // conforme o texto da alternativa precisar de mais espaço.
+            width: double.infinity,
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -457,10 +483,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 
   Widget _buildFooter() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: !_answered
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: !_answered
           ? _fullWidthButton('Mostrar Resposta', _showAnswer)
           : _hasGradableField(_current)
               ? _fullWidthButton('Continuar', () => _registerAndNext(_isCurrentAnswerCorrect(_current)))
@@ -491,6 +519,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     ),
                   ),
                 ]),
+      ),
     );
   }
 

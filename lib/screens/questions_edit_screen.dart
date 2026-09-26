@@ -35,6 +35,14 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   int? _selectedTagId;
   int? _selectedPackageId;
 
+  // Campo de tag em formato de texto com marcadores (#historia, #matematica...)
+  // e autosugestão a partir das tags já cadastradas. O schema atual só
+  // vincula UMA tag por questão, então usamos apenas o primeiro marcador
+  // digitado ao salvar; se o app passar a suportar múltiplas tags por
+  // questão, este é o ponto a estender.
+  final TextEditingController _tagInputController = TextEditingController();
+  String _tagQuery = '';
+
   bool _loading = true;
   bool _saving = false;
 
@@ -62,6 +70,16 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     if (q != null) {
       _selectedTagId = q.tagId;
       _selectedPackageId = q.packageId ?? widget.packageId;
+
+      if (_selectedTagId != null) {
+        final match = _tags.firstWhere(
+          (t) => t['id'] == _selectedTagId,
+          orElse: () => const <String, dynamic>{},
+        );
+        if (match.isNotEmpty) {
+          _tagInputController.text = '#${match['title']} ';
+        }
+      }
 
       TemplateModel? match;
       for (final t in _templates) {
@@ -155,7 +173,52 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         c.dispose();
       }
     }
+    _tagInputController.dispose();
     super.dispose();
+  }
+
+  void _onTagInputChanged(String text) {
+    final hashIndex = text.lastIndexOf('#');
+    final query = hashIndex == -1 ? '' : text.substring(hashIndex + 1).trim();
+    setState(() => _tagQuery = query);
+  }
+
+  void _selectSuggestedTag(int id, String title) {
+    setState(() {
+      _selectedTagId = id;
+      _tagInputController.text = '#$title ';
+      _tagInputController.selection = TextSelection.collapsed(offset: _tagInputController.text.length);
+      _tagQuery = '';
+    });
+  }
+
+  /// Resolve o id da tag a partir do texto digitado (primeiro marcador
+  /// #algo). Se a tag ainda não existe, cria e recarrega a lista para
+  /// obter o id gerado.
+  Future<int?> _resolveTagId() async {
+    final text = _tagInputController.text.trim();
+    if (text.isEmpty) return null;
+
+    final hashIndex = text.indexOf('#');
+    final raw = hashIndex != -1 ? text.substring(hashIndex + 1) : text;
+    final tagName = raw.split(RegExp(r'\s')).first.trim();
+    if (tagName.isEmpty) return null;
+
+    for (final t in _tags) {
+      if ((t['title'] as String).toLowerCase() == tagName.toLowerCase()) {
+        return t['id'] as int;
+      }
+    }
+
+    await TagDao().insert(tagName);
+    final refreshed = await TagDao().getAll();
+    _tags = refreshed;
+    for (final t in refreshed) {
+      if ((t['title'] as String).toLowerCase() == tagName.toLowerCase()) {
+        return t['id'] as int;
+      }
+    }
+    return null;
   }
 
   Map<String, dynamic> _collectValues(TemplateModel template) {
@@ -194,10 +257,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     setState(() => _saving = true);
 
     final values = _collectValues(_selectedTemplate!);
+    final tagId = await _resolveTagId();
 
     final dto = QuestionDto(
       packageId: _selectedPackageId!,
-      tagId: _selectedTagId,
+      tagId: tagId,
       templateId: _selectedTemplate!.id!,
       questions: jsonEncode(values),
     );
@@ -257,6 +321,34 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         ],
       ),
       body: _templates.isEmpty ? _buildNoTemplates() : _buildForm(),
+      // O botão de salvar fica fixo ao final da tela, acima da área de
+      // navegação do sistema; o formulário acima dele permanece rolável
+      // para o caso de o template ter muitos campos.
+      bottomNavigationBar: _templates.isEmpty ? null : _buildSaveFooter(),
+    );
+  }
+
+  Widget _buildSaveFooter() {
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _saving ? null : _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE65100),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(_saving ? 'Salvando...' : 'Salvar questão',
+              style: const TextStyle(fontSize: 15)),
+          ),
+        ),
+      ),
     );
   }
 
@@ -304,15 +396,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           onChanged: (v) => setState(() => _selectedPackageId = v),
         ),
         const SizedBox(height: 16),
-        _buildDropdown<int?>(
-          label: 'Tag (opcional)',
-          value: _selectedTagId,
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Sem tag')),
-            ..._tags.map((t) => DropdownMenuItem(value: t['id'] as int, child: Text(t['title'] as String))),
-          ],
-          onChanged: (v) => setState(() => _selectedTagId = v),
-        ),
+        _buildTagField(),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -364,22 +448,48 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                 )),
           ],
         ],
+        // Espaço extra para a última seção não ficar colada no rodapé fixo.
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE65100),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(_saving ? 'Salvando...' : 'Salvar questão',
-              style: const TextStyle(fontSize: 15)),
+  Widget _buildTagField() {
+    final query = _tagQuery.toLowerCase();
+    final matches = query.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : _tags.where((t) => (t['title'] as String).toLowerCase().contains(query)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tag (opcional)',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _tagInputController,
+          minLines: 1,
+          maxLines: null, // expande verticalmente conforme o texto cresce
+          onChanged: _onTagInputChanged,
+          decoration: InputDecoration(
+            hintText: '#historia #matematica',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
         ),
+        if (matches.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: matches.map((t) => ActionChip(
+              label: Text('#${t['title']}'),
+              backgroundColor: const Color(0xFFFFF3E0),
+              side: BorderSide.none,
+              onPressed: () => _selectSuggestedTag(t['id'] as int, t['title'] as String),
+            )).toList(),
+          ),
+        ],
       ],
     );
   }

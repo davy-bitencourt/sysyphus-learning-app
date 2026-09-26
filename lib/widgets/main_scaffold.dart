@@ -6,6 +6,7 @@ import '../screens/home.dart';
 import '../screens/package_edit_screen.dart';
 import '../screens/questions_edit_screen.dart';
 import '../screens/templaate_edit_screen.dart';
+import '../screens/question_bank_screen.dart';
 import '../data/DAO/tag_dao.dart';
 import '../data/DAO/session_dao.dart';
 import '../data/DTO/session_dto.dart';
@@ -288,7 +289,10 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const Home()));
               }),
-              _drawerItem(context, Icons.chrome_reader_mode, 'Questions finder'),
+              _drawerItem(context, Icons.chrome_reader_mode, 'Questions finder', onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
+              }),
               _drawerItem(context, Icons.bar_chart, 'Statistics', onTap: () {
                 Navigator.pop(context);
                 widget.onStatisticsTap?.call();

@@ -166,42 +166,51 @@ class _HomeState extends State<Home> {
   Widget _buildDeckCard(MapEntry<int, String> deck) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      child: Row(children: [
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => QuestionScreen(packageId: deck.key),
-                    ),
-                  ),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          // Área inteira do card é clicável agora, não só o texto do título.
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => QuestionScreen(packageId: deck.key),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
                   child: Text(deck.value, style: mediumText),
                 ),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PackageEditScreen(
-                        packageId: deck.key,
-                        initialTitle: deck.value,
+                // Botão de configurações continua com sua própria área de
+                // toque, sobrepondo a área clicável do card.
+                IconButton(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PackageEditScreen(
+                          packageId: deck.key,
+                          initialTitle: deck.value,
+                        ),
                       ),
-                    ),
-                  );
-                  if (result == true) _loadData();
-                },
-                child: Icon(Icons.settings, color: Colors.grey[400], size: 22),
-              ),
-            ],
+                    );
+                    if (result == true) _loadData();
+                  },
+                  icon: Icon(Icons.settings, color: Colors.grey[400], size: 22),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
           ),
         ),
-      ]),
+      ),
     );
   }
 
@@ -241,7 +250,19 @@ class _HomeState extends State<Home> {
                     color: isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF5F5F5),
                   ),
                   children: [
-                    _tableCell(deck.value, const Color(0xFF1A1A2E)),
+                    TableCell(
+                      verticalAlignment: TableCellVerticalAlignment.middle,
+                      // Toda a célula do título é clicável, não só o texto.
+                      child: InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => QuestionScreen(packageId: deck.key),
+                          ),
+                        ),
+                        child: _tableCell(deck.value, const Color(0xFF1A1A2E)),
+                      ),
+                    ),
                     TableCell(
                       verticalAlignment: TableCellVerticalAlignment.middle,
                       child: IconButton(
