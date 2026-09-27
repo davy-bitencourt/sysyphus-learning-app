@@ -41,6 +41,14 @@ class HeatmapCard extends StatelessWidget {
 
         final int totalCols = lastMonday.difference(firstMonday).inDays ~/ 7 + 1;
         final int visibleCols = (availW / cellStep).floor().clamp(1, totalCols);
+
+        // Alinha a grade para sempre mostrar a semana atual (em vez de
+        // travar sempre no início do ano quando nem todas as colunas
+        // cabem na largura disponível).
+        final int todayWeekIndex = todayNorm.difference(firstMonday).inDays ~/ 7;
+        final int maxStartCol = (totalCols - visibleCols).clamp(0, totalCols - 1);
+        final int startCol = (todayWeekIndex - visibleCols + 1).clamp(0, maxStartCol);
+
         final double gridW = visibleCols * (cellSize + cellGap);        
         
         return SizedBox(
@@ -91,7 +99,7 @@ class HeatmapCard extends StatelessWidget {
                         height: 14,
                         child: Stack(
                           children: List.generate(visibleCols, (ci) {
-                            final monday = firstMonday.add(Duration(days: ci * 7));
+                            final monday = firstMonday.add(Duration(days: (startCol + ci) * 7));
                             String? label;
                             for (int d = 0; d < 7; d++) {
                               final day = monday.add(Duration(days: d));
@@ -108,7 +116,7 @@ class HeatmapCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: List.generate(visibleCols, (ci) {
-                          final monday = firstMonday.add(Duration(days: ci * 7));
+                          final monday = firstMonday.add(Duration(days: (startCol + ci) * 7));
                           return Padding(
                             padding: const EdgeInsets.only(right: cellGap),
                             child: Column(

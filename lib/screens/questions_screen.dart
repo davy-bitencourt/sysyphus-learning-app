@@ -314,7 +314,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[400]),
+                    child: _buildAnswerStatusIcon(),
                   ),
                   const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
                 ]),
@@ -331,6 +331,20 @@ class _QuestionScreenState extends State<QuestionScreen> {
         ),
       ),
       bottomNavigationBar: _buildFooter(),
+    );
+  }
+
+  // Ícone verde de certo / vermelho de errado, exibido no divisor entre
+  // pergunta e resposta depois que a questão é respondida.
+  Widget _buildAnswerStatusIcon() {
+    if (!_hasGradableField(_current)) {
+      return Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[400]);
+    }
+    final correct = _isCurrentAnswerCorrect(_current);
+    return Icon(
+      correct ? Icons.check_circle : Icons.cancel,
+      size: 20,
+      color: correct ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
     );
   }
 
