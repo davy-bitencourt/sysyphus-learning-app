@@ -13,7 +13,10 @@ class FieldType {
   static const options = 'options'; // múltipla escolha
   static const vof = 'vof';         // verdadeiro ou falso
 
-  static const all = [text, image, audio, options, vof];
+  /// Tipos disponíveis ao CRIAR um campo. `vof` foi retirado da lista de
+  /// propósito (não dá mais pra criar), mas a constante e o suporte de
+  /// leitura continuam, para templates/questões antigos não quebrarem.
+  static const all = [text, image, audio, options];
 
   static String label(String type) {
     switch (type) {

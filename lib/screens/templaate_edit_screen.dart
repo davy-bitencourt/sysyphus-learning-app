@@ -314,7 +314,7 @@ Widget _buildDividerRow({required Key key}) {
     switch (type) {
       case FieldType.image: return Icons.image_outlined;
       case FieldType.audio: return Icons.audiotrack_outlined;
-      case FieldType.options: return Icons.checklist_outlined;
+      case FieldType.options: return Icons.rule_outlined;
       case FieldType.vof: return Icons.rule_outlined;
       default: return Icons.short_text_outlined;
     }
@@ -352,7 +352,8 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SafeArea(child: 
+    Padding(
       padding: EdgeInsets.only(
         left: 16, right: 16, top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
@@ -414,6 +415,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
           ),
         ],
       ),
+      ), 
     );
   }
 }
