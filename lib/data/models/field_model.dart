@@ -54,6 +54,16 @@ class FieldDefinition {
   final String section; // um dos FieldSection.*
   final int optionCount; // só relevante para 'options'/'vof'
 
+  /// Id fixo do campo "Enunciado", presente em TODO template.
+  static const statementId = 'statement';
+  static const statement = FieldDefinition(
+    id: statementId,
+    type: FieldType.text,
+    label: 'Enunciado',
+  );
+
+  bool get isStatement => id == statementId;
+
   const FieldDefinition({
     required this.id,
     required this.type,
@@ -102,6 +112,11 @@ class TemplateModel {
   List<FieldDefinition> get answerFields =>
       fields.where((f) => f.section == FieldSection.answer).toList();
 
+  /// Garante que o enunciado exista, sempre como primeiro campo.
+  /// Templates antigos (sem enunciado) são migrados na leitura.
+  static List<FieldDefinition> withStatement(List<FieldDefinition> fields) =>
+      [FieldDefinition.statement, ...fields.where((f) => !f.isStatement)];
+
   factory TemplateModel.fromJson(int id, String rawJson) =>
       TemplateModel.fromMap(id, jsonDecode(rawJson) as Map<String, dynamic>);
 
@@ -111,15 +126,17 @@ class TemplateModel {
     return TemplateModel(
       id: id,
       name: map['name'] as String? ?? 'Template',
-      fields: rawFields
-          .map((f) => FieldDefinition.fromMap(f as Map<String, dynamic>))
-          .toList(),
+      fields: withStatement(
+        rawFields
+            .map((f) => FieldDefinition.fromMap(f as Map<String, dynamic>))
+            .toList(),
+      ),
     );
   }
 
   String toJsonString() => jsonEncode({
     'name': name,
-    'fields': fields.map((f) => f.toMap()).toList(),
+    'fields': withStatement(fields).map((f) => f.toMap()).toList(),
   });
 }
 

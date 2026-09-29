@@ -45,7 +45,7 @@ class Question {
       id: row['id'] as int?,
       templateId: row['template_id'] as int?,
       tagId: row['tag_id'] as int?,
-      statement: row['enunciado'] as String? ?? '',
+      statement: (values[FieldDefinition.statementId] as String?)?.trim() ?? '',
       values: values,
       extraComments: row['extra'] as String? ?? '',
       description: row['description'] as String? ?? '',

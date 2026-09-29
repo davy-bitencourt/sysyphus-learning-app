@@ -254,6 +254,13 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       return;
     }
 
+    final statementText =
+        _textControllers[FieldDefinition.statementId]?.text.trim() ?? '';
+    if (statementText.isEmpty) {
+      _showError('Preencha o enunciado antes de salvar.');
+      return;
+    }
+
     setState(() => _saving = true);
 
     final values = _collectValues(_selectedTemplate!);
@@ -497,7 +504,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Widget _buildFieldInput(FieldDefinition field) {
     switch (field.type) {
       case FieldType.text:
-        return _buildTextField(_textControllers[field.id]!, field.label, maxLines: 3);
+        return _buildTextField(
+          _textControllers[field.id]!,
+          field.isStatement ? '${field.label} *' : field.label,
+          maxLines: 3,
+        );
       case FieldType.image:
         return _buildMediaField(field, isImage: true);
       case FieldType.audio:

@@ -4,7 +4,7 @@ import '../data/DAO/package_dao.dart';
 import '../data/DAO/template_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
-import '../data/schema/question_schema.dart';
+import '../data/DAO/question_state_dao.dart';
 import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
 import 'templaate_edit_screen.dart';
@@ -22,8 +22,6 @@ class QuestionBankScreen extends StatefulWidget {
 }
 
 class _QuestionBankScreenState extends State<QuestionBankScreen> {
-  final QuestionSchema _questionSchema = QuestionSchema();
-
   List<Map<String, dynamic>> _packages = [];
   List<TemplateModel> _templates = [];
   bool _loading = true;
@@ -64,10 +62,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     if (packageId == null) return;
 
     setState(() => _loadingQuestions = true);
-    // Limite alto: aqui é a tela de gerenciamento, queremos ver tudo do
-    // pacote, não só um lote de estudo.
-    await _questionSchema.getQuestionData(packageId, 500);
-    final loaded = _questionSchema.question_schema.map((row) => Question.fromDb(row)).toList();
+    // Tela de gerenciamento: traz TODAS as questões do pacote, em ordem
+    // estável (o getByPackage é de estudo: aleatório e limitado a 60).
+    final rows = await QuestionDao().getAllByPackage(packageId);
+    final loaded = rows.map((row) => Question.fromDb(row)).toList();
 
     if (!mounted) return;
     setState(() {
@@ -219,6 +217,43 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
+  // Título = enunciado (campo obrigatório de todo template).
+  String _titleOf(Question q) => q.statement.isEmpty ? '(sem enunciado)' : q.statement;
+
+  Future<void> _editQuestion(Question question) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
+      ),
+    );
+    if (result == true) _loadQuestionsForSelectedPackage();
+  }
+
+  Future<void> _deleteQuestion(Question question) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir questão'),
+        content: Text('Tem certeza que deseja excluir "${_titleOf(question)}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || question.id == null) return;
+
+    await QuestionDao().delete(question.id!);
+    _loadQuestionsForSelectedPackage();
+  }
+
   Widget _buildQuestionsList() {
     if (_loadingQuestions) {
       return const Center(child: CircularProgressIndicator());
@@ -233,30 +268,31 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
         final question = _packageQuestions[i];
-        final statement = question.statement.isEmpty ? '(sem enunciado)' : question.statement;
-        return Material(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(10),
-          child: InkWell(
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(10),
-            onTap: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
+          ),
+          padding: const EdgeInsets.only(left: 14, right: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _titleOf(question),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
                 ),
-              );
-              if (result == true) _loadQuestionsForSelectedPackage();
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              child: Text(
-                statement,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
               ),
-            ),
+              IconButton(
+                onPressed: () => _editQuestion(question),
+                icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey[500]),
+              ),
+              IconButton(
+                onPressed: () => _deleteQuestion(question),
+                icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+              ),
+            ],
           ),
         );
       },

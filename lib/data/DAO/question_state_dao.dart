@@ -27,6 +27,20 @@ class QuestionDao {
     );
   }
 
+  /* lista completa do pacote, ordenada, para a tela de gerenciamento */
+  Future<List<Map<String, dynamic>>> getAllByPackage(int packageId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.rawQuery(
+      '''
+        SELECT q.id, q.template_id, q.tag_id, q.questions, s.state, s.interval_days, s.ease_factor, s.due_date
+        FROM question q
+        LEFT JOIN state s ON s.question_id = q.id
+        WHERE q.package_id = ?
+        ORDER BY q.id
+      ''', [packageId]
+    );
+  }
+
   Future<int> insert(QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 
@@ -87,11 +101,10 @@ class QuestionDao {
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
 
-    await db.rawDelete(
-      '''
-        DELETE FROM question
-        WHERE id = ?
-      ''', [id]
-    );
+    /* remove o estado junto, para não deixar linha órfã */
+    await db.transaction((txn) async {
+      await txn.rawDelete('DELETE FROM state WHERE question_id = ?', [id]);
+      await txn.rawDelete('DELETE FROM question WHERE id = ?', [id]);
+    });
   }
 }

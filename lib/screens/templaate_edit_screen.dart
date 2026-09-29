@@ -32,7 +32,9 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     super.initState();
     _nameController.text = widget.template?.name ?? '';
 
-    final fields = widget.template?.fields ?? const <FieldDefinition>[];
+    final fields = TemplateModel.withStatement(
+      widget.template?.fields ?? const <FieldDefinition>[],
+    );
     final questionFields = fields.where((f) => f.section == FieldSection.question).toList();
     final answerFields = fields.where((f) => f.section == FieldSection.answer).toList();
     _items = [...questionFields, _divider, ...answerFields];
@@ -58,15 +60,28 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     });
   }
 
-  void _removeField(FieldDefinition field) => setState(() => _items.remove(field));
+  void _removeField(FieldDefinition field) {
+    if (field.isStatement) return; // enunciado é obrigatório
+    setState(() => _items.remove(field));
+  }
 
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) newIndex -= 1;
       final item = _items.removeAt(oldIndex);
       _items.insert(newIndex, item);
+      _pinStatementFirst();
       _snapGradableFieldsAboveDivider();
     });
+  }
+
+  /// Se alguém soltar outro campo acima do enunciado, ele volta pro topo.
+  void _pinStatementFirst() {
+    final i = _items.indexWhere((e) => e is FieldDefinition && e.isStatement);
+    if (i > 0) {
+      final statement = _items.removeAt(i);
+      _items.insert(0, statement);
+    }
   }
 
   /// Alternativas e V/F só fazem sentido antes de responder -- se o
@@ -108,8 +123,8 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
       return;
     }
     final fields = _computeFields();
-    if (fields.isEmpty) {
-      _showError('Adicione pelo menos um campo.');
+    if (fields.length < 2) {
+      _showError('Adicione pelo menos um campo além do enunciado.');
       return;
     }
 
@@ -255,13 +270,18 @@ Widget _buildDividerRow({required Key key}) {
       ),
       child: Row(
         children: [
-          ReorderableDragStartListener(
-            index: index,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              child: Icon(Icons.drag_indicator, color: Colors.grey[400]),
-            ),
-          ),
+          field.isStatement
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: Icon(Icons.lock_outline, color: Colors.grey[400]),
+                )
+              : ReorderableDragStartListener(
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    child: Icon(Icons.drag_indicator, color: Colors.grey[400]),
+                  ),
+                ),
           Icon(_iconFor(field.type), color: const Color(0xFFE65100), size: 20),
           const SizedBox(width: 10),
           Expanded(
@@ -270,18 +290,21 @@ Widget _buildDividerRow({required Key key}) {
               children: [
                 Text(field.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 Text(
-                  FieldType.needsOptionCount(field.type)
-                      ? '${FieldType.label(field.type)} • ${field.optionCount} opções'
-                      : FieldType.label(field.type),
+                  field.isStatement
+                      ? 'Texto • obrigatório'
+                      : FieldType.needsOptionCount(field.type)
+                          ? '${FieldType.label(field.type)} • ${field.optionCount} opções'
+                          : FieldType.label(field.type),
                   style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
-            onPressed: () => _removeField(field),
-          ),
+          if (!field.isStatement)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+              onPressed: () => _removeField(field),
+            ),
         ],
       ),
     );
