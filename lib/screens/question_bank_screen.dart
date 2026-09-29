@@ -212,6 +212,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 },
                 icon: Icon(Icons.settings, color: Colors.grey[400]),
               ),
+              IconButton(
+                onPressed: () => _deleteSelectedPackage(selectedPackage),
+                icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -219,6 +223,57 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _deleteSelectedPackage(Map<String, dynamic> package) async {
+    final id = package['id'] as int;
+    final title = package['title'] as String;
+    final count = _packageQuestions.length;
+    final questionsText = count == 1 ? 'a 1 questão' : 'as $count questões';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir pacote'),
+        content: Text(
+          'Tem certeza que deseja excluir o pacote "$title"?\n\n'
+          'Isso apagará também $questionsText dele e todo o histórico de '
+          'revisões. Essa ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir tudo', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await QuestionDao().deletePackageCascade(id);
+    } catch (e) {
+      debugPrint('Erro ao excluir pacote $id: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível excluir o pacote: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    // O pacote selecionado deixou de existir: zera a seleção pro _load()
+    // escolher o primeiro que sobrou.
+    setState(() {
+      _selectedPackageId = null;
+      _packageQuestions = [];
+    });
+    Home.packagesChanged.value++; // avisa a Home
+    await _load();
   }
 
   // Título = enunciado (campo obrigatório de todo template).

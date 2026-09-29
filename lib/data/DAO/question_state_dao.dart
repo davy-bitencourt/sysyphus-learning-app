@@ -98,13 +98,31 @@ class QuestionDao {
     );
   }
 
+  /* apaga a questão e tudo que depende dela. O revlog NÃO tem
+   * ON DELETE CASCADE, então precisa ser limpo à mão antes. */
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
 
-    /* remove o estado junto, para não deixar linha órfã */
     await db.transaction((txn) async {
+      await txn.rawDelete('DELETE FROM revlog WHERE question_id = ?', [id]);
       await txn.rawDelete('DELETE FROM state WHERE question_id = ?', [id]);
       await txn.rawDelete('DELETE FROM question WHERE id = ?', [id]);
+    });
+  }
+
+  /* apaga o pacote inteiro: histórico, estado e questões dele, solta
+   * qualquer profile que apontava pra ele e por fim remove o pacote.
+   * Tudo numa transação: ou apaga tudo, ou não apaga nada. */
+  Future<void> deletePackageCascade(int packageId) async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.transaction((txn) async {
+      final ids = 'SELECT id FROM question WHERE package_id = ?';
+      await txn.rawDelete('DELETE FROM revlog WHERE question_id IN ($ids)', [packageId]);
+      await txn.rawDelete('DELETE FROM state WHERE question_id IN ($ids)', [packageId]);
+      await txn.rawDelete('DELETE FROM question WHERE package_id = ?', [packageId]);
+      await txn.rawUpdate('UPDATE profile SET package_id = NULL WHERE package_id = ?', [packageId]);
+      await txn.rawDelete('DELETE FROM package WHERE id = ?', [packageId]);
     });
   }
 }
