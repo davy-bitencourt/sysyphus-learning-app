@@ -14,6 +14,10 @@ class Home extends StatefulWidget {
   // de perfil existir.
   final int profileId;
 
+  /// Aviso de que a lista de pacotes mudou (criado, renomeado, excluído).
+  /// Quem altera pacotes em outra tela faz `Home.packagesChanged.value++`.
+  static final ValueNotifier<int> packagesChanged = ValueNotifier<int>(0);
+
   const Home({super.key, this.profileId = 1});
 
   @override
@@ -33,8 +37,12 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    Home.packagesChanged.addListener(_onPackagesChanged);
     _loadData();
   }
+
+  // Outra tela (ex: Banco de questões) criou/renomeou/excluiu um pacote.
+  void _onPackagesChanged() => _loadData();
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
@@ -58,6 +66,7 @@ class _HomeState extends State<Home> {
 
   @override
   void dispose() {
+    Home.packagesChanged.removeListener(_onPackagesChanged);
     _pageController.dispose();
     super.dispose();
   }

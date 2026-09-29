@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/DAO/package_dao.dart';
+import 'home.dart';
 import '../data/DAO/template_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
@@ -204,7 +205,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       ),
                     ),
                   );
-                  if (result == true) _load();
+                  if (result == true) {
+                    Home.packagesChanged.value++; // avisa a Home
+                    _load();
+                  }
                 },
                 icon: Icon(Icons.settings, color: Colors.grey[400]),
               ),
@@ -250,8 +254,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
     if (confirmed != true || question.id == null) return;
 
-    await QuestionDao().delete(question.id!);
-    _loadQuestionsForSelectedPackage();
+    try {
+      await QuestionDao().delete(question.id!);
+      _loadQuestionsForSelectedPackage();
+    } catch (e) {
+      debugPrint('Erro ao excluir questão ${question.id}: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível excluir: $e')),
+      );
+    }
   }
 
   Widget _buildQuestionsList() {
