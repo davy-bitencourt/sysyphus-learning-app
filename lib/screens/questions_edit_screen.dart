@@ -1,20 +1,56 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:Sysyphus/styles/app_theme.dart';
-import 'package:Sysyphus/data/DAO/question_state_dao.dart';
-import 'package:Sysyphus/data/DAO/template_dao.dart';
-import 'package:Sysyphus/data/DAO/tag_dao.dart';
-import 'package:Sysyphus/data/DAO/package_dao.dart';
-import 'package:Sysyphus/data/DTO/question_dto.dart';
-import 'package:Sysyphus/data/models/field_model.dart';
-import 'package:Sysyphus/data/models/question_model.dart';
-import 'package:Sysyphus/data/services/media_storage_service.dart';
+import '../styles/app_theme.dart';
+import '../data/DAO/question_state_dao.dart';
+import '../data/DAO/template_dao.dart';
+import '../data/DAO/tag_dao.dart';
+import '../data/DAO/package_dao.dart';
+import '../data/DTO/question_dto.dart';
+import '../data/models/field_model.dart';
+import '../data/models/question_model.dart';
+import '../data/services/media_storage_service.dart';
+import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 
+class TagTextEditingController extends TextEditingController {
+  final TextStyle tagStyle;
+
+  TagTextEditingController({super.text, required this.tagStyle});
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final List<InlineSpan> children = [];
+    final RegExp regExp = RegExp(r'(#[^\s]+(?:\s+|$))|([^#]+)');
+
+    text.splitMapJoin(
+      regExp,
+      onMatch: (Match match) {
+        final String matchText = match[0]!;
+        if (matchText.startsWith('#')) {
+          children.add(TextSpan(text: matchText, style: tagStyle));
+        } else {
+          children.add(TextSpan(text: matchText, style: style));
+        }
+        return matchText;
+      },
+      onNonMatch: (String nonMatch) {
+        children.add(TextSpan(text: nonMatch, style: style));
+        return nonMatch;
+      },
+    );
+
+    return TextSpan(style: style, children: children);
+  }
+}
+
 class QuestionsEditScreen extends StatefulWidget {
-  final Question? question; // null = criar nova
-  final int? packageId; // pré-seleciona o pacote ao criar a partir de um deck
+  final Question? question;
+  final int? packageId;
 
   const QuestionsEditScreen({super.key, this.question, this.packageId});
 
@@ -36,12 +72,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   int? _selectedTagId;
   int? _selectedPackageId;
 
-  // Campo de tag em formato de texto com marcadores (#historia, #matematica...)
-  // e autosugestão a partir das tags já cadastradas. O schema atual só
-  // vincula UMA tag por questão, então usamos apenas o primeiro marcador
-  // digitado ao salvar; se o app passar a suportar múltiplas tags por
-  // questão, este é o ponto a estender.
-  final TextEditingController _tagInputController = TextEditingController();
+  late final TagTextEditingController _tagInputController;
   String _tagQuery = '';
 
   bool _loading = true;
@@ -53,6 +84,12 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   void initState() {
     super.initState();
     _selectedPackageId = widget.packageId;
+    _tagInputController = TagTextEditingController(
+      tagStyle: TextStyle(
+        color: context.colors.accent,
+        fontWeight: FontWeight.bold,
+      ),
+    );
     _loadOptions();
   }
 
@@ -132,13 +169,30 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                   ?.map((o) => OptionValue.fromMap(o as Map<String, dynamic>))
                   .toList() ??
               const <OptionValue>[];
-          _optionControllers[field.id] = List.generate(field.optionCount, (i) =>
-            TextEditingController(text: i < options.length ? options[i].text : ''));
-          _optionCorrect[field.id] = List.generate(field.optionCount, (i) =>
-            i < options.length ? options[i].correct : false);
+          _optionControllers[field.id] = List.generate(
+              field.optionCount, (i) => TextEditingController(text: i < options.length ? options[i].text : ''));
+          _optionCorrect[field.id] =
+              List.generate(field.optionCount, (i) => i < options.length ? options[i].correct : false);
           break;
       }
     }
+  }
+
+  Future<void> _openNewPackage() async {
+    final previousIds = _packages.map((p) => p['id']).toSet();
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PackageEditScreen()),
+    );
+    if (result != true || !mounted) return;
+
+    final rows = await PackageDao().getAll();
+    if (!mounted) return;
+    final created = rows.where((p) => !previousIds.contains(p['id'])).toList();
+    setState(() {
+      _packages = rows;
+      if (created.isNotEmpty) _selectedPackageId = created.last['id'] as int;
+    });
   }
 
   Future<void> _openNewTemplate() async {
@@ -193,9 +247,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     });
   }
 
-  /// Resolve o id da tag a partir do texto digitado (primeiro marcador
-  /// #algo). Se a tag ainda não existe, cria e recarrega a lista para
-  /// obter o id gerado.
   Future<int?> _resolveTagId() async {
     final text = _tagInputController.text.trim();
     if (text.isEmpty) return null;
@@ -211,15 +262,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       }
     }
 
-    await TagDao().insert(tagName);
+    final newId = await TagDao().insert(tagName);
     final refreshed = await TagDao().getAll();
     _tags = refreshed;
-    for (final t in refreshed) {
-      if ((t['title'] as String).toLowerCase() == tagName.toLowerCase()) {
-        return t['id'] as int;
-      }
-    }
-    return null;
+    return newId;
   }
 
   Map<String, dynamic> _collectValues(TemplateModel template) {
@@ -237,8 +283,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         case FieldType.vof:
           final controllers = _optionControllers[field.id] ?? [];
           final corrects = _optionCorrect[field.id] ?? [];
-          values[field.id] = List.generate(controllers.length, (i) =>
-            OptionValue(text: controllers[i].text.trim(), correct: corrects[i]).toMap());
+          values[field.id] = List.generate(
+            controllers.length,
+            (i) => OptionValue(text: controllers[i].text.trim(), correct: corrects[i]).toMap(),
+          );
           break;
       }
     }
@@ -255,8 +303,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       return;
     }
 
-    final statementText =
-        _textControllers[FieldDefinition.statementId]?.text.trim() ?? '';
+    final statementText = _textControllers[FieldDefinition.statementId]?.text.trim() ?? '';
     if (statementText.isEmpty) {
       _showError('Preencha o enunciado antes de salvar.');
       return;
@@ -317,9 +364,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(_isEditing ? 'Editar questão' : 'Nova questão',
-          style: TextStyle(color: context.colors.text,
-            fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(
+          _isEditing ? 'Editar questão' : 'Nova questão',
+          style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+        ),
         actions: [
           if (_isEditing)
             IconButton(
@@ -329,9 +377,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         ],
       ),
       body: _templates.isEmpty ? _buildNoTemplates() : _buildForm(),
-      // O botão de salvar fica fixo ao final da tela, acima da área de
-      // navegação do sistema; o formulário acima dele permanece rolável
-      // para o caso de o template ter muitos campos.
       bottomNavigationBar: _templates.isEmpty ? null : _buildSaveFooter(),
     );
   }
@@ -352,8 +397,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text(_saving ? 'Salvando...' : 'Salvar questão',
-              style: const TextStyle(fontSize: 15)),
+            child: Text(_saving ? 'Salvando...' : 'Salvar questão', style: const TextStyle(fontSize: 15)),
           ),
         ),
       ),
@@ -368,7 +412,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Nenhum template cadastrado ainda. Crie um template (com os campos que quiser: texto, imagem, áudio, alternativas...) antes de adicionar questões.',
+              'Nenhum template cadastrado ainda. Crie um template antes de adicionar questões.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -395,16 +439,24 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildDropdown<int?>(
-          label: 'Pacote',
-          value: _selectedPackageId,
-          items: _packages
-              .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
-              .toList(),
-          onChanged: (v) => setState(() => _selectedPackageId = v),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDropdown<int?>(
+                label: 'Pacote',
+                value: _selectedPackageId,
+                items: _packages
+                    .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedPackageId = v),
+              ),
+            ),
+            IconButton(
+              onPressed: _openNewPackage,
+              icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        _buildTagField(),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -412,9 +464,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               child: _buildDropdown<TemplateModel?>(
                 label: 'Template',
                 value: _selectedTemplate,
-                items: _templates
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                    .toList(),
+                items: _templates.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
                 onChanged: (t) {
                   if (t == null) return;
                   setState(() {
@@ -430,33 +480,27 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _buildTagField(),
         const SizedBox(height: 20),
         if (template != null) ...[
-          // Lista de campos antes de responder
           ...questionFields.map((f) => Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: _buildFieldInput(f),
               )),
-
           if (answerFields.isNotEmpty) ...[
-            // Divisor contínuo/único
             Divider(
-              color: context.colors.border, 
+              color: context.colors.border,
               thickness: 1.5,
               height: 1.5,
             ),
-            
-            // Espaçamento uniforme após a linha
             const SizedBox(height: 20),
-
-            // Lista de campos depois de responder
             ...answerFields.map((f) => Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: _buildFieldInput(f),
                 )),
           ],
         ],
-        // Espaço extra para a última seção não ficar colada no rodapé fixo.
         const SizedBox(height: 24),
       ],
     );
@@ -471,13 +515,12 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Tag (opcional)',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
+        Text('Tag (opcional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
         const SizedBox(height: 8),
         TextField(
           controller: _tagInputController,
           minLines: 1,
-          maxLines: null, // expande verticalmente conforme o texto cresce
+          maxLines: null,
           onChanged: _onTagInputChanged,
           decoration: InputDecoration(
             hintText: '#historia #matematica',
@@ -490,12 +533,14 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: matches.map((t) => ActionChip(
-              label: Text('#${t['title']}'),
-              backgroundColor: context.colors.accent.withValues(alpha: 0.15),
-              side: BorderSide.none,
-              onPressed: () => _selectSuggestedTag(t['id'] as int, t['title'] as String),
-            )).toList(),
+            children: matches
+                .map((t) => ActionChip(
+                      label: Text('#${t['title']}'),
+                      backgroundColor: context.colors.accent.withValues(alpha: 0.15),
+                      side: BorderSide.none,
+                      onPressed: () => _selectSuggestedTag(t['id'] as int, t['title'] as String),
+                    ))
+                .toList(),
           ),
         ],
       ],
@@ -587,33 +632,38 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text),
         ),
         const SizedBox(height: 8),
-        ...List.generate(controllers.length, (i) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Checkbox(
-                value: corrects[i],
-                onChanged: (v) => setState(() => _optionCorrect[field.id]![i] = v ?? false),
-                activeColor: const Color(0xFF2E7D32),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: controllers[i],
-                  decoration: InputDecoration(
-                    hintText: 'Opção ${i + 1}',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ...List.generate(
+          controllers.length,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: corrects[i],
+                  onChanged: (v) => setState(() => _optionCorrect[field.id]![i] = v ?? false),
+                  activeColor: const Color(0xFF2E7D32),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: controllers[i],
+                    decoration: InputDecoration(
+                      hintText: 'Opção ${i + 1}',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
     int maxLines = 1,
     TextInputType? keyboardType,
   }) {

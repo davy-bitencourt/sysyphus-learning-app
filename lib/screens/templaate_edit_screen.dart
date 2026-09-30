@@ -304,7 +304,7 @@ Widget _buildDividerRow({required Key key}) {
               child: Icon(Icons.drag_indicator, color: Colors.grey[400]),
             ),
           ),
-          Icon(_iconFor(field.type), color: context.colors.accent, size: 20),
+          Icon(_iconFor(field.type), color: context.colors.accent, size: context.icon(20)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -327,12 +327,12 @@ Widget _buildDividerRow({required Key key}) {
           if (field.type == FieldType.image)
             IconButton(
               tooltip: 'Tamanho da imagem',
-              icon: Icon(Icons.aspect_ratio_outlined, size: 18, color: Colors.grey[500]),
+              icon: Icon(Icons.aspect_ratio_outlined, size: context.icon(18), color: Colors.grey[500]),
               onPressed: () => _editImageSize(field),
             ),
           if (!field.isStatement)
             IconButton(
-              icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+              icon: Icon(Icons.delete_outline, size: context.icon(18), color: Color(0xFFC62828)),
               onPressed: () => _removeField(field),
             ),
         ],

@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
-
 import '../data/DAO/package_dao.dart';
-import 'home.dart';
 import '../data/DAO/template_dao.dart';
+import '../data/DAO/tag_dao.dart';
+import '../data/DAO/question_state_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
-import '../data/DAO/question_state_dao.dart';
+import 'home.dart';
 import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 
-/// Tela de gerenciamento do banco de questões e templates da aplicação.
-///
-/// Acessada pelo item "Questions finder" do menu lateral. Reúne, em duas
-/// abas: a busca de questões por pacote (via dropdown) e a lista de
-/// templates cadastrados, com opção de editar/excluir.
 class QuestionBankScreen extends StatefulWidget {
   const QuestionBankScreen({super.key});
 
@@ -26,6 +21,7 @@ class QuestionBankScreen extends StatefulWidget {
 class _QuestionBankScreenState extends State<QuestionBankScreen> {
   List<Map<String, dynamic>> _packages = [];
   List<TemplateModel> _templates = [];
+  List<Map<String, dynamic>> _tags = [];
   bool _loading = true;
 
   int? _selectedPackageId;
@@ -43,13 +39,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
     final packageRows = await PackageDao().getAll();
     final templateRows = await TemplateDao().getAll();
+    final tagRows = await TagDao().getAll();
 
     if (!mounted) return;
     setState(() {
-      _packages = packageRows;
+      _packages = List.from(packageRows);
       _templates = templateRows
           .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
           .toList();
+      _tags = List.from(tagRows);
       _loading = false;
     });
 
@@ -64,8 +62,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     if (packageId == null) return;
 
     setState(() => _loadingQuestions = true);
-    // Tela de gerenciamento: traz TODAS as questões do pacote, em ordem
-    // estável (o getByPackage é de estudo: aleatório e limitado a 60).
     final rows = await QuestionDao().getAllByPackage(packageId);
     final loaded = rows.map((row) => Question.fromDb(row)).toList();
 
@@ -76,55 +72,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     });
   }
 
-  Future<void> _openNewTemplate() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TemplateEditScreen()),
-    );
-    if (result == true) _load();
-  }
-
-  // Abre o template selecionado para edição — TemplateEditScreen recebe o
-  // TemplateModel completo (não um id) no parâmetro `template`.
-  Future<void> _editTemplate(TemplateModel template) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
-    );
-    if (result == true) _load();
-  }
-
-  Future<void> _deleteTemplate(TemplateModel template) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir template'),
-        content: Text(
-          'Tem certeza que deseja excluir "${template.name}"? '
-          'Questões que usam esse template podem parar de funcionar corretamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || template.id == null) return;
-
-    await TemplateDao().delete(template.id!);
-    _load();
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 4,
       child: Scaffold(
         backgroundColor: context.colors.bg,
         appBar: AppBar(
@@ -134,15 +85,20 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             icon: Icon(Icons.arrow_back, color: context.colors.text),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Banco de questões',
-            style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20)),
+          title: Text(
+            'Banco de questões',
+            style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+          ),
           bottom: TabBar(
+            isScrollable: true,
             labelColor: context.colors.accent,
-            unselectedLabelColor: Color(0xFF9E9E9E),
+            unselectedLabelColor: const Color(0xFF9E9E9E),
             indicatorColor: context.colors.accent,
-            tabs: [
+            tabs: const [
               Tab(text: 'Questões'),
+              Tab(text: 'Pacotes'),
               Tab(text: 'Templates'),
+              Tab(text: 'Tags'),
             ],
           ),
         ),
@@ -151,13 +107,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             : TabBarView(
                 children: [
                   _buildQuestionsTab(),
+                  _buildPackagesTab(),
                   _buildTemplatesTab(),
+                  _buildTagsTab(),
                 ],
               ),
       ),
     );
   }
 
+  // --- ABA 1: QUESTÕES ---
   Widget _buildQuestionsTab() {
     if (_packages.isEmpty) {
       return Center(
@@ -207,15 +166,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     ),
                   );
                   if (result == true) {
-                    Home.packagesChanged.value++; // avisa a Home
+                    Home.packagesChanged.value++;
                     _load();
                   }
                 },
                 icon: Icon(Icons.settings, color: Colors.grey[400]),
-              ),
-              IconButton(
-                onPressed: () => _deleteSelectedPackage(selectedPackage),
-                icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
               ),
             ],
           ),
@@ -226,68 +181,58 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  Future<void> _deleteSelectedPackage(Map<String, dynamic> package) async {
-    final id = package['id'] as int;
-    final title = package['title'] as String;
-    final count = _packageQuestions.length;
-    final questionsText = count == 1 ? 'a 1 questão' : 'as $count questões';
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir pacote'),
-        content: Text(
-          'Tem certeza que deseja excluir o pacote "$title"?\n\n'
-          'Isso apagará também $questionsText dele. O histórico de revisões '
-          '(heatmap) é mantido. Essa ação não pode ser desfeita.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir tudo', style: TextStyle(color: Color(0xFFC62828))),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      await QuestionDao().deletePackageCascade(id);
-    } catch (e) {
-      debugPrint('Erro ao excluir pacote $id: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir o pacote: $e')),
-      );
-      return;
+  Widget _buildQuestionsList() {
+    if (_loadingQuestions) {
+      return const Center(child: CircularProgressIndicator());
     }
-
-    if (!mounted) return;
-    // O pacote selecionado deixou de existir: zera a seleção pro _load()
-    // escolher o primeiro que sobrou.
-    setState(() {
-      _selectedPackageId = null;
-      _packageQuestions = [];
-    });
-    Home.packagesChanged.value++; // avisa a Home
-    await _load();
-  }
-
-  // Título = enunciado (campo obrigatório de todo template).
-  String _titleOf(Question q) => q.statement.isEmpty ? '(sem enunciado)' : q.statement;
-
-  Future<void> _editQuestion(Question question) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
-      ),
+    if (_packageQuestions.isEmpty) {
+      return Center(
+        child: Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[500])),
+      );
+    }
+    return ListView.separated(
+      itemCount: _packageQuestions.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final question = _packageQuestions[i];
+        final title = question.statement.isEmpty ? '(sem enunciado)' : question.statement;
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.only(left: 14, right: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, color: context.colors.text),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
+                    ),
+                  );
+                  if (result == true) _loadQuestionsForSelectedPackage();
+                },
+                icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
+              ),
+              IconButton(
+                onPressed: () => _deleteQuestion(question),
+                icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
+              ),
+            ],
+          ),
+        );
+      },
     );
-    if (result == true) _loadQuestionsForSelectedPackage();
   }
 
   Future<void> _deleteQuestion(Question question) async {
@@ -295,7 +240,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir questão'),
-        content: Text('Tem certeza que deseja excluir "${_titleOf(question)}"?'),
+        content: Text('Tem certeza que deseja excluir "${question.statement.isEmpty ? '(sem enunciado)' : question.statement}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -315,73 +260,92 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       _loadQuestionsForSelectedPackage();
     } catch (e) {
       debugPrint('Erro ao excluir questão ${question.id}: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir: $e')),
-      );
     }
   }
 
-  Widget _buildQuestionsList() {
-    if (_loadingQuestions) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_packageQuestions.isEmpty) {
-      return Center(
-        child: Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[500])),
-      );
-    }
-    return ListView.separated(
-      itemCount: _packageQuestions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final question = _packageQuestions[i];
+// --- ABA 2: PACOTES (REORDENÁVEL COM DRAG HANDLE NO INÍCIO) ---
+  Widget _buildPackagesTab() {
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.all(16),
+      buildDefaultDragHandles: false, // Desativa o drag handle padrão no final
+      itemCount: _packages.length,
+      onReorder: (oldIndex, newIndex) {
+        setState(() {
+          if (newIndex > oldIndex) newIndex -= 1;
+          final item = _packages.removeAt(oldIndex);
+          _packages.insert(newIndex, item);
+        });
+      },
+      itemBuilder: (context, index) {
+        final pkg = _packages[index];
         return Container(
+          key: ValueKey(pkg['id']),
+          margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: context.colors.surfaceAlt,
             borderRadius: BorderRadius.circular(10),
           ),
-          padding: const EdgeInsets.only(left: 14, right: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _titleOf(question),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: context.colors.text),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _editQuestion(question),
-                icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey[500]),
-              ),
-              IconButton(
-                onPressed: () => _deleteQuestion(question),
-                icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
-              ),
-            ],
+          child: ListTile(
+            leading: ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_handle, color: Colors.grey[500]),
+            ),
+            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+              onPressed: () => _deletePackage(pkg),
+            ),
           ),
         );
       },
     );
   }
 
+  Future<void> _deletePackage(Map<String, dynamic> pkg) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Excluir Pacote'),
+        content: Text('Deseja excluir o pacote "${pkg['title']}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await QuestionDao().deletePackageCascade(pkg['id'] as int);
+      Home.packagesChanged.value++;
+      _load();
+    }
+  }
+
+  // --- ABA 3: TEMPLATES (REORDENÁVEL COM DRAG HANDLE NO INÍCIO) ---
   Widget _buildTemplatesTab() {
     return Column(
       children: [
         Expanded(
           child: _templates.isEmpty
-              ? Center(
-                  child: Text('Nenhum template cadastrado ainda.', style: TextStyle(color: Colors.grey[500])),
-                )
-              : ListView.separated(
+              ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
+              : ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
+                  buildDefaultDragHandles: false, // Desativa o drag handle padrão no final
                   itemCount: _templates.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final item = _templates.removeAt(oldIndex);
+                      _templates.insert(newIndex, item);
+                    });
+                  },
                   itemBuilder: (context, i) {
                     final template = _templates[i];
                     return Container(
+                      key: ValueKey(template.id ?? i),
+                      margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: context.colors.surfaceAlt,
                         borderRadius: BorderRadius.circular(10),
@@ -389,22 +353,35 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       child: Row(
                         children: [
-                          Icon(Icons.dashboard_customize_outlined,
-                            color: context.colors.accent, size: 20),
-                          const SizedBox(width: 10),
+                          ReorderableDragStartListener(
+                            index: i,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: Icon(Icons.drag_handle, color: Colors.grey[500]),
+                            ),
+                          ),
                           Expanded(
-                            child: Text(template.name,
-                              style: TextStyle(fontSize: 14, color: context.colors.text)),
+                            child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
                           ),
-                          Text('${template.fields.length} campos',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                          Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           IconButton(
-                            onPressed: () => _editTemplate(template),
-                            icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey[500]),
+                            onPressed: () async {
+                              final res = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
+                              );
+                              if (res == true) _load();
+                            },
+                            icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
                           ),
                           IconButton(
-                            onPressed: () => _deleteTemplate(template),
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+                            onPressed: () async {
+                              if (template.id != null) {
+                                await TemplateDao().delete(template.id!);
+                                _load();
+                              }
+                            },
+                            icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
                           ),
                         ],
                       ),
@@ -419,7 +396,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _openNewTemplate,
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TemplateEditScreen()),
+                  );
+                  if (result == true) _load();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
                   foregroundColor: Colors.white,
@@ -433,6 +416,34 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // --- ABA 4: TAGS ---
+  Widget _buildTagsTab() {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _tags.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final tag = _tags[i];
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ListTile(
+            title: Text('#${tag['title']}', style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+              onPressed: () async {
+                await TagDao().delete(tag['id'] as int);
+                _load();
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }

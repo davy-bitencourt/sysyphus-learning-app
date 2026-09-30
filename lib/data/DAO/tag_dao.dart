@@ -8,18 +8,32 @@ class TagDao {
       '''
         SELECT id, title
         FROM tag
-      '''
+      ''',
     );
   }
 
-  Future<void> insert(String title) async {
+  Future<int> insert(String title) async {
     final db = await DatabaseHelper.instance.database;
 
-    await db.rawInsert(
+    return await db.rawInsert(
       '''
         INSERT INTO tag (title)
         VALUES (?)
-      ''', [title]
+      ''',
+      [title],
+    );
+  }
+
+  Future<void> update(int id, String title) async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.rawUpdate(
+      '''
+        UPDATE tag
+        SET title = ?
+        WHERE id = ?
+      ''',
+      [title, id],
     );
   }
 
@@ -30,7 +44,8 @@ class TagDao {
       '''
         DELETE FROM tag
         WHERE id = ?
-      ''', [id]
+      ''',
+      [id],
     );
   }
 }

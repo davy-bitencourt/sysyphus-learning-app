@@ -41,6 +41,28 @@ class QuestionDao {
     );
   }
 
+  /* contagens do card da Home:
+   *  'new' = questões novas, nunca vistas (state 'new' ou sem linha de state)
+   *  'due' = questões para revisar: 'review' vencidas (due_date <= hoje) e as
+   *          'neutral' (esquecidas, voltam para revisão na hora) */
+  Future<Map<String, int>> getStudyCounts(String today) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.rawQuery(
+      '''
+        SELECT
+          COALESCE(SUM(CASE WHEN s.state IS NULL OR s.state = 'new' THEN 1 ELSE 0 END), 0) AS new_count,
+          COALESCE(SUM(CASE WHEN (s.state = 'review' AND s.due_date <= ?) OR s.state = 'neutral' THEN 1 ELSE 0 END), 0) AS due_count
+        FROM question q
+        LEFT JOIN state s ON s.question_id = q.id
+      ''', [today]
+    );
+    final row = rows.first;
+    return {
+      'new': (row['new_count'] as num?)?.toInt() ?? 0,
+      'due': (row['due_count'] as num?)?.toInt() ?? 0,
+    };
+  }
+
   Future<int> insert(QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 

@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:Sysyphus/styles/app_theme.dart';
+import '../styles/app_theme.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:Sysyphus/data/schema/question_schema.dart';
-import 'package:Sysyphus/data/schema/template_schema.dart';
-import 'package:Sysyphus/data/DAO/question_state_dao.dart';
-import 'package:Sysyphus/data/DAO/revlog_dao.dart';
-import 'package:Sysyphus/data/models/field_model.dart';
-import 'package:Sysyphus/data/models/question_model.dart';
+import '../data/schema/question_schema.dart';
+import '../data/schema/template_schema.dart';
+import '../data/DAO/question_state_dao.dart';
+import '../data/DAO/revlog_dao.dart';
+import '../data/models/field_model.dart';
+import '../data/models/question_model.dart';
 import 'questions_edit_screen.dart';
 
 class QuestionScreen extends StatefulWidget {
@@ -282,7 +282,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.quiz_outlined, size: 64, color: Colors.grey[300]),
+                Icon(Icons.quiz_outlined, size: context.icon(64), color: Colors.grey[300]),
                 const SizedBox(height: 12),
                 Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[600])),
                 const SizedBox(height: 16),
@@ -415,16 +415,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
-  // Ícone verde de certo / vermelho de errado, exibido no divisor entre
-  // pergunta e resposta depois que a questão é respondida.
+  // Ícone exibido no divisor entre pergunta e resposta depois que a questão
+  // é respondida: verde (certo) / vermelho (errado) em múltipla escolha, ou
+  // uma interrogação quando não há múltipla escolha para corrigir.
   Widget _buildAnswerStatusIcon() {
     if (!_hasGradableField(_current)) {
-      return Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[400]);
+      return Icon(Icons.help_outline, size: context.icon(20), color: Colors.grey[400]);
     }
     final correct = _isCurrentAnswerCorrect(_current);
     return Icon(
       correct ? Icons.check_circle : Icons.cancel,
-      size: 20,
+      size: context.icon(20),
       color: correct ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
     );
   }
@@ -466,7 +467,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         // Só o ícone, centralizado: sem container, borda, sombra nem rótulo.
         return Center(
           child: IconButton(
-            iconSize: 64,
+            iconSize: context.icon(64),
             icon: Icon(playing ? Icons.stop_circle : Icons.play_circle, color: context.colors.accent),
             onPressed: () => _toggleAudio(field.id, path),
           ),
@@ -612,16 +613,16 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Não lembrei'),
+                      child: const Text('Esqueci'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: OutlinedButton(
                       onPressed: () => _registerAndNext(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2E7D32),
+                        side: const BorderSide(color: Color(0xFF2E7D32)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),

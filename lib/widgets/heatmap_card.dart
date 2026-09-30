@@ -5,8 +5,15 @@ import '../styles/text_styles.dart';
 
 class HeatmapCard extends StatelessWidget {
   final Map<DateTime, int> activityMap;  // recebe os dados de fora
+  final int newCount; // questões novas (nunca vistas)
+  final int dueCount; // questões para revisar (vencidas ou esquecidas)
 
-  const HeatmapCard({super.key, required this.activityMap});
+  const HeatmapCard({
+    super.key,
+    required this.activityMap,
+    this.newCount = 0,
+    this.dueCount = 0,
+  });
 
   /// Converte a QUANTIDADE de revisões do dia em um nível de 0 a 4.
   /// (Antes o número de revisões ia direto pro switch: a partir de 5
@@ -24,6 +31,23 @@ class HeatmapCard extends StatelessWidget {
   /// Cor do nível 0..4 na paleta escolhida nas configurações.
   Color _colorForLevel(int level, AppColors c) => c.heat[level.clamp(0, 4)];
 
+  /// Dias seguidos com pelo menos uma revisão, terminando hoje. Se hoje ainda
+  /// não teve revisão, a sequência de ontem continua valendo (ela só quebra
+  /// quando um dia inteiro passa sem estudar).
+  int _streak(Map<DateTime, int> map, DateTime todayNorm) {
+    bool studied(DateTime d) => (map[d] ?? 0) > 0;
+
+    var day = todayNorm;
+    if (!studied(day)) day = DateTime(day.year, day.month, day.day - 1);
+
+    int count = 0;
+    while (studied(day)) {
+      count++;
+      day = DateTime(day.year, day.month, day.day - 1);
+    }
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
     const double cellSize  = 11;
@@ -35,6 +59,8 @@ class HeatmapCard extends StatelessWidget {
     final today       = DateTime.now();
     final todayNorm   = DateTime(today.year, today.month, today.day);
     final c           = context.colors;
+    final todayCount  = activityMap[todayNorm] ?? 0;
+    final streak      = _streak(activityMap, todayNorm);
     final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     return Center(
@@ -72,8 +98,8 @@ class HeatmapCard extends StatelessWidget {
                   const Text('Study Activity', style: mediumText),
                   const SizedBox(height: 2),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    const Text('365 questions this day', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                    Text('12 day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
+                    Text('$todayCount reviewed today', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text('$streak day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
               ),
@@ -171,9 +197,9 @@ class HeatmapCard extends StatelessWidget {
                   Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                 ]),
                 Row(children: [
-                  Text('60', style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
+                  Text('+$newCount', style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
                   const SizedBox(width: 6),
-                  Text('10', style: TextStyle(fontSize: 10, color: c.accent, fontWeight: FontWeight.w600)),
+                  Text('$dueCount', style: TextStyle(fontSize: 10, color: c.accent, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 10),
                 ]),
               ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../styles/app_theme.dart';
+import '../styles/text_styles.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -12,7 +13,7 @@ class SettingsScreen extends StatelessWidget {
     {'icon': Icons.notifications,   'title': 'Notifications', 'sub': 'Notify when • Vibrate • Blink light'},
     {'icon': Icons.palette,         'title': 'Appearance',    'sub': 'Themes • Accent • Heatmap'},
     {'icon': Icons.tune,            'title': 'Controls',      'sub': 'Gestures • Keyboard • Bluetooth'},
-    {'icon': Icons.accessibility,   'title': 'Accessibility', 'sub': 'Card zoom • Answer button size'},
+    {'icon': Icons.accessibility,   'title': 'Accessibility', 'sub': 'Font size • Icon size'},
     {'icon': Icons.tune,            'title': 'Advanced',      'sub': 'Workrounds • Plugins'},
     {'icon': Icons.info_outline,    'title': 'About',         'sub': ' '},
   ];
@@ -58,7 +59,7 @@ class SettingsScreen extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Search...',
                 hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: context.icon(20)),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -79,7 +80,7 @@ class SettingsScreen extends StatelessWidget {
                       height: 36,
                       child: Icon(
                         item['icon'] as IconData,
-                        size: 18,
+                        size: context.icon(18),
                         color: context.colors.text,
                       ),
                     ),
@@ -106,6 +107,11 @@ class SettingsScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
+                        );
+                      } else if (item['title'] == 'Accessibility') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
                         );
                       }
                     },
@@ -324,7 +330,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: selected ? c.text : Colors.transparent, width: 2.5),
         ),
-        child: selected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+        child: selected ? Icon(Icons.check, color: Colors.white, size: context.icon(20)) : null,
       ),
     );
   }
@@ -357,10 +363,179 @@ class AppearanceSettingsScreen extends StatelessWidget {
             ),
             if (selected) ...[
               const SizedBox(width: 10),
-              Icon(Icons.check, size: 18, color: c.accent),
+              Icon(Icons.check, size: context.icon(18), color: c.accent),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// Settings > Accessibility: tamanho da fonte e dos ícones do aplicativo.
+class AccessibilitySettingsScreen extends StatelessWidget {
+  const AccessibilitySettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppSettings.instance,
+      builder: (context, _) {
+        final s = AppSettings.instance;
+        final c = context.colors;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: c.text),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              'Accessibility',
+              style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              _sectionTitle(context, 'Font size'),
+              Text(
+                'Changes the text size across the whole app',
+                style: TextStyle(fontSize: 12, color: c.mutedText),
+              ),
+              const SizedBox(height: 8),
+              _scaleSlider(
+                context,
+                value: s.fontScale,
+                small: Text('A', style: TextStyle(fontSize: 12, color: c.mutedText)),
+                large: Text('A', style: TextStyle(fontSize: 22, color: c.mutedText)),
+                onChanged: (v) => s.setFontScale(v, save: false),
+                onChangeEnd: (v) => s.setFontScale(v),
+              ),
+              _fontPreview(context, s),
+              const SizedBox(height: 28),
+
+              _sectionTitle(context, 'Icon size'),
+              Text(
+                'Changes the size of icons across the whole app',
+                style: TextStyle(fontSize: 12, color: c.mutedText),
+              ),
+              const SizedBox(height: 8),
+              _scaleSlider(
+                context,
+                value: s.iconScale,
+                small: Icon(Icons.circle, size: context.icon(10), color: c.mutedText),
+                large: Icon(Icons.circle, size: context.icon(22), color: c.mutedText),
+                onChanged: (v) => s.setIconScale(v, save: false),
+                onChangeEnd: (v) => s.setIconScale(v),
+              ),
+              _iconPreview(context, s),
+              const SizedBox(height: 28),
+
+              OutlinedButton.icon(
+                onPressed: s.resetAccessibility,
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Reset to default'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text),
+      ),
+    );
+  }
+
+  Widget _scaleSlider(
+    BuildContext context, {
+    required double value,
+    required Widget small,
+    required Widget large,
+    required ValueChanged<double> onChanged,
+    required ValueChanged<double> onChangeEnd,
+  }) {
+    return Row(
+      children: [
+        small,
+        Expanded(
+          child: Slider(
+            value: value,
+            min: AppSettings.minScale,
+            max: AppSettings.maxScale,
+            divisions: 7,
+            label: '${(value * 100).round()}%',
+            onChanged: onChanged,
+            onChangeEnd: onChangeEnd,
+          ),
+        ),
+        large,
+      ],
+    );
+  }
+
+  /// Os três tamanhos de fonte do app (Grande, Médio e Pequeno). Os valores
+  /// em pt mudam conforme a barra de tamanho de fonte é movida.
+  Widget _fontPreview(BuildContext context, AppSettings s) {
+    final c = context.colors;
+
+    Widget row(String label, TextStyle base) {
+      final pt = (base.fontSize! * s.fontScale).round();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Expanded(child: Text('$label text', style: base.copyWith(color: c.text))),
+            Text('$pt pt', style: TextStyle(fontSize: 12, color: c.mutedText)),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          row('Large', bigText),
+          row('Medium', mediumText),
+          row('Small', smallText),
+        ],
+      ),
+    );
+  }
+
+  Widget _iconPreview(BuildContext context, AppSettings s) {
+    final c = context.colors;
+    final px = (24 * s.iconScale).round();
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.home_outlined, size: context.icon(24), color: c.text),
+              const SizedBox(width: 12),
+              Icon(Icons.bar_chart_outlined, size: context.icon(24), color: c.text),
+              const SizedBox(width: 12),
+              Icon(Icons.settings, size: context.icon(24), color: c.text),
+              const SizedBox(width: 12),
+              Icon(Icons.edit_outlined, size: context.icon(24), color: c.text),
+            ],
+          ),
+          Text('$px px', style: TextStyle(fontSize: 12, color: c.mutedText)),
+        ],
       ),
     );
   }

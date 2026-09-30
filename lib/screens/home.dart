@@ -5,6 +5,7 @@ import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
 import '../styles/text_styles.dart';
 import '../data/DAO/package_dao.dart';
+import '../data/DAO/question_state_dao.dart';
 import '../data/schema/revlog_schema.dart';
 import 'statistic_screen.dart';
 import 'questions_screen.dart';
@@ -33,6 +34,8 @@ class _HomeState extends State<Home> {
 
   Map<int, String> _packages = {};
   Map<DateTime, int> _activityMap = {};
+  int _newCount = 0; // questões novas (nunca vistas)
+  int _dueCount = 0; // questões para revisar
   bool _loading = true;
 
   @override
@@ -54,6 +57,7 @@ class _HomeState extends State<Home> {
      * modelagem de dono do pacote ser revista. */
     final packageRows = await PackageDao().getAll();
     final heatmap = await _revlogSchema.getHeatmapData();
+    final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
 
     if (!mounted) return;
     setState(() {
@@ -61,9 +65,14 @@ class _HomeState extends State<Home> {
         for (final row in packageRows) row['id'] as int: row['title'] as String
       };
       _activityMap = heatmap;
+      _newCount = counts['new'] ?? 0;
+      _dueCount = counts['due'] ?? 0;
       _loading = false;
     });
   }
+
+  String _formatDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   @override
   void dispose() {
@@ -110,7 +119,7 @@ class _HomeState extends State<Home> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 10),
-            HeatmapCard(activityMap: _activityMap),
+            HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,7 +154,7 @@ class _HomeState extends State<Home> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                HeatmapCard(activityMap: _activityMap),
+                HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
                 const SizedBox(height: 24),
                 _buildDeckTable(),
               ],
@@ -215,7 +224,7 @@ class _HomeState extends State<Home> {
                     );
                     if (result == true) _loadData();
                   },
-                  icon: Icon(Icons.settings, color: Colors.grey[400], size: 22),
+                  icon: Icon(Icons.settings, color: Colors.grey[400], size: context.icon(22)),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -294,7 +303,7 @@ class _HomeState extends State<Home> {
                           );
                           if (result == true) _loadData();
                         },
-                        icon: Icon(Icons.settings, size: 16, color: Colors.grey[400]),
+                        icon: Icon(Icons.settings, size: context.icon(16), color: Colors.grey[400]),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),

@@ -37,6 +37,16 @@ class StudyApp extends StatelessWidget {
           theme: AppTheme.build(settings, Brightness.light),
           darkTheme: AppTheme.build(settings, Brightness.dark),
           themeMode: settings.themeMode,
+          // Escala de fonte (Settings > Accessibility), somada à do sistema.
+          builder: (context, child) {
+            final mq = MediaQuery.of(context);
+            return MediaQuery(
+              data: mq.copyWith(
+                textScaler: TextScaler.linear(mq.textScaler.scale(1.0) * settings.fontScale),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           home: const Home(),
         );
       },

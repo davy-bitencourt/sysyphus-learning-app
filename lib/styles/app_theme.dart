@@ -83,8 +83,16 @@ class AppSettings extends ChangeNotifier {
   String _accentId = 'satin_gold';
   String _heatmapId = 'satin_gold';
   String _languageId = 'pt_BR';
+  double _fontScale = 1.0;
+  double _iconScale = 1.0;
+
+  /// Limites das escalas de acessibilidade (80% a 150%).
+  static const double minScale = 0.8;
+  static const double maxScale = 1.5;
 
   ThemeMode get themeMode => _themeMode;
+  double get fontScale => _fontScale;
+  double get iconScale => _iconScale;
 
   AccentOption get accent => AppOptions.accents.firstWhere(
         (a) => a.id == _accentId,
@@ -116,6 +124,8 @@ class AppSettings extends ChangeNotifier {
       _accentId = map['accent'] ?? _accentId;
       _heatmapId = map['heatmap'] ?? _heatmapId;
       _languageId = map['language'] ?? _languageId;
+      _fontScale = _parseScale(map['font_scale']);
+      _iconScale = _parseScale(map['icon_scale']);
     } catch (e) {
       debugPrint('Erro ao carregar configurações (usando padrão): $e');
     }
@@ -144,6 +154,35 @@ class AppSettings extends ChangeNotifier {
     _languageId = id;
     notifyListeners();
     await _save('language', id);
+  }
+
+  /// `save: false` enquanto o slider está sendo arrastado (evita gravar no
+  /// banco a cada passo); a gravação acontece no onChangeEnd.
+  Future<void> setFontScale(double value, {bool save = true}) async {
+    _fontScale = _clampScale(value);
+    notifyListeners();
+    if (save) await _save('font_scale', _fontScale.toStringAsFixed(2));
+  }
+
+  Future<void> setIconScale(double value, {bool save = true}) async {
+    _iconScale = _clampScale(value);
+    notifyListeners();
+    if (save) await _save('icon_scale', _iconScale.toStringAsFixed(2));
+  }
+
+  Future<void> resetAccessibility() async {
+    _fontScale = 1.0;
+    _iconScale = 1.0;
+    notifyListeners();
+    await _save('font_scale', '1.00');
+    await _save('icon_scale', '1.00');
+  }
+
+  double _clampScale(double v) => v.clamp(minScale, maxScale).toDouble();
+
+  double _parseScale(String? value) {
+    final v = double.tryParse(value ?? '');
+    return v == null ? 1.0 : _clampScale(v);
   }
 
   ThemeMode _parseMode(String? value) {
@@ -318,7 +357,43 @@ class AppTheme {
         style: TextButton.styleFrom(foregroundColor: c.accent),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: c.accent),
-      extensions: <ThemeExtension<dynamic>>[c],
+      // Ícones sem tamanho explícito seguem a escala de ícones.
+      iconTheme: IconThemeData(size: 24 * settings.iconScale),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(iconSize: 24 * settings.iconScale),
+      ),
+      extensions: <ThemeExtension<dynamic>>[
+        c,
+        AppMetrics(fontScale: settings.fontScale, iconScale: settings.iconScale),
+      ],
     );
   }
+}
+
+@immutable
+class AppMetrics extends ThemeExtension<AppMetrics> {
+  final double fontScale;
+  final double iconScale;
+  const AppMetrics({required this.fontScale, required this.iconScale});
+
+  @override
+  AppMetrics copyWith({double? fontScale, double? iconScale}) => AppMetrics(
+        fontScale: fontScale ?? this.fontScale,
+        iconScale: iconScale ?? this.iconScale,
+      );
+
+  @override
+  AppMetrics lerp(ThemeExtension<AppMetrics>? other, double t) {
+    if (other is! AppMetrics) return this;
+    return AppMetrics(
+      fontScale: fontScale + (other.fontScale - fontScale) * t,
+      iconScale: iconScale + (other.iconScale - iconScale) * t,
+    );
+  }
+}
+
+extension AppMetricsContext on BuildContext {
+  /// Tamanho de ícone já com a escala de acessibilidade: `context.icon(18)`.
+  double icon(double base) =>
+      base * (Theme.of(this).extension<AppMetrics>()?.iconScale ?? 1.0);
 }

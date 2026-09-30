@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:Sysyphus/data/DAO/package_dao.dart';
-import 'package:Sysyphus/data/DAO/session_dao.dart';
+import '../data/DAO/package_dao.dart';
+import '../data/DAO/session_dao.dart';
+import '../data/DAO/question_state_dao.dart';
+import '../styles/app_theme.dart';
 
 class PackageEditScreen extends StatefulWidget {
   final int? packageId;
@@ -70,28 +72,62 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
 
   Future<void> _delete() async {
     if (!_isEditing) return;
+
+    final title = _titleController.text.trim().isEmpty
+        ? (widget.initialTitle ?? '')
+        : _titleController.text.trim();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir pacote'),
+        content: Text(
+          'Tem certeza que deseja excluir o pacote "$title"?\n\n'
+          'Isso apagará também todas as questões dele. O histórico de '
+          'revisões (heatmap) é mantido. Essa ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir tudo', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     setState(() => _saving = true);
     try {
-      await PackageDao().delete(widget.packageId!);
+      // Apaga as questões, o estado e o pacote numa transação só
+      // (o delete simples do PackageDao falha por causa das FKs).
+      await QuestionDao().deletePackageCascade(widget.packageId!);
       if (mounted) Navigator.pop(context, true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      debugPrint('Erro ao excluir pacote ${widget.packageId}: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível excluir o pacote: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(_isEditing ? 'Editar pacote' : 'Novo pacote',
-          style: const TextStyle(color: Color(0xFF1A1A2E),
+          style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_isEditing)
@@ -131,23 +167,27 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                 ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE65100),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(_saving ? 'Salvando...' : 'Salvar pacote',
-                      style: const TextStyle(fontSize: 15)),
-                  ),
-                ),
               ],
             ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          color: context.colors.bg,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_saving || _loading) ? null : _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(_saving ? 'Salvando...' : 'Salvar pacote', style: const TextStyle(fontSize: 15)),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

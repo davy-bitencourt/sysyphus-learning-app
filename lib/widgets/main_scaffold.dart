@@ -114,7 +114,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, color: context.colors.accent, size: 20),
+            Icon(icon, color: context.colors.accent, size: context.icon(20)),
             const SizedBox(width: 12),
             Text(
               label,
@@ -210,19 +210,19 @@ class _MainScaffoldState extends State<MainScaffold> {
     }
   }
 
+  // Só o ícone (o rótulo vira tooltip, para acessibilidade).
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isActive = widget.currentIndex == index;
-    return GestureDetector(
-      onTap: () => widget.onTap?.call(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon,
-            color: isActive ? context.colors.accent : Colors.grey[400], size: 24),
-          Text(label,
-            style: TextStyle(fontSize: 11,
-              color: isActive ? context.colors.accent : Colors.grey[400])),
-        ],
+    return Tooltip(
+      message: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => widget.onTap?.call(index),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Icon(icon,
+            color: isActive ? context.colors.accent : Colors.grey[400], size: context.icon(28)),
+        ),
       ),
     );
   }
@@ -233,7 +233,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   }) {
     return ListTile(
       leading: Icon(icon,
-        color: active ? context.colors.accent : context.colors.text, size: 21),
+        color: active ? context.colors.accent : context.colors.text, size: context.icon(21)),
       title: Text(label,
         style: TextStyle(
           color: active ? context.colors.accent : context.colors.text,
@@ -290,7 +290,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const Home()));
               }),
-              _drawerItem(context, Icons.chrome_reader_mode, 'Questions finder', onTap: () {
+              _drawerItem(context, Icons.chrome_reader_mode, 'Database', onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
@@ -336,10 +336,10 @@ class _MainScaffoldState extends State<MainScaffold> {
         child: AnimatedRotation(
           turns: _isMenuOpen ? 0.125 : 0, // Rotaciona o ícone de + suavemente quando aberto
           duration: const Duration(milliseconds: 200),
-          child: const Icon(
+          child: Icon(
             Icons.add,
             color: Colors.white,
-            size: 28,
+            size: context.icon(28),
           ),
         ),
       ),
