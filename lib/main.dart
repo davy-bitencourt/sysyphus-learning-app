@@ -3,14 +3,19 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
-
 import 'screens/home.dart';
+import 'styles/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Carrega tema, cores e idioma salvos (precisa vir depois do init do banco).
+  await AppSettings.instance.load();
 
   runApp(const StudyApp());
 }
@@ -20,14 +25,21 @@ class StudyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Study App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
-      ),
-      home: const Home(),
+    // Reconstrói o MaterialApp sempre que as configurações mudam
+    // (modo claro/escuro, cor de destaque, paleta do heatmap).
+    return ListenableBuilder(
+      listenable: AppSettings.instance,
+      builder: (context, _) {
+        final settings = AppSettings.instance;
+        return MaterialApp(
+          title: 'Study App',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.build(settings, Brightness.light),
+          darkTheme: AppTheme.build(settings, Brightness.dark),
+          themeMode: settings.themeMode,
+          home: const Home(),
+        );
+      },
     );
   }
 }

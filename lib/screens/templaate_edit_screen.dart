@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sysyphus_learning_app/data/DAO/template_dao.dart';
-import 'package:sysyphus_learning_app/data/models/field_model.dart';
+import 'package:Sysyphus/styles/app_theme.dart';
+import 'package:Sysyphus/data/DAO/template_dao.dart';
+import 'package:Sysyphus/data/models/field_model.dart';
 
 /// Marcador que representa a linha divisória dentro da lista reordenável.
 /// Tudo que fica ANTES dela na lista vira `section: question`, tudo que
@@ -60,6 +61,39 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     });
   }
 
+  Future<void> _editImageSize(FieldDefinition field) async {
+    final limits = await showDialog<_ImageLimits>(
+      context: context,
+      builder: (_) => _ImageSizeDialog(
+        initialWidth: field.maxWidth,
+        initialHeight: field.maxHeight,
+      ),
+    );
+    if (limits == null) return;
+    final i = _items.indexOf(field);
+    if (i < 0) return;
+    setState(() {
+      _items[i] = FieldDefinition(
+        id: field.id,
+        type: field.type,
+        label: field.label,
+        section: field.section,
+        optionCount: field.optionCount,
+        maxWidth: limits.width,
+        maxHeight: limits.height,
+      );
+    });
+  }
+
+  String _imageLimitText(FieldDefinition f) {
+    if (f.maxWidth != null && f.maxHeight != null) {
+      return 'máx. ${_fmtLimit(f.maxWidth)} × ${_fmtLimit(f.maxHeight)} px';
+    }
+    if (f.maxWidth != null) return 'largura máx. ${_fmtLimit(f.maxWidth)} px';
+    if (f.maxHeight != null) return 'altura máx. ${_fmtLimit(f.maxHeight)} px';
+    return 'tamanho original';
+  }
+
   void _removeField(FieldDefinition field) {
     if (field.isStatement) return; // enunciado é obrigatório
     setState(() => _items.remove(field));
@@ -70,28 +104,19 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
       if (newIndex > oldIndex) newIndex -= 1;
       final item = _items.removeAt(oldIndex);
       _items.insert(newIndex, item);
-      _pinStatementFirst();
       _snapGradableFieldsAboveDivider();
     });
   }
 
-  /// Se alguém soltar outro campo acima do enunciado, ele volta pro topo.
-  void _pinStatementFirst() {
-    final i = _items.indexWhere((e) => e is FieldDefinition && e.isStatement);
-    if (i > 0) {
-      final statement = _items.removeAt(i);
-      _items.insert(0, statement);
-    }
-  }
-
-  /// Alternativas e V/F só fazem sentido antes de responder -- se o
-  /// usuário arrastar um desses campos pra baixo da divisória, ele volta
-  /// pra cima automaticamente.
+  /// Alternativas, V/F e o enunciado só fazem sentido antes de responder --
+  /// se o usuário arrastar um desses campos pra baixo da divisória, ele volta
+  /// pra cima automaticamente. (O enunciado pode ficar em qualquer posição
+  /// acima da divisória.)
   void _snapGradableFieldsAboveDivider() {
     final dividerIndex = _dividerIndex;
     for (int i = _items.length - 1; i > dividerIndex; i--) {
       final item = _items[i];
-      if (item is FieldDefinition && FieldType.isGradable(item.type)) {
+      if (item is FieldDefinition && (item.isStatement || FieldType.isGradable(item.type))) {
         _items.removeAt(i);
         _items.insert(_dividerIndex, item);
       }
@@ -111,6 +136,8 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
           label: item.label,
           section: section,
           optionCount: item.optionCount,
+          maxWidth: item.maxWidth,
+          maxHeight: item.maxHeight,
         ));
       }
     }
@@ -163,16 +190,16 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(_isEditing ? 'Editar template' : 'Novo template',
-          style: const TextStyle(color: Color(0xFF1A1A2E),
+          style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_isEditing)
@@ -202,8 +229,8 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: _addField,
-                icon: const Icon(Icons.add, color: Color(0xFFE65100)),
-                label: const Text('Adicionar campo', style: TextStyle(color: Color(0xFFE65100))),
+                icon: Icon(Icons.add, color: context.colors.accent),
+                label: Text('Adicionar campo', style: TextStyle(color: context.colors.accent)),
               ),
             ),
           ),
@@ -226,14 +253,14 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: Colors.white,
+          color: context.colors.bg,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE65100),
+                backgroundColor: context.colors.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -250,8 +277,8 @@ Widget _buildDividerRow({required Key key}) {
     return Padding(
       key: key,
       padding: const EdgeInsets.symmetric(vertical: 20),
-      child: const Divider(
-        color: Color(0xFFE0E0E0),
+      child: Divider(
+        color: context.colors.border,
         thickness: 1.5,
         height: 1.5,
       ),
@@ -264,25 +291,20 @@ Widget _buildDividerRow({required Key key}) {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
-          field.isStatement
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Icon(Icons.lock_outline, color: Colors.grey[400]),
-                )
-              : ReorderableDragStartListener(
-                  index: index,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    child: Icon(Icons.drag_indicator, color: Colors.grey[400]),
-                  ),
-                ),
-          Icon(_iconFor(field.type), color: const Color(0xFFE65100), size: 20),
+          ReorderableDragStartListener(
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Icon(Icons.drag_indicator, color: Colors.grey[400]),
+            ),
+          ),
+          Icon(_iconFor(field.type), color: context.colors.accent, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -294,12 +316,20 @@ Widget _buildDividerRow({required Key key}) {
                       ? 'Texto • obrigatório'
                       : FieldType.needsOptionCount(field.type)
                           ? '${FieldType.label(field.type)} • ${field.optionCount} opções'
-                          : FieldType.label(field.type),
+                          : field.type == FieldType.image
+                              ? '${FieldType.label(field.type)} • ${_imageLimitText(field)}'
+                              : FieldType.label(field.type),
                   style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
             ),
           ),
+          if (field.type == FieldType.image)
+            IconButton(
+              tooltip: 'Tamanho da imagem',
+              icon: Icon(Icons.aspect_ratio_outlined, size: 18, color: Colors.grey[500]),
+              onPressed: () => _editImageSize(field),
+            ),
           if (!field.isStatement)
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
@@ -330,12 +360,16 @@ class _AddFieldSheet extends StatefulWidget {
 
 class _AddFieldSheetState extends State<_AddFieldSheet> {
   final _labelController = TextEditingController();
+  final _maxWidthController = TextEditingController();
+  final _maxHeightController = TextEditingController();
   String _type = FieldType.text;
   int _optionCount = 4;
 
   @override
   void dispose() {
     _labelController.dispose();
+    _maxWidthController.dispose();
+    _maxHeightController.dispose();
     super.dispose();
   }
 
@@ -347,6 +381,8 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
       label: _labelController.text.trim(),
       section: FieldSection.question, // entra acima da divisória; arraste pra mudar
       optionCount: _optionCount,
+      maxWidth: _type == FieldType.image ? _parseLimit(_maxWidthController.text) : null,
+      maxHeight: _type == FieldType.image ? _parseLimit(_maxHeightController.text) : null,
     ));
   }
 
@@ -384,6 +420,19 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
+          if (_type == FieldType.image) ...[
+            const SizedBox(height: 12),
+            Text('Tamanho máximo da imagem (opcional)',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _limitField(_maxWidthController, 'Largura (px)')),
+                const SizedBox(width: 12),
+                Expanded(child: _limitField(_maxHeightController, 'Altura (px)')),
+              ],
+            ),
+          ],
           if (FieldType.needsOptionCount(_type)) ...[
             const SizedBox(height: 12),
             Row(
@@ -407,7 +456,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
             child: ElevatedButton(
               onPressed: _confirm,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE65100),
+                backgroundColor: context.colors.accent,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Adicionar'),
@@ -416,6 +465,95 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
         ],
       ),
       ), 
+    );
+  }
+}
+
+
+/// Limites de exibição de um campo de imagem (null = sem limite).
+class _ImageLimits {
+  final double? width;
+  final double? height;
+  const _ImageLimits(this.width, this.height);
+}
+
+/// Aceita vírgula ou ponto; vazio, zero ou inválido = sem limite.
+double? _parseLimit(String text) {
+  final v = double.tryParse(text.trim().replaceAll(',', '.'));
+  return (v != null && v > 0) ? v : null;
+}
+
+String _fmtLimit(double? v) {
+  if (v == null) return '';
+  return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+}
+
+Widget _limitField(TextEditingController controller, String label) {
+  return TextField(
+    controller: controller,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    decoration: InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    ),
+  );
+}
+
+class _ImageSizeDialog extends StatefulWidget {
+  final double? initialWidth;
+  final double? initialHeight;
+  const _ImageSizeDialog({this.initialWidth, this.initialHeight});
+
+  @override
+  State<_ImageSizeDialog> createState() => _ImageSizeDialogState();
+}
+
+class _ImageSizeDialogState extends State<_ImageSizeDialog> {
+  late final TextEditingController _width =
+      TextEditingController(text: _fmtLimit(widget.initialWidth));
+  late final TextEditingController _height =
+      TextEditingController(text: _fmtLimit(widget.initialHeight));
+
+  @override
+  void dispose() {
+    _width.dispose();
+    _height.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Tamanho da imagem'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tamanho máximo de exibição, em pixels. A imagem é reduzida para '
+            'caber, sem distorcer. Deixe em branco para não limitar.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 16),
+          _limitField(_width, 'Largura máxima (px)'),
+          const SizedBox(height: 12),
+          _limitField(_height, 'Altura máxima (px)'),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            _ImageLimits(_parseLimit(_width.text), _parseLimit(_height.text)),
+          ),
+          child: const Text('Salvar'),
+        ),
+      ],
     );
   }
 }

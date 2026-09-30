@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:Sysyphus/styles/app_theme.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:sysyphus_learning_app/data/schema/question_schema.dart';
-import 'package:sysyphus_learning_app/data/schema/template_schema.dart';
-import 'package:sysyphus_learning_app/data/DAO/question_state_dao.dart';
-import 'package:sysyphus_learning_app/data/DAO/revlog_dao.dart';
-import 'package:sysyphus_learning_app/data/models/field_model.dart';
-import 'package:sysyphus_learning_app/data/models/question_model.dart';
+import 'package:Sysyphus/data/schema/question_schema.dart';
+import 'package:Sysyphus/data/schema/template_schema.dart';
+import 'package:Sysyphus/data/DAO/question_state_dao.dart';
+import 'package:Sysyphus/data/DAO/revlog_dao.dart';
+import 'package:Sysyphus/data/models/field_model.dart';
+import 'package:Sysyphus/data/models/question_model.dart';
 import 'questions_edit_screen.dart';
 
 class QuestionScreen extends StatefulWidget {
@@ -142,31 +143,43 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return anyGraded;
   }
 
-  /// Quantas opções o usuário acertou. Na seleção múltipla, cada opção
-  /// conta: acertou se marcou uma correta ou deixou sem marcar uma errada.
-  /// Na escolha única, conta como 1 item (acertou ou não).
-  ({int hits, int total}) _answerScore(LoadedQuestion q) {
-    int hits = 0;
-    int total = 0;
+  /// Nota da resposta atual, de 0.0 a 1.0 (ou null se não há múltipla escolha).
+  ///
+  /// Seleção múltipla: (corretas marcadas - erradas marcadas) / total de
+  /// corretas, com mínimo 0. Deixar uma opção errada sem marcar NÃO conta
+  /// como acerto (senão marcar só uma errada já daria pontos), e marcar tudo
+  /// também não dá 100%, porque cada errada marcada desconta.
+  /// Escolha única: 1.0 se acertou, 0.0 se errou.
+  /// Com mais de um campo de múltipla escolha, tira a média entre eles.
+  double? _answerScore(LoadedQuestion q) {
+    double sum = 0;
+    int fields = 0;
     for (final field in q.template.fields) {
       if (field.type != FieldType.options && field.type != FieldType.vof) continue;
 
+      fields++;
       final options = _optionsFor(field);
+
       if (_isMultiSelect(q, field)) {
         final answers = _vofAnswersByField[field.id] ?? {};
+        int rightMarked = 0;
+        int totalCorrect = 0;
         for (int i = 0; i < options.length; i++) {
-          total++;
-          if ((answers[i] == true) == options[i].correct) hits++;
+          final marked = answers[i] == true;
+          if (options[i].correct) {
+            totalCorrect++;
+            if (marked) rightMarked++;
+          }
         }
+          sum += (rightMarked / totalCorrect).clamp(0.0, 1.0).toDouble();
       } else {
-        total++;
         final selected = _selectedOptionByField[field.id];
         if (selected != null && selected < options.length && options[selected].correct) {
-          hits++;
+          sum += 1.0;
         }
       }
     }
-    return (hits: hits, total: total);
+    return fields == 0 ? null : sum / fields;
   }
 
   void _showAnswer() => setState(() => _answered = true);
@@ -256,10 +269,10 @@ class _QuestionScreenState extends State<QuestionScreen> {
     if (_questions.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: context.colors.bg,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.arrow_back, color: context.colors.text),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -276,7 +289,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                 ElevatedButton(
                   onPressed: _openNewQuestion,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE65100),
+                    backgroundColor: context.colors.accent,
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('Adicionar questão'),
@@ -289,12 +302,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
         // Contador de questão e barra de progresso ficam juntos e
@@ -303,14 +316,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${_currentQuestion + 1} / ${_questions.length}',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF555555))),
+              style: TextStyle(fontSize: 14, color: context.colors.mutedText)),
             const SizedBox(width: 10),
             SizedBox(
               width: 70,
               child: LinearProgressIndicator(
                 value: (_currentQuestion + 1) / _questions.length,
-                backgroundColor: const Color(0xFFE0E0E0),
-                color: const Color(0xFFE65100),
+                backgroundColor: context.colors.border,
+                color: context.colors.accent,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -319,11 +332,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.edit_outlined, color: context.colors.text),
             onPressed: _openEditQuestion,
           ),
           IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.add, color: context.colors.text),
             onPressed: _openNewQuestion,
           ),
         ],
@@ -333,31 +346,22 @@ class _QuestionScreenState extends State<QuestionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-              child: Text(_current.question.statement,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-            ),
-            const SizedBox(height: 16),
-            ..._current.template.questionFields
-                .where((f) => !f.isStatement) // o enunciado já é o cabeçalho acima
-                .map((f) => Padding(
+            // O enunciado aparece na posição que o template definiu.
+            ..._current.template.questionFields.map((f) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildFieldDisplay(f),
+                  child: f.isStatement ? _buildStatement() : _buildFieldDisplay(f),
                 )),
             if (_answered) ...[
               // A divisória (com o ícone de certo/errado) aparece sempre depois
               // de responder, mesmo que o template não tenha campos de resposta.
               const SizedBox(height: 8),
               Row(children: [
-                const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
+                Expanded(child: Divider(color: context.colors.border, thickness: 1.5)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: _buildAnswerStatusIcon(),
                 ),
-                const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
+                Expanded(child: Divider(color: context.colors.border, thickness: 1.5)),
               ]),
               const SizedBox(height: 16),
               _buildScoreLabel(),
@@ -375,15 +379,25 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
+  Widget _buildStatement() {
+    // Sem decoration: o fundo atrás do texto do enunciado é transparente.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      child: Text(_current.question.statement,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.colors.text)),
+    );
+  }
+
   // Porcentagem de acerto, exibida logo abaixo da divisória (só em
   // questões com múltipla escolha).
   Widget _buildScoreLabel() {
     if (!_hasGradableField(_current)) return const SizedBox.shrink();
   
     final score = _answerScore(_current);
-    if (score.total == 0) return const SizedBox.shrink();
+    if (score == null) return const SizedBox.shrink();
   
-    final percent = (score.hits * 100 / score.total).round();
+    final percent = (score * 100).round();
     final color = percent == 100
         ? const Color(0xFF2E7D32)
         : percent == 0
@@ -420,13 +434,30 @@ class _QuestionScreenState extends State<QuestionScreen> {
       case FieldType.text:
         final value = _current.question.textFor(field.id);
         if (value == null || value.isEmpty) return const SizedBox.shrink();
-        return Text(value, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)));
+        return Text(value, style: TextStyle(fontSize: 14, color: context.colors.text));
       case FieldType.image:
         final path = _current.question.textFor(field.id);
         if (path == null) return const SizedBox.shrink();
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.file(File(path), width: double.infinity, fit: BoxFit.cover),
+        // Sem limite no template: comportamento original (largura total).
+        if (field.maxWidth == null && field.maxHeight == null) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(File(path), width: double.infinity, fit: BoxFit.cover),
+          );
+        }
+        // Com limite: a imagem é reduzida para caber na largura/altura máximas
+        // (sem distorcer, sem ampliar) e fica centralizada.
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: field.maxWidth ?? double.infinity,
+              maxHeight: field.maxHeight ?? double.infinity,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(File(path), fit: BoxFit.contain),
+            ),
+          ),
         );
       case FieldType.audio:
         final path = _current.question.textFor(field.id);
@@ -435,7 +466,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
         // Só o ícone, centralizado: sem container, borda, sombra nem rótulo.
         return Center(
           child: IconButton(
-            icon: Icon(playing ? Icons.stop_circle : Icons.play_circle, color: const Color(0xFFE65100), size: 32),
+            iconSize: 64,
+            icon: Icon(playing ? Icons.stop_circle : Icons.play_circle, color: context.colors.accent),
             onPressed: () => _toggleAudio(field.id, path),
           ),
         );
@@ -459,8 +491,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final option = options[i];
         final isSelected = selected == i;
 
-        Color borderColor = const Color(0xFFE0E0E0);
-        Color bgColor = Colors.white;
+        Color borderColor = context.colors.border;
+        Color bgColor = context.colors.surface;
 
         if (_answered) {
           if (option.correct) {
@@ -488,7 +520,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
+            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.text)),
           ),
         );
       }),
@@ -507,8 +539,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final option = options[i];
         final isMarked = answers[i] == true;
 
-        Color borderColor = const Color(0xFFE0E0E0);
-        Color bgColor = Colors.white;
+        Color borderColor = context.colors.border;
+        Color bgColor = context.colors.surface;
 
         if (_answered) {
           borderColor = option.correct ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
@@ -539,7 +571,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
+            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.text)),
           ),
         );
       }),
@@ -552,11 +584,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E1),
+        color: context.colors.note,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.4)),
       ),
-      child: Text(_current.question.extraComments, style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E))),
+      child: Text(_current.question.extraComments, style: TextStyle(fontSize: 13, color: context.colors.text)),
     );
   }
 
@@ -564,7 +596,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: Colors.white,
+        color: context.colors.bg,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: !_answered
           ? _fullWidthButton('Mostrar Resposta', _showAnswer)
@@ -607,7 +639,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE65100),
+          backgroundColor: context.colors.accent,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

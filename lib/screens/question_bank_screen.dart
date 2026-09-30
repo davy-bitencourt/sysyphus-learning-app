@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../styles/app_theme.dart';
 
 import '../data/DAO/package_dao.dart';
 import 'home.dart';
@@ -125,20 +126,20 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: context.colors.bg,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.arrow_back, color: context.colors.text),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text('Banco de questões',
-            style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.bold, fontSize: 20)),
-          bottom: const TabBar(
-            labelColor: Color(0xFFE65100),
+          title: Text('Banco de questões',
+            style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20)),
+          bottom: TabBar(
+            labelColor: context.colors.accent,
             unselectedLabelColor: Color(0xFF9E9E9E),
-            indicatorColor: Color(0xFFE65100),
+            indicatorColor: context.colors.accent,
             tabs: [
               Tab(text: 'Questões'),
               Tab(text: 'Templates'),
@@ -337,7 +338,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         final question = _packageQuestions[i];
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
+            color: context.colors.surfaceAlt,
             borderRadius: BorderRadius.circular(10),
           ),
           padding: const EdgeInsets.only(left: 14, right: 4),
@@ -348,7 +349,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   _titleOf(question),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                  style: TextStyle(fontSize: 14, color: context.colors.text),
                 ),
               ),
               IconButton(
@@ -382,18 +383,18 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     final template = _templates[i];
                     return Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
+                        color: context.colors.surfaceAlt,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.dashboard_customize_outlined,
-                            color: Color(0xFFE65100), size: 20),
+                          Icon(Icons.dashboard_customize_outlined,
+                            color: context.colors.accent, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(template.name,
-                              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
+                              style: TextStyle(fontSize: 14, color: context.colors.text)),
                           ),
                           Text('${template.fields.length} campos',
                             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
@@ -420,7 +421,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               child: ElevatedButton.icon(
                 onPressed: _openNewTemplate,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE65100),
+                  backgroundColor: context.colors.accent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

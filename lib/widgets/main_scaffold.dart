@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
 import '../screens/setting_screen.dart';
@@ -80,7 +81,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
+                color: context.colors.surface,
                 child: Container(
                   width: 220,
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -113,13 +114,13 @@ class _MainScaffoldState extends State<MainScaffold> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFFE65100), size: 20),
+            Icon(icon, color: context.colors.accent, size: 20),
             const SizedBox(width: 12),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF1A1A2E),
+                color: context.colors.text,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -217,10 +218,10 @@ class _MainScaffoldState extends State<MainScaffold> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon,
-            color: isActive ? const Color(0xFFFF8F00) : Colors.grey[400], size: 24),
+            color: isActive ? context.colors.accent : Colors.grey[400], size: 24),
           Text(label,
             style: TextStyle(fontSize: 11,
-              color: isActive ? const Color(0xFFFF8F00) : Colors.grey[400])),
+              color: isActive ? context.colors.accent : Colors.grey[400])),
         ],
       ),
     );
@@ -232,14 +233,14 @@ class _MainScaffoldState extends State<MainScaffold> {
   }) {
     return ListTile(
       leading: Icon(icon,
-        color: active ? const Color(0xFFFFB300) : const Color(0xFF1A1A2E), size: 21),
+        color: active ? context.colors.accent : context.colors.text, size: 21),
       title: Text(label,
         style: TextStyle(
-          color: active ? const Color(0xFFFFB300) : const Color(0xFF1A1A2E),
+          color: active ? context.colors.accent : context.colors.text,
           fontSize: 14,
           fontWeight: active ? FontWeight.bold : FontWeight.normal,
         )),
-      tileColor: active ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+      tileColor: active ? context.colors.accent.withValues(alpha: 0.10) : Colors.transparent,
       onTap: onTap ?? () => Navigator.pop(context),
     );
   }
@@ -253,9 +254,9 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
+      backgroundColor: context.colors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(
@@ -264,7 +265,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             Row(children: [
               Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(Icons.menu, color: Color(0xFF555555)),
+                  icon: Icon(Icons.menu, color: context.colors.mutedText),
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
@@ -272,7 +273,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               const Text('Sysyphus', style: bigText),
             ]),
             IconButton(
-              icon: const Icon(Icons.sync, color: Color(0xFF555555)),
+              icon: Icon(Icons.sync, color: context.colors.mutedText),
               onPressed: () {},
             ),
           ],
@@ -280,7 +281,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       drawer: Drawer(
         width: 240,
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: context.colors.surface,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: SafeArea(
           child: Column(
@@ -297,7 +298,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Navigator.pop(context);
                 widget.onStatisticsTap?.call();
               }),
-              const Divider(color: Color(0xFFE0E0E0), thickness: 1, indent: 16, endIndent: 16),
+              Divider(color: context.colors.border, thickness: 1, indent: 16, endIndent: 16),
               _drawerItem(context, Icons.settings, 'Settings', onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
@@ -312,7 +313,8 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
-        color: Colors.white,
+        color: context.colors.surface,
+        surfaceTintColor: Colors.transparent,
         elevation: 8,
         child: SizedBox(
           height: 60,
@@ -328,7 +330,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _toggleMenu,
-        backgroundColor: const Color(0xFFE65100),
+        backgroundColor: context.colors.accent,
         elevation: 0,
         shape: const CircleBorder(),
         child: AnimatedRotation(

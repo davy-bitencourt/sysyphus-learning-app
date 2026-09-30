@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:sysyphus_learning_app/data/DAO/question_state_dao.dart';
-import 'package:sysyphus_learning_app/data/DAO/template_dao.dart';
-import 'package:sysyphus_learning_app/data/DAO/tag_dao.dart';
-import 'package:sysyphus_learning_app/data/DAO/package_dao.dart';
-import 'package:sysyphus_learning_app/data/DTO/question_dto.dart';
-import 'package:sysyphus_learning_app/data/models/field_model.dart';
-import 'package:sysyphus_learning_app/data/models/question_model.dart';
-import 'package:sysyphus_learning_app/data/services/media_storage_service.dart';
+import 'package:Sysyphus/styles/app_theme.dart';
+import 'package:Sysyphus/data/DAO/question_state_dao.dart';
+import 'package:Sysyphus/data/DAO/template_dao.dart';
+import 'package:Sysyphus/data/DAO/tag_dao.dart';
+import 'package:Sysyphus/data/DAO/package_dao.dart';
+import 'package:Sysyphus/data/DTO/question_dto.dart';
+import 'package:Sysyphus/data/models/field_model.dart';
+import 'package:Sysyphus/data/models/question_model.dart';
+import 'package:Sysyphus/data/services/media_storage_service.dart';
 import 'templaate_edit_screen.dart';
 
 class QuestionsEditScreen extends StatefulWidget {
@@ -308,16 +309,16 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(_isEditing ? 'Editar questão' : 'Nova questão',
-          style: const TextStyle(color: Color(0xFF1A1A2E),
+          style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_isEditing)
@@ -339,14 +340,14 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: Colors.white,
+        color: context.colors.bg,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: _saving ? null : _save,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE65100),
+              backgroundColor: context.colors.accent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -375,7 +376,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             ElevatedButton(
               onPressed: _openNewTemplate,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE65100),
+                backgroundColor: context.colors.accent,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Criar template'),
@@ -425,7 +426,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             ),
             IconButton(
               onPressed: _openNewTemplate,
-              icon: const Icon(Icons.add_circle_outline, color: Color(0xFFE65100)),
+              icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
             ),
           ],
         ),
@@ -439,8 +440,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
           if (answerFields.isNotEmpty) ...[
             // Divisor contínuo/único
-            const Divider(
-              color: Color(0xFFE0E0E0), 
+            Divider(
+              color: context.colors.border, 
               thickness: 1.5,
               height: 1.5,
             ),
@@ -470,8 +471,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Tag (opcional)',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        Text('Tag (opcional)',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
         const SizedBox(height: 8),
         TextField(
           controller: _tagInputController,
@@ -491,7 +492,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             runSpacing: 8,
             children: matches.map((t) => ActionChip(
               label: Text('#${t['title']}'),
-              backgroundColor: const Color(0xFFFFF3E0),
+              backgroundColor: context.colors.accent.withValues(alpha: 0.15),
               side: BorderSide.none,
               onPressed: () => _selectSuggestedTag(t['id'] as int, t['title'] as String),
             )).toList(),
@@ -526,7 +527,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(field.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
         const SizedBox(height: 8),
         if (path != null) ...[
           if (isImage)
@@ -536,7 +537,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             )
           else
             Row(children: [
-              const Icon(Icons.audiotrack, color: Color(0xFFE65100)),
+              Icon(Icons.audiotrack, color: context.colors.accent),
               const SizedBox(width: 8),
               Expanded(child: Text(path.split(Platform.pathSeparator).last, overflow: TextOverflow.ellipsis)),
             ]),
@@ -583,7 +584,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           field.type == FieldType.options
               ? '${field.label} (marque a correta; mais de uma = seleção múltipla)'
               : '${field.label} (marque as verdadeiras)',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text),
         ),
         const SizedBox(height: 8),
         ...List.generate(controllers.length, (i) => Padding(

@@ -1,4 +1,4 @@
-import 'package:sysyphus_learning_app/data/DAO/session_dao.dart';
+import 'package:Sysyphus/data/DAO/session_dao.dart';
 
 class  SessionSchema {
 

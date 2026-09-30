@@ -24,6 +24,7 @@ class FieldType {
       case image: return 'Imagem';
       case audio: return 'Áudio';
       case options: return 'Múltipla escolha';
+      case vof: return 'Verdadeiro ou Falso';
       default: return type;
     }
   }
@@ -56,6 +57,12 @@ class FieldDefinition {
   final String section; // um dos FieldSection.*
   final int optionCount; // só relevante para 'options'/'vof'
 
+  /// Só para campos de imagem: tamanho MÁXIMO de exibição, em pixels lógicos.
+  /// null = sem limite naquela dimensão. A imagem nunca é distorcida: ela
+  /// é reduzida para caber dentro da largura e da altura máximas.
+  final double? maxWidth;
+  final double? maxHeight;
+
   /// Id fixo do campo "Enunciado", presente em TODO template.
   static const statementId = 'statement';
   static const statement = FieldDefinition(
@@ -72,6 +79,8 @@ class FieldDefinition {
     required this.label,
     this.section = FieldSection.question,
     this.optionCount = 4,
+    this.maxWidth,
+    this.maxHeight,
   });
 
   factory FieldDefinition.fromMap(Map<String, dynamic> map) => FieldDefinition(
@@ -80,6 +89,8 @@ class FieldDefinition {
     label: map['label'] as String? ?? '',
     section: map['section'] as String? ?? FieldSection.question,
     optionCount: map['optionCount'] as int? ?? 4,
+    maxWidth: (map['maxWidth'] as num?)?.toDouble(),
+    maxHeight: (map['maxHeight'] as num?)?.toDouble(),
   );
 
   Map<String, dynamic> toMap() => {
@@ -88,6 +99,8 @@ class FieldDefinition {
     'label': label,
     'section': section,
     'optionCount': optionCount,
+    if (maxWidth != null) 'maxWidth': maxWidth,
+    if (maxHeight != null) 'maxHeight': maxHeight,
   };
 }
 
@@ -114,10 +127,24 @@ class TemplateModel {
   List<FieldDefinition> get answerFields =>
       fields.where((f) => f.section == FieldSection.answer).toList();
 
-  /// Garante que o enunciado exista, sempre como primeiro campo.
-  /// Templates antigos (sem enunciado) são migrados na leitura.
-  static List<FieldDefinition> withStatement(List<FieldDefinition> fields) =>
-      [FieldDefinition.statement, ...fields.where((f) => !f.isStatement)];
+  /// Garante que o enunciado exista. Se já estiver no template, MANTÉM a
+  /// posição que o usuário escolheu; se não estiver (templates antigos), entra
+  /// como primeiro campo. Duplicatas do enunciado são descartadas.
+  static List<FieldDefinition> withStatement(List<FieldDefinition> fields) {
+    final result = <FieldDefinition>[];
+    bool found = false;
+    for (final f in fields) {
+      if (f.isStatement) {
+        if (found) continue;
+        found = true;
+        result.add(FieldDefinition.statement);
+      } else {
+        result.add(f);
+      }
+    }
+    if (!found) result.insert(0, FieldDefinition.statement);
+    return result;
+  }
 
   factory TemplateModel.fromJson(int id, String rawJson) =>
       TemplateModel.fromMap(id, jsonDecode(rawJson) as Map<String, dynamic>);

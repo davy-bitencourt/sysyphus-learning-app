@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../styles/app_theme.dart';
 
 import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
@@ -156,8 +157,8 @@ class _HomeState extends State<Home> {
   }
 
   Widget _sectionLabel(String text) => Text(text,
-    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-      color: Color(0xFF1A1A2E)));
+    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+      color: context.colors.text));
 
   Widget _buildDeckList() {
     if (_packages.isEmpty) {
@@ -233,7 +234,7 @@ class _HomeState extends State<Home> {
         constraints: const BoxConstraints(maxWidth: 700),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFFFF),
+            color: context.colors.surface,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.06),
@@ -247,8 +248,8 @@ class _HomeState extends State<Home> {
             },
             children: [
               TableRow(
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0)))),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: context.colors.border))),
                 children: [
                   _tableCell('Packages', Colors.grey[400]!, isHeader: true),
                   const SizedBox(),
@@ -259,7 +260,7 @@ class _HomeState extends State<Home> {
                 final isEven = i % 2 == 0;
                 return TableRow(
                   decoration: BoxDecoration(
-                    color: isEven ? const Color(0xFFFFFFFF) : const Color(0xFFF5F5F5),
+                    color: isEven ? context.colors.surface : context.colors.surfaceAlt,
                   ),
                   children: [
                     TableCell(
@@ -275,7 +276,7 @@ class _HomeState extends State<Home> {
                           );
                           if (mounted) _loadData();
                         },
-                        child: _tableCell(deck.value, const Color(0xFF1A1A2E)),
+                        child: _tableCell(deck.value, context.colors.text),
                       ),
                     ),
                     TableCell(

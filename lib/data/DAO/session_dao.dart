@@ -1,4 +1,4 @@
-import 'package:sysyphus_learning_app/data/DTO/session_dto.dart';
+import 'package:Sysyphus/data/DTO/session_dto.dart';
 
 import '../../data/database_helper.dart';
 

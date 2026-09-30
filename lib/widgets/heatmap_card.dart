@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
 class HeatmapCard extends StatelessWidget {
@@ -18,18 +19,12 @@ class HeatmapCard extends StatelessWidget {
     return 4;
   }
 
-  Color _heatColor(int count) => _colorForLevel(_levelFor(count));
+  Color _heatColor(int count, AppColors c) => _colorForLevel(_levelFor(count), c);
 
-  Color _colorForLevel(int value) {
-    switch (value) {
-      case 1:  return const Color(0xFFFFE082); // amarelo claro
-      case 2:  return const Color(0xFFFFB300); // âmbar
-      case 3:  return const Color(0xFFFF8F00); // laranja âmbar
-      case 4:  return const Color(0xFFE65100); // laranja escuro
-      default: return const Color(0xFFEBEDF0); // cinza (sem atividade)
-    }
-  }   
+  /// Cor do nível 0..4 na paleta escolhida nas configurações.
+  Color _colorForLevel(int level, AppColors c) => c.heat[level.clamp(0, 4)];
 
+  @override
   Widget build(BuildContext context) {
     const double cellSize  = 11;
     const double cellGap   = 2;
@@ -39,6 +34,7 @@ class HeatmapCard extends StatelessWidget {
 
     final today       = DateTime.now();
     final todayNorm   = DateTime(today.year, today.month, today.day);
+    final c           = context.colors;
     final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     return Center(
@@ -77,7 +73,7 @@ class HeatmapCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     const Text('365 questions this day', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                    const Text('12 day streak', style: TextStyle(fontSize: 11, color: Color(0xFFFF8F00), fontWeight: FontWeight.w600)),
+                    Text('12 day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
               ),
@@ -144,9 +140,9 @@ class HeatmapCard extends StatelessWidget {
                                   width: cellSize, height: cellSize,
                                   margin: const EdgeInsets.only(bottom: cellGap),
                                   decoration: BoxDecoration(
-                                    color: isOutOfYear ? Colors.transparent : isFuture ? const Color(0xFFEBEDF0) : _heatColor(value),                                    
+                                    color: isOutOfYear ? Colors.transparent : isFuture ? c.heat[0] : _heatColor(value, c),                                    
                                     borderRadius: BorderRadius.circular(2),
-                                    border: isToday ? Border.all(color: const Color(0xFF1565C0), width: 1.5) : null,
+                                    border: isToday ? Border.all(color: c.accent, width: 1.5) : null,
                                   ),
                                 );
                               }),
@@ -170,14 +166,14 @@ class HeatmapCard extends StatelessWidget {
                   ...[0, 1, 2, 3, 4].map((v) => Container(
                     width: 9, height: 9,
                     margin: const EdgeInsets.only(right: 2),
-                    decoration: BoxDecoration(color: _colorForLevel(v), borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(color: _colorForLevel(v, c), borderRadius: BorderRadius.circular(2)),
                   )),
                   Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                 ]),
                 Row(children: [
                   Text('60', style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
                   const SizedBox(width: 6),
-                  Text('10', style: const TextStyle(fontSize: 10, color: Color(0xFFC62828), fontWeight: FontWeight.w600)),
+                  Text('10', style: TextStyle(fontSize: 10, color: c.accent, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 10),
                 ]),
               ],

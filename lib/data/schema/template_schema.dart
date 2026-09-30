@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:sysyphus_learning_app/data/DAO/template_dao.dart';
+import 'package:Sysyphus/data/DAO/template_dao.dart';
 
 class TemplateSchema {
   /* guarda os templates no schema, com base no 
