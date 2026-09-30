@@ -7,7 +7,20 @@ class HeatmapCard extends StatelessWidget {
 
   const HeatmapCard({super.key, required this.activityMap});
 
-  Color _heatColor(int value) {
+  /// Converte a QUANTIDADE de revisões do dia em um nível de 0 a 4.
+  /// (Antes o número de revisões ia direto pro switch: a partir de 5
+  /// revisões no dia caía no `default` e a célula ficava cinza.)
+  int _levelFor(int count) {
+    if (count <= 0) return 0;
+    if (count <= 4) return 1;
+    if (count <= 9) return 2;
+    if (count <= 19) return 3;
+    return 4;
+  }
+
+  Color _heatColor(int count) => _colorForLevel(_levelFor(count));
+
+  Color _colorForLevel(int value) {
     switch (value) {
       case 1:  return const Color(0xFFFFE082); // amarelo claro
       case 2:  return const Color(0xFFFFB300); // âmbar
@@ -34,9 +47,9 @@ class HeatmapCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: LayoutBuilder(builder: (context, constraints) {
         final double availW = constraints.maxWidth - dayLabelW - labelGap;
-        final DateTime yearStart = DateTime(2026, 1, 1);
+        final DateTime yearStart = DateTime(today.year, 1, 1);
         final DateTime firstMonday = yearStart.subtract(Duration(days: yearStart.weekday % 7));
-        final DateTime yearEnd = DateTime(2026, 12, 31);
+        final DateTime yearEnd = DateTime(today.year, 12, 31);
         final DateTime lastMonday = yearEnd.subtract(Duration(days: yearEnd.weekday - 1));
 
         final int totalCols = lastMonday.difference(firstMonday).inDays ~/ 7 + 1;
@@ -124,8 +137,8 @@ class HeatmapCard extends StatelessWidget {
                                 final date    = monday.add(Duration(days: d));
                                 final dateKey = DateTime(date.year, date.month, date.day);
                                 final isToday  = dateKey == todayNorm;
-                                final isFuture = date.isAfter(todayNorm) && date.year == 2026;
-                                final isOutOfYear = date.isBefore(DateTime(2026, 1, 1));
+                                final isFuture = date.isAfter(todayNorm) && date.year == today.year;
+                                final isOutOfYear = date.isBefore(DateTime(today.year, 1, 1));
                                 final value = isFuture ? 0 : (activityMap[dateKey] ?? 0);
                                 return Container(
                                   width: cellSize, height: cellSize,
@@ -157,7 +170,7 @@ class HeatmapCard extends StatelessWidget {
                   ...[0, 1, 2, 3, 4].map((v) => Container(
                     width: 9, height: 9,
                     margin: const EdgeInsets.only(right: 2),
-                    decoration: BoxDecoration(color: _heatColor(v), borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(color: _colorForLevel(v), borderRadius: BorderRadius.circular(2)),
                   )),
                   Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                 ]),

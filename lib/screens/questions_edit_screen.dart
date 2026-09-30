@@ -581,7 +581,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       children: [
         Text(
           field.type == FieldType.options
-              ? '${field.label} (marque a correta)'
+              ? '${field.label} (marque a correta; mais de uma = seleção múltipla)'
               : '${field.label} (marque as verdadeiras)',
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
         ),

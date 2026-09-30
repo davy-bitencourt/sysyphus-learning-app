@@ -108,27 +108,65 @@ class _QuestionScreenState extends State<QuestionScreen> {
   bool _hasGradableField(LoadedQuestion q) =>
       q.template.fields.any((f) => f.type == FieldType.options || f.type == FieldType.vof);
 
+  /// Seleção múltipla = comportamento do antigo V/F: o usuário marca/desmarca
+  /// várias opções e a resposta só é certa se o conjunto marcado bater
+  /// exatamente com o conjunto de corretas. Vale para o `vof` legado e para
+  /// a múltipla escolha que tenha MAIS DE UMA opção correta.
+  bool _isMultiSelect(LoadedQuestion q, FieldDefinition field) {
+    if (field.type == FieldType.vof) return true;
+    if (field.type != FieldType.options) return false;
+    return q.question.optionsFor(field.id).where((o) => o.correct).length > 1;
+  }
+
   bool _isCurrentAnswerCorrect(LoadedQuestion q) {
     bool anyGraded = false;
     for (final field in q.template.fields) {
-      if (field.type == FieldType.options) {
-        anyGraded = true;
-        final options = _optionsFor(field);
-        final selected = _selectedOptionByField[field.id];
-        if (selected == null || selected >= options.length || !options[selected].correct) {
-          return false;
-        }
-      } else if (field.type == FieldType.vof) {
-        anyGraded = true;
-        final options = q.question.optionsFor(field.id);
+      if (field.type != FieldType.options && field.type != FieldType.vof) continue;
+
+      anyGraded = true;
+      final options = _optionsFor(field);
+
+      if (_isMultiSelect(q, field)) {
         final answers = _vofAnswersByField[field.id] ?? {};
         for (int i = 0; i < options.length; i++) {
           final marked = answers[i] == true;
           if (marked != options[i].correct) return false;
         }
+      } else {
+        final selected = _selectedOptionByField[field.id];
+        if (selected == null || selected >= options.length || !options[selected].correct) {
+          return false;
+        }
       }
     }
     return anyGraded;
+  }
+
+  /// Quantas opções o usuário acertou. Na seleção múltipla, cada opção
+  /// conta: acertou se marcou uma correta ou deixou sem marcar uma errada.
+  /// Na escolha única, conta como 1 item (acertou ou não).
+  ({int hits, int total}) _answerScore(LoadedQuestion q) {
+    int hits = 0;
+    int total = 0;
+    for (final field in q.template.fields) {
+      if (field.type != FieldType.options && field.type != FieldType.vof) continue;
+
+      final options = _optionsFor(field);
+      if (_isMultiSelect(q, field)) {
+        final answers = _vofAnswersByField[field.id] ?? {};
+        for (int i = 0; i < options.length; i++) {
+          total++;
+          if ((answers[i] == true) == options[i].correct) hits++;
+        }
+      } else {
+        total++;
+        final selected = _selectedOptionByField[field.id];
+        if (selected != null && selected < options.length && options[selected].correct) {
+          hits++;
+        }
+      }
+    }
+    return (hits: hits, total: total);
   }
 
   void _showAnswer() => setState(() => _answered = true);
@@ -303,23 +341,26 @@ class _QuestionScreenState extends State<QuestionScreen> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
             ),
             const SizedBox(height: 16),
-            ..._current.template.questionFields.map((f) => Padding(
+            ..._current.template.questionFields
+                .where((f) => !f.isStatement) // o enunciado já é o cabeçalho acima
+                .map((f) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _buildFieldDisplay(f),
                 )),
             if (_answered) ...[
-              if (_current.template.answerFields.isNotEmpty || _current.question.extraComments.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Row(children: [
-                  const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: _buildAnswerStatusIcon(),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
-                ]),
-                const SizedBox(height: 16),
-              ],
+              // A divisória (com o ícone de certo/errado) aparece sempre depois
+              // de responder, mesmo que o template não tenha campos de resposta.
+              const SizedBox(height: 8),
+              Row(children: [
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: _buildAnswerStatusIcon(),
+                ),
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0), thickness: 1.5)),
+              ]),
+              const SizedBox(height: 16),
+              _buildScoreLabel(),
               ..._current.template.answerFields.map((f) => Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: _buildFieldDisplay(f),
@@ -331,6 +372,32 @@ class _QuestionScreenState extends State<QuestionScreen> {
         ),
       ),
       bottomNavigationBar: _buildFooter(),
+    );
+  }
+
+  // Porcentagem de acerto, exibida logo abaixo da divisória (só em
+  // questões com múltipla escolha).
+  Widget _buildScoreLabel() {
+    if (!_hasGradableField(_current)) return const SizedBox.shrink();
+  
+    final score = _answerScore(_current);
+    if (score.total == 0) return const SizedBox.shrink();
+  
+    final percent = (score.hits * 100 / score.total).round();
+    final color = percent == 100
+        ? const Color(0xFF2E7D32)
+        : percent == 0
+            ? const Color(0xFFC62828)
+            : const Color(0xFFEF6C00);
+  
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: Text(
+          '$percent%',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+        ),
+      ),
     );
   }
 
@@ -365,25 +432,19 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final path = _current.question.textFor(field.id);
         if (path == null) return const SizedBox.shrink();
         final playing = _playingFieldId == field.id;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE0E0E0)),
+        // Só o ícone, centralizado: sem container, borda, sombra nem rótulo.
+        return Center(
+          child: IconButton(
+            icon: Icon(playing ? Icons.stop_circle : Icons.play_circle, color: const Color(0xFFE65100), size: 32),
+            onPressed: () => _toggleAudio(field.id, path),
           ),
-          child: Row(children: [
-            IconButton(
-              icon: Icon(playing ? Icons.stop_circle : Icons.play_circle, color: const Color(0xFFE65100), size: 32),
-              onPressed: () => _toggleAudio(field.id, path),
-            ),
-            Expanded(child: Text(field.label, style: const TextStyle(fontSize: 13))),
-          ]),
         );
       case FieldType.options:
-        return _buildOptionsDisplay(field);
+        return _isMultiSelect(_current, field)
+            ? _buildMultiSelectDisplay(field)
+            : _buildOptionsDisplay(field);
       case FieldType.vof:
-        return _buildVofDisplay(field);
+        return _buildMultiSelectDisplay(field);
       default:
         return const SizedBox.shrink();
     }
@@ -434,8 +495,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
-  Widget _buildVofDisplay(FieldDefinition field) {
-    final options = _current.question.optionsFor(field.id);
+  // Seleção múltipla (comportamento do antigo V/F). Usa _optionsFor para que
+  // a múltipla escolha com várias corretas continue embaralhada; o `vof`
+  // legado não embaralha (o _optionsFor só embaralha o tipo `options`).
+  Widget _buildMultiSelectDisplay(FieldDefinition field) {
+    final options = _optionsFor(field);
     final answers = _vofAnswersByField.putIfAbsent(field.id, () => {});
 
     return Column(

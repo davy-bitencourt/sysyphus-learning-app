@@ -33,4 +33,10 @@ class RevlogDao {
       ''', [questionId, data, time]
     );
   }
+
+  /* apaga TODO o histórico de revisões (zera o heatmap) */
+  Future<void> deleteAll() async {
+    final db = await DatabaseHelper.instance.database;
+    await db.rawDelete('DELETE FROM revlog');
+  }
 }

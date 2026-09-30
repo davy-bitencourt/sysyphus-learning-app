@@ -237,8 +237,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         title: const Text('Excluir pacote'),
         content: Text(
           'Tem certeza que deseja excluir o pacote "$title"?\n\n'
-          'Isso apagará também $questionsText dele e todo o histórico de '
-          'revisões. Essa ação não pode ser desfeita.',
+          'Isso apagará também $questionsText dele. O histórico de revisões '
+          '(heatmap) é mantido. Essa ação não pode ser desfeita.',
         ),
         actions: [
           TextButton(

@@ -182,12 +182,15 @@ class _HomeState extends State<Home> {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           // Área inteira do card é clicável agora, não só o texto do título.
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => QuestionScreen(packageId: deck.key),
-            ),
-          ),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => QuestionScreen(packageId: deck.key),
+              ),
+            );
+            if (mounted) _loadData(); // atualiza o heatmap com o que foi estudado
+          },
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -263,12 +266,15 @@ class _HomeState extends State<Home> {
                       verticalAlignment: TableCellVerticalAlignment.middle,
                       // Toda a célula do título é clicável, não só o texto.
                       child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => QuestionScreen(packageId: deck.key),
-                          ),
-                        ),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => QuestionScreen(packageId: deck.key),
+                            ),
+                          );
+                          if (mounted) _loadData();
+                        },
                         child: _tableCell(deck.value, const Color(0xFF1A1A2E)),
                       ),
                     ),

@@ -24,7 +24,6 @@ class FieldType {
       case image: return 'Imagem';
       case audio: return 'Áudio';
       case options: return 'Múltipla escolha';
-      case vof: return 'Verdadeiro ou Falso';
       default: return type;
     }
   }

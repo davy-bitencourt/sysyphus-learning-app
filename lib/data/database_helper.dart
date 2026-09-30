@@ -35,10 +35,35 @@ class DatabaseHelper{
 
     return await openDatabase(
       dir, 
-      version: 1, 
+      version: 2, 
       onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, 
-      onCreate: _createDB
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  /* v2: o histórico de revisões deixou de ser preso às questões.
+   * O revlog perdeu a FOREIGN KEY para question, então apagar uma questão
+   * (ou um pacote) não apaga mais o histórico e o heatmap se mantém.
+   * SQLite não altera constraints, por isso a tabela é recriada.
+   * Obs.: o sqflite já roda o onUpgrade dentro de uma transação. */
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE revlog_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          question_id INTEGER NOT NULL,
+          data TEXT,
+          time TEXT
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO revlog_new (id, question_id, data, time)
+        SELECT id, question_id, data, time FROM revlog
+      ''');
+      await db.execute('DROP TABLE revlog');
+      await db.execute('ALTER TABLE revlog_new RENAME TO revlog');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -133,8 +158,7 @@ class DatabaseHelper{
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           question_id INTEGER NOT NULL,
           data TEXT,
-          time TEXT,
-          FOREIGN KEY (question_id) REFERENCES question(id)
+          time TEXT
         )
       """
     );
