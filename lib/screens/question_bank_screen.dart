@@ -129,55 +129,89 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       orElse: () => _packages.first,
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: _selectedPackageId,
-                  items: _packages
-                      .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
-                      .toList(),
-                  onChanged: (id) {
-                    if (id == null) return;
-                    setState(() => _selectedPackageId = id);
-                    _loadQuestionsForSelectedPackage();
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Pacote',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: _selectedPackageId,
+                        items: _packages
+                            .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
+                            .toList(),
+                        onChanged: (id) {
+                          if (id == null) return;
+                          setState(() => _selectedPackageId = id);
+                          _loadQuestionsForSelectedPackage();
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Pacote',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PackageEditScreen(
+                              packageId: selectedPackage['id'] as int,
+                              initialTitle: selectedPackage['title'] as String,
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          Home.packagesChanged.value++;
+                          _load();
+                        }
+                      },
+                      icon: Icon(Icons.settings, color: Colors.grey[400]),
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
+                const SizedBox(height: 16),
+                Expanded(child: _buildQuestionsList()),
+              ],
+            ),
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
                 onPressed: () async {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => PackageEditScreen(
-                        packageId: selectedPackage['id'] as int,
-                        initialTitle: selectedPackage['title'] as String,
-                      ),
+                      builder: (_) => QuestionsEditScreen(packageId: _selectedPackageId),
                     ),
                   );
-                  if (result == true) {
-                    Home.packagesChanged.value++;
-                    _load();
-                  }
+                  if (result == true) _loadQuestionsForSelectedPackage();
                 },
-                icon: Icon(Icons.settings, color: Colors.grey[400]),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Nova questão'),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Expanded(child: _buildQuestionsList()),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -263,41 +297,76 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-// --- ABA 2: PACOTES (REORDENÁVEL COM DRAG HANDLE NO INÍCIO) ---
+  // --- ABA 2: PACOTES (REORDENÁVEL) ---
   Widget _buildPackagesTab() {
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.all(16),
-      buildDefaultDragHandles: false, // Desativa o drag handle padrão no final
-      itemCount: _packages.length,
-      onReorder: (oldIndex, newIndex) {
-        setState(() {
-          if (newIndex > oldIndex) newIndex -= 1;
-          final item = _packages.removeAt(oldIndex);
-          _packages.insert(newIndex, item);
-        });
-      },
-      itemBuilder: (context, index) {
-        final pkg = _packages[index];
-        return Container(
-          key: ValueKey(pkg['id']),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(10),
+    return Column(
+      children: [
+        Expanded(
+          child: ReorderableListView.builder(
+            padding: const EdgeInsets.all(16),
+            buildDefaultDragHandles: false,
+            itemCount: _packages.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex -= 1;
+                final item = _packages.removeAt(oldIndex);
+                _packages.insert(newIndex, item);
+              });
+            },
+            itemBuilder: (context, index) {
+              final pkg = _packages[index];
+              return Container(
+                key: ValueKey(pkg['id']),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: ReorderableDragStartListener(
+                    index: index,
+                    child: Icon(Icons.drag_handle, color: Colors.grey[500]),
+                  ),
+                  title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+                    onPressed: () => _deletePackage(pkg),
+                  ),
+                ),
+              );
+            },
           ),
-          child: ListTile(
-            leading: ReorderableDragStartListener(
-              index: index,
-              child: Icon(Icons.drag_handle, color: Colors.grey[500]),
-            ),
-            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-              onPressed: () => _deletePackage(pkg),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PackageEditScreen()),
+                  );
+                  if (result == true) {
+                    Home.packagesChanged.value++;
+                    _load();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Novo pacote'),
+              ),
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -323,7 +392,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // --- ABA 3: TEMPLATES (REORDENÁVEL COM DRAG HANDLE NO INÍCIO) ---
+  // --- ABA 3: TEMPLATES (REORDENÁVEL) ---
   Widget _buildTemplatesTab() {
     return Column(
       children: [
@@ -332,7 +401,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
               : ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
-                  buildDefaultDragHandles: false, // Desativa o drag handle padrão no final
+                  buildDefaultDragHandles: false,
                   itemCount: _templates.length,
                   onReorder: (oldIndex, newIndex) {
                     setState(() {
@@ -421,29 +490,86 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   // --- ABA 4: TAGS ---
   Widget _buildTagsTab() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _tags.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final tag = _tags[i];
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(10),
+    final titleController = TextEditingController();
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: _tags.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final tag = _tags[i];
+              return Container(
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  title: Text('#${tag['title']}', style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+                    onPressed: () async {
+                      await TagDao().delete(tag['id'] as int);
+                      _load();
+                    },
+                  ),
+                ),
+              );
+            },
           ),
-          child: ListTile(
-            title: Text('#${tag['title']}', style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold)),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-              onPressed: () async {
-                await TagDao().delete(tag['id'] as int);
-                _load();
-              },
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final title = await showDialog<String>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Nova Tag'),
+                      content: TextField(
+                        controller: titleController,
+                        decoration: const InputDecoration(hintText: 'Nome da tag (sem #)'),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, titleController.text.trim()),
+                          child: const Text('Adicionar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (title != null && title.isNotEmpty) {
+                    final cleanTitle = title.replaceAll('#', '').trim();
+                    if (cleanTitle.isNotEmpty) {
+                      await TagDao().insert(cleanTitle);
+                      _load();
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Nova tag'),
+              ),
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

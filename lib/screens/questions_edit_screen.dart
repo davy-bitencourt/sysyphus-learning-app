@@ -14,7 +14,7 @@ import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 
 class TagTextEditingController extends TextEditingController {
-  final TextStyle tagStyle;
+  TextStyle tagStyle;
 
   TagTextEditingController({super.text, required this.tagStyle});
 
@@ -69,7 +69,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   List<Map<String, dynamic>> _packages = [];
 
   TemplateModel? _selectedTemplate;
-  int? _selectedTagId;
   int? _selectedPackageId;
 
   late final TagTextEditingController _tagInputController;
@@ -85,10 +84,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     super.initState();
     _selectedPackageId = widget.packageId;
     _tagInputController = TagTextEditingController(
-      tagStyle: TextStyle(
-        color: context.colors.accent,
-        fontWeight: FontWeight.bold,
-      ),
+      tagStyle: const TextStyle(fontWeight: FontWeight.bold),
     );
     _loadOptions();
   }
@@ -106,12 +102,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
     final q = widget.question;
     if (q != null) {
-      _selectedTagId = q.tagId;
       _selectedPackageId = q.packageId ?? widget.packageId;
 
-      if (_selectedTagId != null) {
+      if (q.tagId != null) {
         final match = _tags.firstWhere(
-          (t) => t['id'] == _selectedTagId,
+          (t) => t['id'] == q.tagId,
           orElse: () => const <String, dynamic>{},
         );
         if (match.isNotEmpty) {
@@ -238,34 +233,56 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     setState(() => _tagQuery = query);
   }
 
-  void _selectSuggestedTag(int id, String title) {
+  void _selectSuggestedTag(String title) {
+    final currentText = _tagInputController.text;
+    final hashIndex = currentText.lastIndexOf('#');
+    String newText;
+    if (hashIndex != -1) {
+      newText = '${currentText.substring(0, hashIndex)}#$title ';
+    } else {
+      newText = '$currentText #$title ';
+    }
+
     setState(() {
-      _selectedTagId = id;
-      _tagInputController.text = '#$title ';
+      _tagInputController.text = newText;
       _tagInputController.selection = TextSelection.collapsed(offset: _tagInputController.text.length);
       _tagQuery = '';
     });
   }
 
-  Future<int?> _resolveTagId() async {
+  Future<int?> _resolveFirstTagId() async {
     final text = _tagInputController.text.trim();
     if (text.isEmpty) return null;
 
-    final hashIndex = text.indexOf('#');
-    final raw = hashIndex != -1 ? text.substring(hashIndex + 1) : text;
-    final tagName = raw.split(RegExp(r'\s')).first.trim();
-    if (tagName.isEmpty) return null;
+    final tagMatches = RegExp(r'#([^\s#]+)').allMatches(text);
+    final tagNames = tagMatches.map((m) => m.group(1)!.trim()).where((name) => name.isNotEmpty).toList();
 
-    for (final t in _tags) {
-      if ((t['title'] as String).toLowerCase() == tagName.toLowerCase()) {
-        return t['id'] as int;
+    if (tagNames.isEmpty) return null;
+
+    int? firstTagId;
+
+    for (var i = 0; i < tagNames.length; i++) {
+      final tagName = tagNames[i];
+      int? resolvedId;
+
+      for (final t in _tags) {
+        if ((t['title'] as String).toLowerCase() == tagName.toLowerCase()) {
+          resolvedId = t['id'] as int;
+          break;
+        }
+      }
+
+      if (resolvedId == null) {
+        resolvedId = await TagDao().insert(tagName);
+        _tags = await TagDao().getAll();
+      }
+
+      if (i == 0) {
+        firstTagId = resolvedId;
       }
     }
 
-    final newId = await TagDao().insert(tagName);
-    final refreshed = await TagDao().getAll();
-    _tags = refreshed;
-    return newId;
+    return firstTagId;
   }
 
   Map<String, dynamic> _collectValues(TemplateModel template) {
@@ -312,7 +329,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     setState(() => _saving = true);
 
     final values = _collectValues(_selectedTemplate!);
-    final tagId = await _resolveTagId();
+    final tagId = await _resolveFirstTagId();
 
     final dto = QuestionDto(
       packageId: _selectedPackageId!,
@@ -351,6 +368,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _tagInputController.tagStyle = TextStyle(
+      color: context.colors.accent,
+      fontWeight: FontWeight.bold,
+    );
+
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -538,7 +560,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                       label: Text('#${t['title']}'),
                       backgroundColor: context.colors.accent.withValues(alpha: 0.15),
                       side: BorderSide.none,
-                      onPressed: () => _selectSuggestedTag(t['id'] as int, t['title'] as String),
+                      onPressed: () => _selectSuggestedTag(t['title'] as String),
                     ))
                 .toList(),
           ),
