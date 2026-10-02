@@ -3,12 +3,14 @@ import '../styles/app_theme.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/template_dao.dart';
 import '../data/DAO/tag_dao.dart';
+import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
 import 'home.dart';
 import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
+import 'session_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 
 class QuestionBankScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   List<Map<String, dynamic>> _packages = [];
   List<TemplateModel> _templates = [];
   List<Map<String, dynamic>> _tags = [];
+  List<Map<String, dynamic>> _sessions = [];
   bool _loading = true;
 
   int? _selectedPackageId;
@@ -40,6 +43,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final packageRows = await PackageDao().getAll();
     final templateRows = await TemplateDao().getAll();
     final tagRows = await TagDao().getAll();
+    final sessionRows = await SessionDao().getAll();
 
     if (!mounted) return;
     setState(() {
@@ -48,6 +52,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
           .toList();
       _tags = List.from(tagRows);
+      _sessions = List.from(sessionRows);
       _loading = false;
     });
 
@@ -75,7 +80,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: context.colors.bg,
         appBar: AppBar(
@@ -99,6 +104,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               Tab(text: 'Pacotes'),
               Tab(text: 'Templates'),
               Tab(text: 'Tags'),
+              Tab(text: 'Sessões'),
             ],
           ),
         ),
@@ -110,6 +116,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   _buildPackagesTab(),
                   _buildTemplatesTab(),
                   _buildTagsTab(),
+                  _buildSessionsTab(),
                 ],
               ),
       ),
@@ -571,5 +578,150 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         ),
       ],
     );
+  }
+
+  // --- ABA 5: SESSÕES ---
+  Widget _buildSessionsTab() {
+    return Column(
+      children: [
+        Expanded(
+          child: _sessions.isEmpty
+              ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _sessions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final session = _sessions[i];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.timer_outlined, color: context.colors.accent, size: context.icon(20)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (session['title'] as String?) ?? 'Sessão ${session['id']}',
+                                  style: TextStyle(fontSize: 14, color: context.colors.text),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _sessionSummary(session),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _editSession(session),
+                            icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
+                          ),
+                          IconButton(
+                            onPressed: () => _deleteSession(session),
+                            icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SessionEditScreen()),
+                  );
+                  if (result == true) _load();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Nova sessão'),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Resumo em uma linha: tempo • total de questões • filtro por tag.
+  String _sessionSummary(Map<String, dynamic> session) {
+    final minutes = int.tryParse((session['time_limit'] as String?) ?? '');
+    final total = (session['total_q'] as num?)?.toInt();
+    final parts = <String>[
+      minutes == null ? 'Sem limite de tempo' : '$minutes min',
+      if (total != null) '$total questões',
+    ];
+
+    final filters = SessionDao.parseTagFilters(session['tag_filters'] as String?);
+    if (filters.isNotEmpty) {
+      final names = {for (final t in _tags) t['id'] as int: t['title'] as String};
+      parts.add(filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · '));
+    }
+    return parts.join(' • ');
+  }
+
+  Future<void> _editSession(Map<String, dynamic> session) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SessionEditScreen(session: session)),
+    );
+    if (result == true) _load();
+  }
+
+  Future<void> _deleteSession(Map<String, dynamic> session) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir sessão'),
+        content: Text(
+          'Tem certeza que deseja excluir a sessão "${session['title'] ?? ''}"? '
+          'Os pacotes ligados a ela ficarão sem sessão.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await SessionDao().delete(session['id'] as int);
+      _load();
+    } catch (e) {
+      debugPrint('Erro ao excluir sessão ${session['id']}: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível excluir a sessão: $e')),
+      );
+    }
   }
 }

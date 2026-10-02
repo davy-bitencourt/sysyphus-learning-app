@@ -63,6 +63,50 @@ class QuestionDao {
     };
   }
 
+  /* Questões de uma rodada de estudo com SESSÃO:
+   *  - cada filtro de tag traz exatamente `quantity` questões daquela tag (ou
+   *    todas as que existirem, se houver menos);
+   *  - o que sobrar até `totalQ` é completado com questões das demais tags
+   *    (e sem tag), para as quantidades por tag não passarem do combinado;
+   *  - sem filtro, sorteia `totalQ` questões do pacote.
+   * Diferente do getByPackage, aqui não há o teto de 60: o total é o da sessão. */
+  Future<List<Map<String, dynamic>>> getForSession(
+    int packageId,
+    int totalQ,
+    List<Map<String, int>> tagFilters,
+  ) async {
+    final db = await DatabaseHelper.instance.database;
+    const cols = 'q.id, q.template_id, q.tag_id, q.questions, s.state, s.interval_days, s.ease_factor, s.due_date';
+    const base = 'FROM question q LEFT JOIN state s ON s.question_id = q.id WHERE q.package_id = ?';
+
+    final picked = <Map<String, dynamic>>[];
+    final usedTags = <int>[];
+
+    for (final f in tagFilters) {
+      final tagId = f['tag_id']!;
+      usedTags.add(tagId);
+      picked.addAll(await db.rawQuery(
+        'SELECT $cols $base AND q.tag_id = ? ORDER BY RANDOM() LIMIT ?',
+        [packageId, tagId, f['quantity']!],
+      ));
+    }
+
+    final remaining = totalQ - picked.length;
+    if (remaining > 0) {
+      final notIn = usedTags.isEmpty
+          ? ''
+          : 'AND (q.tag_id IS NULL OR q.tag_id NOT IN (${usedTags.map((_) => '?').join(',')}))';
+      picked.addAll(await db.rawQuery(
+        'SELECT $cols $base $notIn ORDER BY RANDOM() LIMIT ?',
+        [packageId, ...usedTags, remaining],
+      ));
+    }
+
+    // Mistura tudo: as questões de uma mesma tag não vêm em bloco.
+    final result = List<Map<String, dynamic>>.from(picked)..shuffle();
+    return result;
+  }
+
   /* quantas questões existem em cada tag (tag_id -> total) */
   Future<Map<int, int>> getTagCounts() async {
     final db = await DatabaseHelper.instance.database;

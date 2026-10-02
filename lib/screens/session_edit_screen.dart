@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/DAO/question_state_dao.dart';
+import '../data/DAO/session_dao.dart';
 import '../data/DAO/tag_dao.dart';
-import '../data/database_helper.dart';
+import '../data/DTO/session_dto.dart';
 import '../styles/app_theme.dart';
 
 /// Quanto de uma tag entra na sessão (ex.: 10 questões de #matemática).
@@ -22,7 +23,10 @@ class _TagQuota {
 ///  - filtro opcional por tag: quantas questões vêm de cada tag. A soma das
 ///    quantidades por tag não pode passar do total da sessão.
 class SessionEditScreen extends StatefulWidget {
-  const SessionEditScreen({super.key});
+  /// Linha da tabela `session` para editar; null = criar nova.
+  final Map<String, dynamic>? session;
+
+  const SessionEditScreen({super.key, this.session});
 
   @override
   State<SessionEditScreen> createState() => _SessionEditScreenState();
@@ -36,6 +40,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   List<Map<String, dynamic>> _tags = [];
   Map<int, int> _tagCounts = {}; // tag_id -> questões que existem naquela tag
   final List<_TagQuota> _quotas = [];
+
+  bool get _isEditing => widget.session != null;
 
   bool _unlimitedTime = true;
   bool _filterByTag = false;
@@ -55,8 +61,32 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     setState(() {
       _tags = tags;
       _tagCounts = counts;
+      if (widget.session != null) _applySession(widget.session!);
       _loading = false;
     });
+  }
+
+  /// Preenche o formulário com a sessão que está sendo editada.
+  void _applySession(Map<String, dynamic> s) {
+    _nameController.text = (s['title'] as String?) ?? '';
+
+    final minutes = int.tryParse((s['time_limit'] as String?) ?? '');
+    _unlimitedTime = minutes == null;
+    if (minutes != null) _minutesController.text = minutes.toString();
+
+    final total = (s['total_q'] as num?)?.toInt();
+    if (total != null) _totalController.text = total.toString();
+
+    // Filtros de tags que ainda existem (tag apagada some do filtro).
+    final filters = SessionDao.parseTagFilters(s['tag_filters'] as String?);
+    _quotas
+      ..clear()
+      ..addAll([
+        for (final f in filters)
+          if (_tags.any((t) => t['id'] == f['tag_id']))
+            _TagQuota(tagId: f['tag_id'], quantity: f['quantity']!),
+      ]);
+    _filterByTag = _quotas.isNotEmpty;
   }
 
   @override
@@ -143,13 +173,18 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
     setState(() => _saving = true);
     try {
-      final db = await DatabaseHelper.instance.database;
-      // time_limit: minutos (texto) ou NULL = sem limite.
-      await db.rawInsert(
-        'INSERT INTO session (title, time_limit, total_q, tag_filters) '
-        'VALUES (?, ?, ?, ?)',
-        [name, minutes?.toString(), total, filters == null ? null : jsonEncode(filters)],
+      final dto = SessionDto(
+        id: widget.session?['id'] as int?,
+        title: name,
+        time_limit: minutes?.toString(), // minutos (texto) ou null = sem limite
+        total_q: total,
+        tagFilters: filters == null ? null : jsonEncode(filters),
       );
+      if (_isEditing) {
+        await SessionDao().update(dto);
+      } else {
+        await SessionDao().insert(dto);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       debugPrint('Erro ao salvar sessão: $e');
@@ -170,7 +205,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Nova sessão',
+        title: Text(_isEditing ? 'Editar sessão' : 'Nova sessão',
           style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
       ),

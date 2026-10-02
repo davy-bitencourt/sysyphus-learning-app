@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
@@ -6,6 +7,7 @@ import '../data/schema/question_schema.dart';
 import '../data/schema/template_schema.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/DAO/revlog_dao.dart';
+import '../data/DAO/session_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
 import 'questions_edit_screen.dart';
@@ -35,6 +37,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
   int _currentQuestion = 0;
   bool _answered = false;
   String? _playingFieldId;
+
+  // ---- sessão do pacote (tempo limite e limite de questões) ----
+  // O cronômetro só existe se a sessão do pacote tiver tempo limite. Ele usa
+  // o horário de término (e não um contador), então continua correto se o app
+  // ficar em segundo plano.
+  Timer? _timer;
+  DateTime? _endsAt;
+  bool _timerStarted = false;
+  bool _timeUpPending = false; // acabou o tempo com outra tela aberta por cima
+  int _answeredCount = 0;
+  final ValueNotifier<Duration?> _timeLeft = ValueNotifier<Duration?>(null);
 
   final Map<String, int?> _selectedOptionByField = {};
   final Map<String, Map<int, bool>> _vofAnswersByField = {};
@@ -66,6 +79,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   void dispose() {
+    _timer?.cancel();
+    _timeLeft.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -73,10 +88,26 @@ class _QuestionScreenState extends State<QuestionScreen> {
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
 
-    await _questionSchema.getQuestionData(widget.packageId, widget.limit);
+    // A sessão do pacote (se houver) define quantas questões entram na rodada,
+    // o filtro por tag e o tempo limite. Sem sessão, vale o limite padrão.
+    final session = await SessionDao().getByPackage(widget.packageId);
+    final totalQ = (session?['total_q'] as num?)?.toInt();
+    final minutes = int.tryParse((session?['time_limit'] as String?) ?? '');
+
+    final List<Map<String, dynamic>> rows;
+    if (session != null && totalQ != null && totalQ > 0) {
+      rows = await QuestionDao().getForSession(
+        widget.packageId,
+        totalQ,
+        SessionDao.parseTagFilters(session['tag_filters'] as String?),
+      );
+    } else {
+      await _questionSchema.getQuestionData(widget.packageId, widget.limit);
+      rows = _questionSchema.question_schema;
+    }
 
     final loaded = <LoadedQuestion>[];
-    for (final row in _questionSchema.question_schema) {
+    for (final row in rows) {
       final templateId = row['template_id'] as int?;
       if (templateId == null) continue;
 
@@ -97,6 +128,97 @@ class _QuestionScreenState extends State<QuestionScreen> {
       _resetAnswerState();
       _loading = false;
     });
+
+    // O cronômetro começa na primeira vez que a rodada abre com questões;
+    // recarregar depois de editar uma questão não reinicia o tempo.
+    if (loaded.isNotEmpty && minutes != null && minutes > 0) _startTimer(minutes);
+  }
+
+  void _startTimer(int minutes) {
+    if (_timerStarted) return;
+    setState(() => _timerStarted = true);
+    _endsAt = DateTime.now().add(Duration(minutes: minutes));
+    _timeLeft.value = Duration(minutes: minutes);
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    final endsAt = _endsAt;
+    if (endsAt == null || !mounted) return;
+
+    final left = endsAt.difference(DateTime.now());
+    if (left <= Duration.zero) {
+      _timer?.cancel();
+      _timer = null;
+      _timeLeft.value = Duration.zero;
+      _onTimeUp();
+    } else {
+      _timeLeft.value = left;
+    }
+  }
+
+  Future<void> _onTimeUp() async {
+    await _audioPlayer.stop();
+    if (!mounted) return;
+
+    // Se outra tela (ex.: editar questão) estiver aberta por cima, espera ela
+    // fechar para encerrar a sessão (ver _openNewQuestion/_openEditQuestion).
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) {
+      _timeUpPending = true;
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Tempo esgotado'),
+        content: Text(
+          'O tempo limite da sessão acabou. Você respondeu '
+          '$_answeredCount de ${_questions.length} questões.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  String _formatDuration(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final sec = d.inSeconds.remainder(60);
+    return h > 0 ? '$h:${two(m)}:${two(sec)}' : '${two(m)}:${two(sec)}';
+  }
+
+  Widget _buildTimerLabel() {
+    return ValueListenableBuilder<Duration?>(
+      valueListenable: _timeLeft,
+      builder: (context, left, _) {
+        final d = left ?? Duration.zero;
+        final urgent = d.inSeconds <= 60; // último minuto em vermelho
+        final color = urgent ? const Color(0xFFC62828) : context.colors.mutedText;
+        return SizedBox(
+          height: 32,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.timer_outlined, size: context.icon(16), color: color),
+              const SizedBox(width: 4),
+              Text(
+                _formatDuration(d),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _resetAnswerState() {
@@ -211,6 +333,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       }
     }
 
+    _answeredCount++;
     _next();
   }
 
@@ -244,6 +367,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
       context,
       MaterialPageRoute(builder: (_) => QuestionsEditScreen(packageId: widget.packageId)),
     );
+    if (_timeUpPending && mounted) {
+      _timeUpPending = false;
+      await _onTimeUp();
+      return;
+    }
     if (result == true) _loadQuestions();
   }
 
@@ -257,6 +385,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
         ),
       ),
     );
+    if (_timeUpPending && mounted) {
+      _timeUpPending = false;
+      await _onTimeUp();
+      return;
+    }
     if (result == true) _loadQuestions();
   }
 
@@ -330,6 +463,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
           ],
         ),
         centerTitle: true,
+        bottom: _timerStarted
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(32),
+                child: _buildTimerLabel(),
+              )
+            : null,
         actions: [
           IconButton(
             icon: Icon(Icons.edit_outlined, color: context.colors.text),

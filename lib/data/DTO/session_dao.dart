@@ -71,11 +71,11 @@ class SessionDao {
 
   Future<void> delete(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
-      // package.session_id tem FOREIGN KEY: os pacotes ligados a esta sessão
-      // ficam sem sessão antes de ela ser removida.
-      await txn.rawUpdate('UPDATE package SET session_id = NULL WHERE session_id = ?', [id]);
-      await txn.rawDelete('DELETE FROM session WHERE id = ?', [id]);
-    });
+    await db.rawDelete(
+      '''
+        DELETE FROM session
+        WHERE id = ?
+      ''', [id]
+    );
   }
 }
