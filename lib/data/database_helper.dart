@@ -35,7 +35,7 @@ class DatabaseHelper{
 
     return await openDatabase(
       dir, 
-      version: 2, 
+      version: 3, 
       onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, 
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
@@ -63,6 +63,11 @@ class DatabaseHelper{
       ''');
       await db.execute('DROP TABLE revlog');
       await db.execute('ALTER TABLE revlog_new RENAME TO revlog');
+    }
+    // v3: sessão guarda o filtro por tag (JSON: [{"tag_id": 1, "quantity": 10}]).
+    // time_limit: minutos (texto) ou NULL = sem limite. total_q: total de questões.
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE session ADD COLUMN tag_filters TEXT');
     }
   }
 
@@ -100,7 +105,8 @@ class DatabaseHelper{
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           title TEXT,
           time_limit TEXT,
-          total_q INTEGER
+          total_q INTEGER,
+          tag_filters TEXT
         )
       """
     );

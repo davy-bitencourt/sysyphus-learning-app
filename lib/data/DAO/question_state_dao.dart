@@ -63,6 +63,22 @@ class QuestionDao {
     };
   }
 
+  /* quantas questões existem em cada tag (tag_id -> total) */
+  Future<Map<int, int>> getTagCounts() async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.rawQuery(
+      '''
+        SELECT tag_id, COUNT(*) AS total
+        FROM question
+        WHERE tag_id IS NOT NULL
+        GROUP BY tag_id
+      '''
+    );
+    return {
+      for (final r in rows) (r['tag_id'] as num).toInt(): (r['total'] as num).toInt(),
+    };
+  }
+
   Future<int> insert(QuestionDto dto) async {
     final db = await DatabaseHelper.instance.database;
 

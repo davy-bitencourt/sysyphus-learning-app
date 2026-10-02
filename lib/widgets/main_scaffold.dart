@@ -8,9 +8,8 @@ import '../screens/package_edit_screen.dart';
 import '../screens/questions_edit_screen.dart';
 import '../screens/templaate_edit_screen.dart';
 import '../screens/question_bank_screen.dart';
+import '../screens/session_edit_screen.dart';
 import '../data/DAO/tag_dao.dart';
-import '../data/DAO/session_dao.dart';
-import '../data/DTO/session_dto.dart';
 
 class MainScaffold extends StatefulWidget {
   final String title;
@@ -166,10 +165,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         break;
 
       case 'session':
-        await _showQuickTextDialog(
-          title: 'Nova sessão',
-          hint: 'Nome da sessão',
-          onConfirm: (text) => SessionDao().insert(SessionDto(title: text)),
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SessionEditScreen()),
         );
         widget.onItemCreated?.call();
         break;
