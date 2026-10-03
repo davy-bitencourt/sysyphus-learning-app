@@ -32,7 +32,7 @@ class StudyApp extends StatelessWidget {
       builder: (context, _) {
         final settings = AppSettings.instance;
         return MaterialApp(
-          title: 'Study App',
+          title: 'Sysyphus',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(settings, Brightness.light),
           darkTheme: AppTheme.build(settings, Brightness.dark),
