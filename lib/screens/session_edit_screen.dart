@@ -47,6 +47,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   bool _filterByTag = false;
   bool _loading = true;
   bool _saving = false;
+  bool _createdAny = false; // criou ao menos uma sessão nesta tela (avisa quem abriu)
 
   @override
   void initState() {
@@ -101,8 +102,20 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   int get _quotaSum => _quotas.fold(0, (sum, q) => sum + q.quantity);
   int get _remaining => _total - _quotaSum;
 
-  void _showError(String message) {
+  void _showError(String message) => _showMessage(message);
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Volta o formulário ao estado de "nova sessão".
+  void _resetForm() {
+    _nameController.clear();
+    _minutesController.text = '30';
+    _totalController.text = '20';
+    _unlimitedTime = true;
+    _filterByTag = false;
+    _quotas.clear();
   }
 
   void _onFilterToggled(bool value) {
@@ -182,10 +195,18 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       );
       if (_isEditing) {
         await SessionDao().update(dto);
+        if (mounted) Navigator.pop(context, true);
       } else {
         await SessionDao().insert(dto);
+        _createdAny = true;
+        if (!mounted) return;
+        // Continua na tela com o formulário nos valores iniciais.
+        setState(() {
+          _resetForm();
+          _saving = false;
+        });
+        _showMessage('Sessão "$name" salva.');
       }
-      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       debugPrint('Erro ao salvar sessão: $e');
       if (!mounted) return;
@@ -194,8 +215,28 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     }
   }
 
+  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
+  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
+  /// da transição de rota.
+  void _leave() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Navigator.pop(context, _createdAny);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Voltar (seta ou gesto do sistema) devolve `true` se alguma sessão foi
+    // criada aqui, para a tela anterior recarregar a lista.
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: context.colors.bg,
       appBar: AppBar(
@@ -203,7 +244,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.colors.text),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _leave(),
         ),
         title: Text(_isEditing ? 'Editar sessão' : 'Nova sessão',
           style: TextStyle(color: context.colors.text,

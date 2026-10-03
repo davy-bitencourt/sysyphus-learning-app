@@ -3,13 +3,12 @@ import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
 import '../screens/setting_screen.dart';
-import '../screens/home.dart';
 import '../screens/package_edit_screen.dart';
 import '../screens/questions_edit_screen.dart';
 import '../screens/templaate_edit_screen.dart';
 import '../screens/question_bank_screen.dart';
 import '../screens/session_edit_screen.dart';
-import '../data/DAO/tag_dao.dart';
+import 'new_tag_dialog.dart';
 
 class MainScaffold extends StatefulWidget {
   final String title;
@@ -156,11 +155,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         break;
 
       case 'tag':
-        await _showQuickTextDialog(
-          title: 'Nova tag',
-          hint: 'Nome da tag',
-          onConfirm: (text) => TagDao().insert(text),
-        );
+        await showNewTagDialog(context);
         widget.onItemCreated?.call();
         break;
 
@@ -171,40 +166,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         );
         widget.onItemCreated?.call();
         break;
-    }
-  }
-
-  Future<void> _showQuickTextDialog({
-    required String title,
-    required String hint,
-    required Future<void> Function(String text) onConfirm,
-  }) async {
-    final controller = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: hint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-
-    final text = controller.text.trim();
-    if (confirmed == true && text.isNotEmpty) {
-      await onConfirm(text);
     }
   }
 
@@ -240,6 +201,36 @@ class _MainScaffoldState extends State<MainScaffold> {
         )),
       tileColor: active ? context.colors.accent.withValues(alpha: 0.10) : Colors.transparent,
       onTap: onTap ?? () => Navigator.pop(context),
+    );
+  }
+
+  /// Barra inferior com recorte para o FAB central.
+  ///
+  /// Não usa `BottomAppBar(shape: CircularNotchedRectangle())` de propósito:
+  /// o clipper dele lê `Scaffold.geometryOf()`, que só pode ser lido durante o
+  /// paint. Com a Home coberta por outra rota, o mouse (desktop) faz hit-test
+  /// nela fora do paint e estoura a asserção. Como o FAB é sempre
+  /// `centerDocked`, o recorte é fixo e dispensa a geometria do Scaffold.
+  Widget _buildBottomBar() {
+    return PhysicalShape(
+      clipper: const _CenterNotchClipper(),
+      color: context.colors.surface,
+      elevation: 8,
+      shadowColor: Colors.black,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home_outlined, 'Home', 0),
+              const SizedBox(width: 48),
+              _buildNavItem(Icons.bar_chart_outlined, 'Statistics', 1),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -285,8 +276,11 @@ class _MainScaffoldState extends State<MainScaffold> {
           child: Column(
             children: [
               _drawerItem(context, Icons.list, 'Home', active: true, onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const Home()));
+                Navigator.pop(context); // fecha o drawer
+                // Volta para a Home que já existe (primeira rota) em vez de
+                // empilhar outra, e garante que a aba aberta seja a Home.
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                widget.onTap?.call(0);
               }),
               _drawerItem(context, Icons.chrome_reader_mode, 'Database', onTap: () {
                 Navigator.pop(context);
@@ -308,24 +302,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
       ),
       body: widget.body,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: context.colors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 8,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(Icons.home_outlined, 'Home', 0),
-              const SizedBox(width: 48),
-              _buildNavItem(Icons.bar_chart_outlined, 'Statistics', 1),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _buildBottomBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: _toggleMenu,
         backgroundColor: context.colors.accent,
@@ -344,4 +321,23 @@ class _MainScaffoldState extends State<MainScaffold> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
+}
+
+/// Recorte circular no topo-centro da barra, igual ao do FAB `centerDocked`
+/// (FAB de 56 px com margem de 8 px, centro na borda superior da barra).
+class _CenterNotchClipper extends CustomClipper<Path> {
+  const _CenterNotchClipper();
+
+  @override
+  Path getClip(Size size) {
+    final fab = Rect.fromCenter(
+      center: Offset(size.width / 2, 0),
+      width: 56,
+      height: 56,
+    ).inflate(8);
+    return const CircularNotchedRectangle().getOuterPath(Offset.zero & size, fab);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

@@ -25,6 +25,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
   final _nameController = TextEditingController();
   late List<Object> _items; // FieldDefinition ou _DividerMarker, nessa ordem
   bool _saving = false;
+  bool _createdAny = false; // criou ao menos um template nesta tela (avisa quem abriu)
 
   bool get _isEditing => widget.template != null;
 
@@ -32,13 +33,16 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
   void initState() {
     super.initState();
     _nameController.text = widget.template?.name ?? '';
+    _items = _buildItems(widget.template?.fields ?? const <FieldDefinition>[]);
+  }
 
-    final fields = TemplateModel.withStatement(
-      widget.template?.fields ?? const <FieldDefinition>[],
-    );
+  /// Monta a lista reordenável: campos da pergunta, divisória, campos da resposta.
+  /// Com lista vazia sobra só o enunciado (obrigatório) acima da divisória.
+  List<Object> _buildItems(List<FieldDefinition> source) {
+    final fields = TemplateModel.withStatement(source);
     final questionFields = fields.where((f) => f.section == FieldSection.question).toList();
     final answerFields = fields.where((f) => f.section == FieldSection.answer).toList();
-    _items = [...questionFields, _divider, ...answerFields];
+    return [...questionFields, _divider, ...answerFields];
   }
 
   @override
@@ -163,10 +167,18 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
       final dao = TemplateDao();
       if (_isEditing) {
         await dao.update(widget.template!.id!, json);
+        if (mounted) Navigator.pop(context, true);
       } else {
         await dao.insert(json);
+        _createdAny = true;
+        if (!mounted) return;
+        // Continua na tela com tudo zerado, pronto para o próximo template.
+        setState(() {
+          _nameController.clear();
+          _items = _buildItems(const <FieldDefinition>[]);
+        });
+        _showMessage('Template "${model.name}" salvo.');
       }
-      if (mounted) Navigator.pop(context, true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -183,12 +195,34 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     }
   }
 
-  void _showError(String message) {
+  void _showError(String message) => _showMessage(message);
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
+  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
+  /// da transição de rota.
+  void _leave() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Navigator.pop(context, _createdAny);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Voltar (seta ou gesto do sistema) devolve `true` se algum template foi
+    // criado aqui, para a tela anterior recarregar a lista.
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: context.colors.bg,
       appBar: AppBar(
@@ -196,7 +230,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.colors.text),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _leave(),
         ),
         title: Text(_isEditing ? 'Editar template' : 'Novo template',
           style: TextStyle(color: context.colors.text,

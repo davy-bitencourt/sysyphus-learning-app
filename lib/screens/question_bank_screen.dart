@@ -12,6 +12,7 @@ import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
 import 'session_edit_screen.dart';
 import 'templaate_edit_screen.dart';
+import '../widgets/new_tag_dialog.dart';
 
 class QuestionBankScreen extends StatefulWidget {
   const QuestionBankScreen({super.key});
@@ -31,11 +32,38 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   List<Question> _packageQuestions = [];
   bool _loadingQuestions = false;
 
+  // Busca: filtra a lista da aba aberta pelo texto digitado.
+  final TextEditingController _searchController = TextEditingController();
+  bool _searching = false;
+  String _query = ''; // já em minúsculas e sem espaços nas pontas
+
   @override
   void initState() {
     super.initState();
     _load();
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool _matches(String? text) => _query.isEmpty || (text ?? '').toLowerCase().contains(_query);
+
+  void _toggleSearch() {
+    setState(() {
+      _searching = !_searching;
+      if (!_searching) {
+        _searchController.clear();
+        _query = '';
+      }
+    });
+  }
+
+  Widget _noResults() => Center(
+        child: Text('Nenhum resultado para a busca.', style: TextStyle(color: Colors.grey[500])),
+      );
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -90,10 +118,29 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             icon: Icon(Icons.arrow_back, color: context.colors.text),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text(
-            'Banco de questões',
-            style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
-          ),
+          title: _searching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                  style: TextStyle(color: context.colors.text, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar...',
+                    hintStyle: TextStyle(color: Colors.grey[500]),
+                    border: InputBorder.none,
+                  ),
+                )
+              : Text(
+                  'Banco de questões',
+                  style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+                ),
+          actions: [
+            IconButton(
+              tooltip: _searching ? 'Fechar busca' : 'Buscar',
+              icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.text),
+              onPressed: _toggleSearch,
+            ),
+          ],
           bottom: TabBar(
             isScrollable: true,
             labelColor: context.colors.accent,
@@ -103,8 +150,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               Tab(text: 'Questões'),
               Tab(text: 'Pacotes'),
               Tab(text: 'Templates'),
-              Tab(text: 'Tags'),
               Tab(text: 'Sessões'),
+              Tab(text: 'Tags'),
             ],
           ),
         ),
@@ -115,8 +162,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   _buildQuestionsTab(),
                   _buildPackagesTab(),
                   _buildTemplatesTab(),
-                  _buildTagsTab(),
                   _buildSessionsTab(),
+                  _buildTagsTab(),
                 ],
               ),
       ),
@@ -231,11 +278,14 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         child: Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[500])),
       );
     }
+    final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
+    if (visible.isEmpty) return _noResults();
+
     return ListView.separated(
-      itemCount: _packageQuestions.length,
+      itemCount: visible.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
-        final question = _packageQuestions[i];
+        final question = visible[i];
         final title = question.statement.isEmpty ? '(sem enunciado)' : question.statement;
         return Container(
           decoration: BoxDecoration(
@@ -306,14 +356,19 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   // --- ABA 2: PACOTES (REORDENÁVEL) ---
   Widget _buildPackagesTab() {
+    final visible = _packages.where((p) => _matches(p['title'] as String?)).toList();
+
     return Column(
       children: [
         Expanded(
-          child: ReorderableListView.builder(
+          child: visible.isEmpty && _query.isNotEmpty
+              ? _noResults()
+              : ReorderableListView.builder(
             padding: const EdgeInsets.all(16),
             buildDefaultDragHandles: false,
-            itemCount: _packages.length,
+            itemCount: visible.length,
             onReorder: (oldIndex, newIndex) {
+              if (_query.isNotEmpty) return; // sem reordenar enquanto filtra
               setState(() {
                 if (newIndex > oldIndex) newIndex -= 1;
                 final item = _packages.removeAt(oldIndex);
@@ -321,7 +376,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               });
             },
             itemBuilder: (context, index) {
-              final pkg = _packages[index];
+              final pkg = visible[index];
               return Container(
                 key: ValueKey(pkg['id']),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -332,6 +387,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 child: ListTile(
                   leading: ReorderableDragStartListener(
                     index: index,
+                    enabled: _query.isEmpty,
                     child: Icon(Icons.drag_handle, color: Colors.grey[500]),
                   ),
                   title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
@@ -401,16 +457,21 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   // --- ABA 3: TEMPLATES (REORDENÁVEL) ---
   Widget _buildTemplatesTab() {
+    final visible = _templates.where((t) => _matches(t.name)).toList();
+
     return Column(
       children: [
         Expanded(
           child: _templates.isEmpty
               ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
+              : visible.isEmpty
+              ? _noResults()
               : ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
                   buildDefaultDragHandles: false,
-                  itemCount: _templates.length,
+                  itemCount: visible.length,
                   onReorder: (oldIndex, newIndex) {
+                    if (_query.isNotEmpty) return; // sem reordenar enquanto filtra
                     setState(() {
                       if (newIndex > oldIndex) newIndex -= 1;
                       final item = _templates.removeAt(oldIndex);
@@ -418,7 +479,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     });
                   },
                   itemBuilder: (context, i) {
-                    final template = _templates[i];
+                    final template = visible[i];
                     return Container(
                       key: ValueKey(template.id ?? i),
                       margin: const EdgeInsets.only(bottom: 8),
@@ -431,6 +492,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                         children: [
                           ReorderableDragStartListener(
                             index: i,
+                            enabled: _query.isEmpty,
                             child: Padding(
                               padding: const EdgeInsets.only(right: 10),
                               child: Icon(Icons.drag_handle, color: Colors.grey[500]),
@@ -495,37 +557,54 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 4: TAGS ---
+  // --- ABA 5: TAGS (centralizadas) ---
   Widget _buildTagsTab() {
-    final titleController = TextEditingController();
+    final visible = _tags.where((t) => _matches(t['title'] as String?)).toList();
 
     return Column(
       children: [
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: _tags.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final tag = _tags[i];
-              return Container(
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(10),
+          child: _tags.isEmpty
+              ? Center(child: Text('Nenhuma tag cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+              : visible.isEmpty
+              ? _noResults()
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: visible.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final tag = visible[i];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          // Mesmo tamanho do botão de excluir, para o texto
+                          // ficar no centro de verdade do cartão.
+                          const SizedBox(width: 48),
+                          Expanded(
+                            child: Text(
+                              '#${tag['title']}',
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+                            onPressed: () async {
+                              await TagDao().delete(tag['id'] as int);
+                              _load();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                child: ListTile(
-                  title: Text('#${tag['title']}', style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-                    onPressed: () async {
-                      await TagDao().delete(tag['id'] as int);
-                      _load();
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
         ),
         SafeArea(
           top: false,
@@ -535,34 +614,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final title = await showDialog<String>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Nova Tag'),
-                      content: TextField(
-                        controller: titleController,
-                        decoration: const InputDecoration(hintText: 'Nome da tag (sem #)'),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, titleController.text.trim()),
-                          child: const Text('Adicionar'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (title != null && title.isNotEmpty) {
-                    final cleanTitle = title.replaceAll('#', '').trim();
-                    if (cleanTitle.isNotEmpty) {
-                      await TagDao().insert(cleanTitle);
-                      _load();
-                    }
-                  }
+                  await showNewTagDialog(context);
+                  _load();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
@@ -580,19 +633,23 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 5: SESSÕES ---
+  // --- ABA 4: SESSÕES ---
   Widget _buildSessionsTab() {
+    final visible = _sessions.where((s) => _matches(s['title'] as String?)).toList();
+
     return Column(
       children: [
         Expanded(
           child: _sessions.isEmpty
               ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+              : visible.isEmpty
+              ? _noResults()
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _sessions.length,
+                  itemCount: visible.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
-                    final session = _sessions[i];
+                    final session = visible[i];
                     return Container(
                       decoration: BoxDecoration(
                         color: context.colors.surfaceAlt,

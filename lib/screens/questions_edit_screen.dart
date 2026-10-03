@@ -74,8 +74,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   late final TagTextEditingController _tagInputController;
   String _tagQuery = '';
 
+  final ScrollController _scrollController = ScrollController();
+
   bool _loading = true;
   bool _saving = false;
+  bool _createdAny = false; // criou ao menos uma questão nesta tela (avisa quem abriu)
 
   bool get _isEditing => widget.question != null;
 
@@ -224,7 +227,31 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       }
     }
     _tagInputController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Esvazia o formulário para a próxima questão. Pacote e template ficam
+  /// como estão (quem cadastra várias questões seguidas costuma manter os dois).
+  void _resetForm() {
+    for (final c in _textControllers.values) {
+      c.clear();
+    }
+    for (final id in _mediaPaths.keys.toList()) {
+      _mediaPaths[id] = null;
+    }
+    for (final list in _optionControllers.values) {
+      for (final c in list) {
+        c.clear();
+      }
+    }
+    for (final list in _optionCorrect.values) {
+      for (var i = 0; i < list.length; i++) {
+        list[i] = false;
+      }
+    }
+    _tagInputController.clear();
+    _tagQuery = '';
   }
 
   void _onTagInputChanged(String text) {
@@ -342,10 +369,22 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     try {
       if (_isEditing) {
         await dao.updateQuestion(widget.question!.id!, dto);
+        if (mounted) Navigator.pop(context, true);
       } else {
         await dao.insert(dto);
+        _createdAny = true;
+        if (!mounted) return;
+        // Continua na tela com os campos vazios, pronto para a próxima questão.
+        setState(_resetForm);
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
+        _showError('Questão salva.');
       }
-      if (mounted) Navigator.pop(context, true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -366,6 +405,14 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
+  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
+  /// da transição de rota.
+  void _leave() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Navigator.pop(context, _createdAny);
+  }
+
   @override
   Widget build(BuildContext context) {
     _tagInputController.tagStyle = TextStyle(
@@ -377,6 +424,18 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // Voltar (seta ou gesto do sistema) devolve `true` se alguma questão foi
+    // criada aqui, para a tela anterior recarregar a lista.
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: context.colors.bg,
       appBar: AppBar(
@@ -384,7 +443,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.colors.text),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _leave(),
         ),
         title: Text(
           _isEditing ? 'Editar questão' : 'Nova questão',
@@ -459,6 +518,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     final answerFields = template?.answerFields ?? const [];
 
     return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       children: [
         Row(

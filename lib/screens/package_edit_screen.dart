@@ -26,6 +26,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
   int? _selectedSessionId;
   bool _loading = true;
   bool _saving = false;
+  bool _createdAny = false; // criou ao menos um pacote nesta tela (avisa quem abriu)
 
   bool get _isEditing => widget.packageId != null;
 
@@ -39,6 +40,26 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
 
   Future<void> _loadSessions() async {
     _sessions = await SessionDao().getAll();
+
+    // Editando pelo botão de engrenagem: quem abriu a tela nem sempre sabe a
+    // sessão do pacote, então busca a sessão já vinculada para pré-selecionar.
+    if (_isEditing && _selectedSessionId == null) {
+      final rows = await PackageDao().getAll();
+      for (final row in rows) {
+        if (row['id'] == widget.packageId) {
+          _selectedSessionId = row['session_id'] as int?;
+          break;
+        }
+      }
+    }
+
+    // Sessão que não existe mais (apagada) não pode ficar selecionada no
+    // dropdown, senão o Flutter reclama de valor fora da lista.
+    if (_selectedSessionId != null &&
+        !_sessions.any((s) => s['id'] == _selectedSessionId)) {
+      _selectedSessionId = null;
+    }
+
     if (mounted) setState(() => _loading = false);
   }
 
@@ -61,10 +82,18 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     try {
       if (_isEditing) {
         await dao.update(widget.packageId!, _selectedSessionId, title);
+        if (mounted) Navigator.pop(context, true);
       } else {
         await dao.insert(_selectedSessionId, title);
+        _createdAny = true;
+        if (!mounted) return;
+        // Continua na tela com o nome vazio, pronto para o próximo pacote.
+        // A sessão escolhida é mantida (costuma ser a mesma em sequência).
+        _titleController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pacote "$title" salvo.')),
+        );
       }
-      if (mounted) Navigator.pop(context, true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -115,8 +144,28 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     }
   }
 
+  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
+  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
+  /// da transição de rota.
+  void _leave() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Navigator.pop(context, _createdAny);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Voltar (seta ou gesto do sistema) devolve `true` se algum pacote foi
+    // criado aqui, para a tela anterior recarregar a lista.
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: context.colors.bg,
       appBar: AppBar(
@@ -124,7 +173,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.colors.text),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _leave(),
         ),
         title: Text(_isEditing ? 'Editar pacote' : 'Novo pacote',
           style: TextStyle(color: context.colors.text,
