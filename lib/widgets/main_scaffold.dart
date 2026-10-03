@@ -7,6 +7,7 @@ import '../screens/package_edit_screen.dart';
 import '../screens/questions_edit_screen.dart';
 import '../screens/templaate_edit_screen.dart';
 import '../screens/question_bank_screen.dart';
+import '../screens/detailed_statistics_screen.dart';
 import '../screens/session_edit_screen.dart';
 import 'new_tag_dialog.dart';
 
@@ -286,9 +287,9 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
-              _drawerItem(context, Icons.bar_chart, 'Statistics', onTap: () {
+              _drawerItem(context, Icons.query_stats, 'Statistics', onTap: () {
                 Navigator.pop(context);
-                widget.onStatisticsTap?.call();
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const DetailedStatisticsScreen()));
               }),
               Divider(color: context.colors.border, thickness: 1, indent: 16, endIndent: 16),
               _drawerItem(context, Icons.settings, 'Settings', onTap: () {
