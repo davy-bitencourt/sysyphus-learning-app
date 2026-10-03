@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
 import '../data/DAO/package_dao.dart';
@@ -157,14 +158,27 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [
-                  _buildQuestionsTab(),
-                  _buildPackagesTab(),
-                  _buildTemplatesTab(),
-                  _buildSessionsTab(),
-                  _buildTagsTab(),
-                ],
+            // Arrastar para o lado troca de aba. No desktop o Flutter ignora o
+            // mouse como dispositivo de arrasto por padrão, então habilita aqui.
+            : ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: const {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.invertedStylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: TabBarView(
+                  children: [
+                    _buildQuestionsTab(),
+                    _buildPackagesTab(),
+                    _buildTemplatesTab(),
+                    _buildSessionsTab(),
+                    _buildTagsTab(),
+                  ],
+                ),
               ),
       ),
     );
