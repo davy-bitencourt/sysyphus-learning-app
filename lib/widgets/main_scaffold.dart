@@ -287,7 +287,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
-              _drawerItem(context, Icons.query_stats, 'Statistics', onTap: () {
+              _drawerItem(context, Icons.bar_chart_outlined, 'Statistics', onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const DetailedStatisticsScreen()));
               }),
