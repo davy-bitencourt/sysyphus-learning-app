@@ -1,52 +1,93 @@
-# Sisyphus Learning App
+# Sysyphus Learning App
 
-A study application with customizable question banks built using Flutter.
+## Overview
 
-## What I plan to build
+Sysyphus is a cross-platform study application built with Flutter. It lets users test their knowledge using customizable question banks, backed by a local database layer that stores questions, study sessions, review history, and user data.
 
-**MVP:**
+What has been implemented so far:
 
-- Create and edit question banks
-- Run study sessions (number of questions, time limits, etc.)
-- Show the correct answer + explanation immediately after answering
-- Immediate feedback
-- Works on Android, iOS, Web, and Desktop
+- **Flutter project scaffolding** for Android, iOS, Web, Linux, macOS and Windows.
+- **Local data layer (SQLite)** with dedicated schema classes for:
+  - Questions
+  - Packages (question banks)
+  - Tags
+  - Templates
+  - Sessions
+  - Review log (`revlog`) for detailed answer history
+- **User system split into two entities**:
+  - `profile` – in-app user data
+  - `account` – authentication-related data
+- **DAO layer (Data Access Objects)** for the entities above, adjusted to support the profile/account separation.
+- **Existing screens** for questions, statistics and settings.
+- **App icon configuration** for Android and iOS.
 
-**Future (if the project evolves well):**
+## Tech Stack
 
-- Statistics for correct/incorrect answers
-- Import questions from CSV/JSON
-- Full offline mode
-- Progress charts
+- **Language:** Dart (SDK `^3.9.2`)
+- **Framework:** Flutter (Material Design)
+- **Database:** SQLite via `sqflite` (with `sqflite_common_ffi` for desktop platforms)
+- **Supported platforms:** Android, iOS, Web, Windows, macOS, Linux
 
-## How to run
+## Dependencies
 
-1. Clone the repository
+**Runtime**
+
+| Package | Version |
+| --- | --- |
+| `cupertino_icons` | ^1.0.8 |
+| `sqflite` | ^2.4.2 |
+| `sqflite_common_ffi` | ^2.3.7+1 |
+| `audioplayers` | ^6.1.0 |
+| `image_picker` | ^1.1.2 |
+| `file_picker` | ^8.1.2 |
+| `path_provider` | ^2.1.4 |
+| `path` | ^1.9.0 |
+| `archive` | ^4.0.7 |
+
+**Development**
+
+| Package | Version |
+| --- | --- |
+| `flutter_test` | SDK |
+| `flutter_lints` | ^5.0.0 |
+| `flutter_launcher_icons` | ^0.13.1 |
+
+## Setup
+
+### Prerequisites
+
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) with Dart `^3.9.2`
+- An emulator, a physical device, or a desktop/web target enabled in Flutter
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/davy-bitencourt/sysyphus-learning-app.git
+   cd sysyphus-learning-app
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   flutter pub get
+   ```
+
+3. Run the app:
+
+   ```bash
+   flutter run
+   ```
+
+   To run on the web:
+
+   ```bash
+   flutter run -d chrome
+   ```
+
+### Optional: regenerate launcher icons
 
 ```bash
-git clone https://github.com/davy-bitencourt/sysyphus-learning-app.git
-cd sysyphus-learning-app
+dart run flutter_launcher_icons
 ```
-
-2. Install dependencies
-
-```bash
-flutter pub get
-```
-
-3. Run the app
-
-```bash
-flutter run
-```
-
-Or for web:
-
-```bash
-flutter run -d chrome
-```
-
-## Status
-
-🚧 Very early development stage
-Many things will still change.
