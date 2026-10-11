@@ -26,6 +26,29 @@ class MediaStorageService {
     return _persist(File(path), 'audio');
   }
 
+  static int _counter = 0;
+
+  /// Grava bytes (ex.: arquivos vindos de um .zip importado) no mesmo lugar
+  /// que pickImage/pickAudio usam, e devolve o caminho. O contador evita nome
+  /// repetido quando vários arquivos são gravados no mesmo microssegundo.
+  static Future<String> saveBytes(
+    List<int> bytes,
+    String extension, {
+    required bool isImage,
+  }) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final targetDir = Directory(
+      p.join(docsDir.path, 'sysyphus_media', isImage ? 'images' : 'audio'),
+    );
+    if (!await targetDir.exists()) {
+      await targetDir.create(recursive: true);
+    }
+    final fileName = '${DateTime.now().microsecondsSinceEpoch}_${_counter++}$extension';
+    final targetPath = p.join(targetDir.path, fileName);
+    await File(targetPath).writeAsBytes(bytes, flush: true);
+    return targetPath;
+  }
+
   static Future<String> _persist(File source, String subfolder) async {
     final docsDir = await getApplicationDocumentsDirectory();
     final targetDir = Directory(p.join(docsDir.path, 'sysyphus_media', subfolder));

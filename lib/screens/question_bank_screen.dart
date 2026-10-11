@@ -1,6 +1,7 @@
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
+import '../widgets/new_tag_dialog.dart';
+import 'pack_transfer.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/template_dao.dart';
 import '../data/DAO/tag_dao.dart';
@@ -13,7 +14,6 @@ import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
 import 'session_edit_screen.dart';
 import 'templaate_edit_screen.dart';
-import '../widgets/new_tag_dialog.dart';
 
 class QuestionBankScreen extends StatefulWidget {
   const QuestionBankScreen({super.key});
@@ -33,10 +33,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   List<Question> _packageQuestions = [];
   bool _loadingQuestions = false;
 
-  // Busca: filtra a lista da aba aberta pelo texto digitado.
+  // Busca (ícone no canto superior direito): filtra a aba aberta.
   final TextEditingController _searchController = TextEditingController();
   bool _searching = false;
-  String _query = ''; // já em minúsculas e sem espaços nas pontas
+  String _query = '';
 
   @override
   void initState() {
@@ -50,20 +50,31 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     super.dispose();
   }
 
-  bool _matches(String? text) => _query.isEmpty || (text ?? '').toLowerCase().contains(_query);
-
   void _toggleSearch() {
     setState(() {
       _searching = !_searching;
       if (!_searching) {
-        _searchController.clear();
         _query = '';
+        _searchController.clear();
       }
     });
   }
 
+  /// Minúsculas e sem acentos, para "historia" achar "História".
+  String _norm(String s) {
+    const from = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const to = 'aaaaaeeeeiiiiooooouuuucn';
+    var out = s.toLowerCase();
+    for (var i = 0; i < from.length; i++) {
+      out = out.replaceAll(from[i], to[i]);
+    }
+    return out;
+  }
+
+  bool _matches(String text) => _query.isEmpty || _norm(text).contains(_norm(_query));
+
   Widget _noResults() => Center(
-        child: Text('Nenhum resultado para a busca.', style: TextStyle(color: Colors.grey[500])),
+        child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
       );
 
   Future<void> _load() async {
@@ -123,10 +134,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? TextField(
                   controller: _searchController,
                   autofocus: true,
-                  onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                  onChanged: (v) => setState(() => _query = v.trim()),
                   style: TextStyle(color: context.colors.text, fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'Buscar...',
+                    hintText: 'Buscar na aba atual...',
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     border: InputBorder.none,
                   ),
@@ -140,6 +151,41 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               tooltip: _searching ? 'Fechar busca' : 'Buscar',
               icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.text),
               onPressed: _toggleSearch,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Importar / Exportar',
+              icon: Icon(Icons.more_vert, color: context.colors.text),
+              color: context.colors.surface,
+              onSelected: (value) async {
+                if (value == 'import') {
+                  final changed = await startPackImport(context);
+                  if (changed && mounted) _load();
+                } else if (value == 'export') {
+                  await startPackExport(context);
+                }
+              },
+              itemBuilder: (menuContext) => [
+                PopupMenuItem<String>(
+                  value: 'import',
+                  child: Row(
+                    children: [
+                      Icon(Icons.file_download_outlined, size: context.icon(20), color: context.colors.accent),
+                      const SizedBox(width: 10),
+                      Text('Importar pacote (.zip)', style: TextStyle(color: context.colors.text)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'export',
+                  child: Row(
+                    children: [
+                      Icon(Icons.file_upload_outlined, size: context.icon(20), color: context.colors.accent),
+                      const SizedBox(width: 10),
+                      Text('Exportar tudo (.zip)', style: TextStyle(color: context.colors.text)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
           bottom: TabBar(
@@ -158,27 +204,14 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            // Arrastar para o lado troca de aba. No desktop o Flutter ignora o
-            // mouse como dispositivo de arrasto por padrão, então habilita aqui.
-            : ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: const {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.invertedStylus,
-                    PointerDeviceKind.trackpad,
-                  },
-                ),
-                child: TabBarView(
-                  children: [
-                    _buildQuestionsTab(),
-                    _buildPackagesTab(),
-                    _buildTemplatesTab(),
-                    _buildSessionsTab(),
-                    _buildTagsTab(),
-                  ],
-                ),
+            : TabBarView(
+                children: [
+                  _buildQuestionsTab(),
+                  _buildPackagesTab(),
+                  _buildTemplatesTab(),
+                  _buildSessionsTab(),
+                  _buildTagsTab(),
+                ],
               ),
       ),
     );
@@ -294,7 +327,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
     final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
     if (visible.isEmpty) return _noResults();
-
     return ListView.separated(
       itemCount: visible.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -370,19 +402,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   // --- ABA 2: PACOTES (REORDENÁVEL) ---
   Widget _buildPackagesTab() {
-    final visible = _packages.where((p) => _matches(p['title'] as String?)).toList();
-
     return Column(
       children: [
         Expanded(
-          child: visible.isEmpty && _query.isNotEmpty
-              ? _noResults()
+          child: _query.isNotEmpty
+              ? _buildPackageResults()
               : ReorderableListView.builder(
             padding: const EdgeInsets.all(16),
             buildDefaultDragHandles: false,
-            itemCount: visible.length,
+            itemCount: _packages.length,
             onReorder: (oldIndex, newIndex) {
-              if (_query.isNotEmpty) return; // sem reordenar enquanto filtra
               setState(() {
                 if (newIndex > oldIndex) newIndex -= 1;
                 final item = _packages.removeAt(oldIndex);
@@ -390,7 +419,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               });
             },
             itemBuilder: (context, index) {
-              final pkg = visible[index];
+              final pkg = _packages[index];
               return Container(
                 key: ValueKey(pkg['id']),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -401,7 +430,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 child: ListTile(
                   leading: ReorderableDragStartListener(
                     index: index,
-                    enabled: _query.isEmpty,
                     child: Icon(Icons.drag_handle, color: Colors.grey[500]),
                   ),
                   title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
@@ -447,6 +475,34 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
+  // Resultado da busca em Pacotes: sem alça de arrastar (reordenar com filtro
+  // ativo não faz sentido).
+  Widget _buildPackageResults() {
+    final results = _packages.where((p) => _matches(p['title'] as String)).toList();
+    if (results.isEmpty) return _noResults();
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: results.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final pkg = results[i];
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ListTile(
+            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+              onPressed: () => _deletePackage(pkg),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _deletePackage(Map<String, dynamic> pkg) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -471,21 +527,18 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   // --- ABA 3: TEMPLATES (REORDENÁVEL) ---
   Widget _buildTemplatesTab() {
-    final visible = _templates.where((t) => _matches(t.name)).toList();
-
     return Column(
       children: [
         Expanded(
           child: _templates.isEmpty
               ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
-              : visible.isEmpty
-              ? _noResults()
-              : ReorderableListView.builder(
+              : _query.isNotEmpty
+                  ? _buildTemplateResults()
+                  : ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
                   buildDefaultDragHandles: false,
-                  itemCount: visible.length,
+                  itemCount: _templates.length,
                   onReorder: (oldIndex, newIndex) {
-                    if (_query.isNotEmpty) return; // sem reordenar enquanto filtra
                     setState(() {
                       if (newIndex > oldIndex) newIndex -= 1;
                       final item = _templates.removeAt(oldIndex);
@@ -493,7 +546,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     });
                   },
                   itemBuilder: (context, i) {
-                    final template = visible[i];
+                    final template = _templates[i];
                     return Container(
                       key: ValueKey(template.id ?? i),
                       margin: const EdgeInsets.only(bottom: 8),
@@ -506,7 +559,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                         children: [
                           ReorderableDragStartListener(
                             index: i,
-                            enabled: _query.isEmpty,
                             child: Padding(
                               padding: const EdgeInsets.only(right: 10),
                               child: Icon(Icons.drag_handle, color: Colors.grey[500]),
@@ -571,17 +623,64 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 5: TAGS (centralizadas) ---
+  Widget _buildTemplateResults() {
+    final results = _templates.where((t) => _matches(t.name)).toList();
+    if (results.isEmpty) return _noResults();
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: results.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final template = results[i];
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
+              ),
+              Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              IconButton(
+                onPressed: () async {
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
+                  );
+                  if (res == true) _load();
+                },
+                icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
+              ),
+              IconButton(
+                onPressed: () async {
+                  if (template.id != null) {
+                    await TemplateDao().delete(template.id!);
+                    _load();
+                  }
+                },
+                icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- ABA 5: TAGS (nome centralizado) ---
   Widget _buildTagsTab() {
-    final visible = _tags.where((t) => _matches(t['title'] as String?)).toList();
+    final visible = _tags.where((t) => _matches(t['title'] as String)).toList();
 
     return Column(
       children: [
         Expanded(
-          child: _tags.isEmpty
-              ? Center(child: Text('Nenhuma tag cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
-              : visible.isEmpty
-              ? _noResults()
+          child: visible.isEmpty
+              ? (_tags.isEmpty
+                  ? Center(child: Text('Nenhuma tag cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  : _noResults())
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: visible.length,
@@ -593,26 +692,26 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                         color: context.colors.surfaceAlt,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(
                         children: [
-                          // Mesmo tamanho do botão de excluir, para o texto
-                          // ficar no centro de verdade do cartão.
+                          // Mesma largura do botão de excluir: o nome fica no
+                          // centro da caixa.
                           const SizedBox(width: 48),
                           Expanded(
                             child: Text(
                               '#${tag['title']}',
                               textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.text,
+                              ),
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-                            onPressed: () async {
-                              await TagDao().delete(tag['id'] as int);
-                              _load();
-                            },
+                            onPressed: () => _deleteTag(tag),
+                            icon: Icon(Icons.delete_outline, size: context.icon(20), color: const Color(0xFFC62828)),
                           ),
                         ],
                       ),
@@ -628,8 +727,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  await showNewTagDialog(context);
-                  _load();
+                  // O diálogo fica aberto entre uma tag e outra.
+                  await showNewTagDialog(context); // não informa quantas foram criadas
+                  if (mounted) _load(); // recarrega a lista ao fechar
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
@@ -647,17 +747,51 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 4: SESSÕES ---
-  Widget _buildSessionsTab() {
-    final visible = _sessions.where((s) => _matches(s['title'] as String?)).toList();
+  Future<void> _deleteTag(Map<String, dynamic> tag) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir tag'),
+        content: Text(
+          'Tem certeza que deseja excluir a tag "#${tag['title']}"? '
+          'As questões que a usam ficarão sem tag.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
 
+    try {
+      await QuestionDao().deleteTag(tag['id'] as int);
+      _load();
+    } catch (e) {
+      debugPrint('Erro ao excluir tag ${tag['id']}: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível excluir a tag: $e')),
+      );
+    }
+  }
+
+  // --- ABA 5: SESSÕES ---
+  Widget _buildSessionsTab() {
+    final visible = _sessions.where((s) => _matches((s['title'] as String?) ?? '')).toList();
     return Column(
       children: [
         Expanded(
-          child: _sessions.isEmpty
-              ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
-              : visible.isEmpty
-              ? _noResults()
+          child: visible.isEmpty
+              ? (_sessions.isEmpty
+                  ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  : _noResults())
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: visible.length,

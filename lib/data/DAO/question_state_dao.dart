@@ -107,6 +107,15 @@ class QuestionDao {
     return result;
   }
 
+  /* apaga a tag; as questões que a usavam ficam sem tag (question.tag_id tem FK) */
+  Future<void> deleteTag(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await txn.rawUpdate('UPDATE question SET tag_id = NULL WHERE tag_id = ?', [id]);
+      await txn.rawDelete('DELETE FROM tag WHERE id = ?', [id]);
+    });
+  }
+
   /* quantas questões existem em cada tag (tag_id -> total) */
   Future<Map<int, int>> getTagCounts() async {
     final db = await DatabaseHelper.instance.database;
