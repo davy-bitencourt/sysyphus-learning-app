@@ -97,8 +97,19 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     });
 
     if (_packages.isNotEmpty) {
-      _selectedPackageId ??= _packages.first['id'] as int;
+      // ADICIONE ESTA VERIFICAÇÃO:
+      // Se o ID selecionado não existe mais na lista de pacotes, pega o primeiro da lista
+      final exists = _packages.any((p) => p['id'] == _selectedPackageId);
+      if (!exists) {
+        _selectedPackageId = _packages.first['id'] as int;
+      }
+      
       await _loadQuestionsForSelectedPackage();
+    } else {
+      setState(() {
+        _selectedPackageId = null;
+        _packageQuestions = [];
+      });
     }
   }
 
@@ -729,7 +740,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 onPressed: () async {
                   // O diálogo fica aberto entre uma tag e outra.
                   await showNewTagDialog(context); // não informa quantas foram criadas
-                  if (mounted) _load(); // recarrega a lista ao fechar
+                  if (mounted) (); // recarrega a lista ao fechar
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
