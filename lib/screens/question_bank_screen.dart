@@ -86,8 +86,20 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final sessionRows = await SessionDao().getAll();
 
     if (!mounted) return;
+
+    // O pacote selecionado tem de existir na lista nova. Se ele foi apagado, a
+    // seleção passa para o primeiro que sobrou (ou fica vazia). Isso precisa
+    // ser decidido ANTES do setState: o Dropdown exige exatamente um item com
+    // o valor selecionado e quebra na hora se o id sumiu.
+    final packageIds = packageRows.map((p) => p['id'] as int).toList();
+    final selected = packageIds.contains(_selectedPackageId)
+        ? _selectedPackageId
+        : (packageIds.isEmpty ? null : packageIds.first);
+
     setState(() {
       _packages = List.from(packageRows);
+      _selectedPackageId = selected;
+      if (selected == null) _packageQuestions = [];
       _templates = templateRows
           .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
           .toList();
@@ -96,20 +108,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       _loading = false;
     });
 
-    if (_packages.isNotEmpty) {
-      // ADICIONE ESTA VERIFICAÇÃO:
-      // Se o ID selecionado não existe mais na lista de pacotes, pega o primeiro da lista
-      final exists = _packages.any((p) => p['id'] == _selectedPackageId);
-      if (!exists) {
-        _selectedPackageId = _packages.first['id'] as int;
-      }
-      
+    if (selected != null) {
       await _loadQuestionsForSelectedPackage();
-    } else {
-      setState(() {
-        _selectedPackageId = null;
-        _packageQuestions = [];
-      });
     }
   }
 
@@ -253,7 +253,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: _selectedPackageId,
+                        value: selectedPackage['id'] as int,
                         items: _packages
                             .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
                             .toList(),
@@ -740,7 +740,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 onPressed: () async {
                   // O diálogo fica aberto entre uma tag e outra.
                   await showNewTagDialog(context); // não informa quantas foram criadas
-                  if (mounted) (); // recarrega a lista ao fechar
+                  if (mounted) _load(); // recarrega a lista ao fechar
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
@@ -883,10 +883,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   /// Resumo em uma linha: tempo • total de questões • filtro por tag.
   String _sessionSummary(Map<String, dynamic> session) {
-    final minutes = int.tryParse((session['time_limit'] as String?) ?? '');
+    final limitSeconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
     final total = (session['total_q'] as num?)?.toInt();
     final parts = <String>[
-      minutes == null ? 'Sem limite de tempo' : '$minutes min',
+      limitSeconds == null ? 'Sem limite de tempo' : SessionDao.describeTimeLimit(limitSeconds),
       if (total != null) '$total questões',
     ];
 

@@ -174,9 +174,17 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
     }
     if (sum > total) total = sum;
 
+    final limitSeconds = SessionDao.parseTimeLimitSeconds(r['time_limit'] as String?);
+
     sessionsJson.add({
       'title': title,
-      'timeLimitMinutes': int.tryParse((r['time_limit'] as String?) ?? ''),
+      // minutos quando o tempo é redondo; segundos quando não é.
+      if (limitSeconds == null)
+        'timeLimitMinutes': null
+      else if (limitSeconds % 60 == 0)
+        'timeLimitMinutes': limitSeconds ~/ 60
+      else
+        'timeLimitSeconds': limitSeconds,
       'totalQuestions': total,
       'tagFilters': filters,
     });

@@ -30,6 +30,47 @@ class SessionDao {
     return rows.isEmpty ? null : rows.first;
   }
 
+  /// Sessão atualmente ligada ao pacote (package.session_id), ou null.
+  Future<int?> getSessionIdOfPackage(int packageId) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.rawQuery(
+      'SELECT session_id FROM package WHERE id = ?', [packageId],
+    );
+    return rows.isEmpty ? null : (rows.first['session_id'] as num?)?.toInt();
+  }
+
+  /// O `time_limit` é guardado como texto:
+  ///  - "<n>s"      = n SEGUNDOS (formato atual, escolhido na tela de sessão);
+  ///  - só dígitos  = n MINUTOS (sessões criadas antes das unidades);
+  ///  - null/vazio  = sem limite.
+  static int? parseTimeLimitSeconds(String? raw) {
+    final t = raw?.trim() ?? '';
+    if (t.isEmpty) return null;
+    if (t.endsWith('s')) {
+      final n = int.tryParse(t.substring(0, t.length - 1));
+      return (n != null && n > 0) ? n : null;
+    }
+    final minutes = int.tryParse(t);
+    return (minutes != null && minutes > 0) ? minutes * 60 : null;
+  }
+
+  /// Texto a gravar em `time_limit` (null = sem limite).
+  static String? formatTimeLimit(int? seconds) =>
+      (seconds == null || seconds <= 0) ? null : '${seconds}s';
+
+  /// Descrição curta: "1 h 30 min", "45 min", "90 s".
+  static String describeTimeLimit(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    final parts = <String>[
+      if (h > 0) '$h h',
+      if (m > 0) '$m min',
+      if (s > 0) '$s s',
+    ];
+    return parts.join(' ');
+  }
+
   /// Converte o JSON de tag_filters em [{tag_id, quantity}]. Vazio/inválido = [].
   static List<Map<String, int>> parseTagFilters(String? raw) {
     if (raw == null || raw.trim().isEmpty) return [];

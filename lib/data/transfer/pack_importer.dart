@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../DAO/session_dao.dart';
 import '../database_helper.dart';
 import '../models/field_model.dart';
 import '../services/media_storage_service.dart';
@@ -431,7 +432,7 @@ Future<ImportOutcome> commitImport(PackImportPlan plan, Map<String, List<int>> f
         }
         final id = await txn.rawInsert(
           'INSERT INTO session (title, time_limit, total_q, tag_filters) VALUES (?, ?, ?, ?)',
-          [s.title, s.timeLimitMinutes?.toString(), s.totalQuestions, filters.isEmpty ? null : jsonEncode(filters)],
+          [s.title, SessionDao.formatTimeLimit(s.timeLimitSeconds), s.totalQuestions, filters.isEmpty ? null : jsonEncode(filters)],
         );
         sessionIds[key] = id;
         sessionsCreated++;

@@ -241,13 +241,25 @@ class _PackParser {
       final where = 'sessions.json [$title]';
       var valid = true;
 
-      int? minutes;
-      final tl = raw['timeLimitMinutes'];
-      if (tl != null) {
-        if (tl is int && tl >= 1) {
-          minutes = tl;
+      // Tempo limite: timeLimitMinutes OU timeLimitSeconds (null = sem limite).
+      int? limitSeconds;
+      final tlMin = raw['timeLimitMinutes'];
+      final tlSec = raw['timeLimitSeconds'];
+      if (tlMin != null && tlSec != null) {
+        _err(where, 'use timeLimitMinutes OU timeLimitSeconds, não os dois');
+        valid = false;
+      } else if (tlMin != null) {
+        if (tlMin is int && tlMin >= 1) {
+          limitSeconds = tlMin * 60;
         } else {
           _err(where, 'timeLimitMinutes deve ser null (sem limite) ou inteiro >= 1');
+          valid = false;
+        }
+      } else if (tlSec != null) {
+        if (tlSec is int && tlSec >= 1) {
+          limitSeconds = tlSec;
+        } else {
+          _err(where, 'timeLimitSeconds deve ser inteiro >= 1');
           valid = false;
         }
       }
@@ -292,7 +304,7 @@ class _PackParser {
       if (valid) {
         _sessions[key] = PackSession(
           title: title,
-          timeLimitMinutes: minutes,
+          timeLimitSeconds: limitSeconds,
           totalQuestions: total,
           tagFilters: filters,
         );

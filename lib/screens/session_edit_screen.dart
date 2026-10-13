@@ -34,7 +34,8 @@ class SessionEditScreen extends StatefulWidget {
 
 class _SessionEditScreenState extends State<SessionEditScreen> {
   final _nameController = TextEditingController();
-  final _minutesController = TextEditingController(text: '30');
+  final _timeController = TextEditingController(text: '30');
+  String _timeUnit = 'min'; // unidade do tempo limite: 's' | 'min' | 'h'
   final _totalController = TextEditingController(text: '20');
 
   List<Map<String, dynamic>> _tags = [];
@@ -71,9 +72,22 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   void _applySession(Map<String, dynamic> s) {
     _nameController.text = (s['title'] as String?) ?? '';
 
-    final minutes = int.tryParse((s['time_limit'] as String?) ?? '');
-    _unlimitedTime = minutes == null;
-    if (minutes != null) _minutesController.text = minutes.toString();
+    // time_limit: "<n>s" (segundos) ou só dígitos (minutos, sessões antigas).
+    final seconds = SessionDao.parseTimeLimitSeconds(s['time_limit'] as String?);
+    _unlimitedTime = seconds == null;
+    if (seconds != null) {
+      // Mostra na maior unidade que divide o tempo certinho.
+      if (seconds % 3600 == 0) {
+        _timeUnit = 'h';
+        _timeController.text = (seconds ~/ 3600).toString();
+      } else if (seconds % 60 == 0) {
+        _timeUnit = 'min';
+        _timeController.text = (seconds ~/ 60).toString();
+      } else {
+        _timeUnit = 's';
+        _timeController.text = seconds.toString();
+      }
+    }
 
     final total = (s['total_q'] as num?)?.toInt();
     if (total != null) _totalController.text = total.toString();
@@ -93,9 +107,18 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _minutesController.dispose();
+    _timeController.dispose();
     _totalController.dispose();
     super.dispose();
+  }
+
+  static const Map<String, int> _unitSeconds = {'s': 1, 'min': 60, 'h': 3600};
+
+  /// Tempo limite digitado convertido para segundos (null se vazio ou zero).
+  int? get _limitSeconds {
+    final n = int.tryParse(_timeController.text.trim());
+    if (n == null || n < 1) return null;
+    return n * (_unitSeconds[_timeUnit] ?? 60);
   }
 
   int get _total => int.tryParse(_totalController.text.trim()) ?? 0;
@@ -111,7 +134,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   /// Volta o formulário ao estado de "nova sessão".
   void _resetForm() {
     _nameController.clear();
-    _minutesController.text = '30';
+    _timeController.text = '30';
+    _timeUnit = 'min';
     _totalController.text = '20';
     _unlimitedTime = true;
     _filterByTag = false;
@@ -153,11 +177,11 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       return;
     }
 
-    int? minutes;
+    int? limitSeconds;
     if (!_unlimitedTime) {
-      minutes = int.tryParse(_minutesController.text.trim());
-      if (minutes == null || minutes < 1) {
-        _showError('Defina o tempo limite em minutos.');
+      limitSeconds = _limitSeconds;
+      if (limitSeconds == null) {
+        _showError('Defina o tempo limite (um número maior que zero).');
         return;
       }
     }
@@ -189,7 +213,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       final dto = SessionDto(
         id: widget.session?['id'] as int?,
         title: name,
-        time_limit: minutes?.toString(), // minutos (texto) ou null = sem limite
+        time_limit: SessionDao.formatTimeLimit(limitSeconds), // "<n>s" ou null = sem limite
         total_q: total,
         tagFilters: filters == null ? null : jsonEncode(filters),
       );
@@ -295,7 +319,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 ),
                 if (!_unlimitedTime) ...[
                   const SizedBox(height: 12),
-                  _numberField(_minutesController, 'Tempo limite (minutos)'),
+                  _buildTimeLimitInput(),
                 ],
                 const SizedBox(height: 28),
 
@@ -343,6 +367,56 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   Widget _sectionTitle(String text) {
     return Text(text,
       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text));
+  }
+
+  /// Número + "gaveta" para escolher a unidade (segundos, minutos ou horas).
+  Widget _buildTimeLimitInput() {
+    final c = context.colors;
+    final seconds = _limitSeconds;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _numberField(
+                _timeController,
+                'Tempo limite',
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 150,
+              child: DropdownButtonFormField<String>(
+                value: _timeUnit,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 's', child: Text('Segundos')),
+                  DropdownMenuItem(value: 'min', child: Text('Minutos')),
+                  DropdownMenuItem(value: 'h', child: Text('Horas')),
+                ],
+                onChanged: (v) => setState(() => _timeUnit = v ?? 'min'),
+                decoration: InputDecoration(
+                  labelText: 'Unidade',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (seconds != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Cronômetro: ${SessionDao.describeTimeLimit(seconds)}',
+              style: TextStyle(fontSize: 12, color: c.mutedText),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _numberField(

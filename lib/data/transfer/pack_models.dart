@@ -131,12 +131,12 @@ class PackTagFilter {
 
 class PackSession {
   final String title;
-  final int? timeLimitMinutes; // null = sem limite
+  final int? timeLimitSeconds; // null = sem limite
   final int totalQuestions;
   final List<PackTagFilter> tagFilters;
   const PackSession({
     required this.title,
-    required this.timeLimitMinutes,
+    required this.timeLimitSeconds,
     required this.totalQuestions,
     required this.tagFilters,
   });

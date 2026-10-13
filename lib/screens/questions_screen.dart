@@ -92,7 +92,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     // o filtro por tag e o tempo limite. Sem sessão, vale o limite padrão.
     final session = await SessionDao().getByPackage(widget.packageId);
     final totalQ = (session?['total_q'] as num?)?.toInt();
-    final minutes = int.tryParse((session?['time_limit'] as String?) ?? '');
+    final limitSeconds = SessionDao.parseTimeLimitSeconds(session?['time_limit'] as String?);
 
     final List<Map<String, dynamic>> rows;
     if (session != null && totalQ != null && totalQ > 0) {
@@ -131,14 +131,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
     // O cronômetro começa na primeira vez que a rodada abre com questões;
     // recarregar depois de editar uma questão não reinicia o tempo.
-    if (loaded.isNotEmpty && minutes != null && minutes > 0) _startTimer(minutes);
+    if (loaded.isNotEmpty && limitSeconds != null) _startTimer(limitSeconds);
   }
 
-  void _startTimer(int minutes) {
+  void _startTimer(int seconds) {
     if (_timerStarted) return;
     setState(() => _timerStarted = true);
-    _endsAt = DateTime.now().add(Duration(minutes: minutes));
-    _timeLeft.value = Duration(minutes: minutes);
+    _endsAt = DateTime.now().add(Duration(seconds: seconds));
+    _timeLeft.value = Duration(seconds: seconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
