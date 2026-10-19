@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
+import 'sync/sync_schema.dart';
+
 class DatabaseHelper{
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -35,7 +37,7 @@ class DatabaseHelper{
 
     return await openDatabase(
       dir, 
-      version: 3, 
+      version: 4, 
       onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, 
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
@@ -68,6 +70,11 @@ class DatabaseHelper{
     // time_limit: minutos (texto) ou NULL = sem limite. total_q: total de questões.
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE session ADD COLUMN tag_filters TEXT');
+    }
+    // v4: sincronização entre aparelhos (uuid + updated_at + fila de mudanças).
+    // Invisível para o usuário; não muda nenhuma tela nem DAO.
+    if (oldVersion < 4) {
+      await applySyncSchema(db);
     }
   }
 
@@ -183,5 +190,8 @@ class DatabaseHelper{
     );
 
     await batch.commit();
+
+    // Banco novo já nasce com as colunas e os gatilhos de sincronização.
+    await applySyncSchema(db);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
+import 'sync_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -112,6 +113,11 @@ class SettingsScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
+                        );
+                      } else if (item['title'] == 'Sync') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
                         );
                       }
                     },
