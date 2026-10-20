@@ -5,8 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../transfer/pack_models.dart';
-import 'sync_models.dart';
-import 'sync_schema.dart';
+import '../models/sync_models.dart';
+import '../schema/sync_schema.dart';
 
 const String _nowSql = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 const Set<String> _imageExts = {'.png', '.jpg', '.jpeg', '.webp', '.gif'};

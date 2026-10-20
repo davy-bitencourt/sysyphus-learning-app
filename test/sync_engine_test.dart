@@ -10,8 +10,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../lib/data/sync/sync_engine.dart';
 import '../lib/data/sync/sync_memory_transport.dart';
-import '../lib/data/sync/sync_models.dart';
-import '../lib/data/sync/sync_schema.dart';
+import '../lib/data/models/sync_models.dart';
+import '../lib/data/schema/sync_schema.dart';
 
 const List<String> _baseSchema = [
   'CREATE TABLE account (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, senha TEXT)',

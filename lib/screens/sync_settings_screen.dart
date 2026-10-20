@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/sync/sync_models.dart';
-import '../data/sync/sync_service.dart';
+import '../data/models/sync_models.dart';
+import '../data/services/sync_service.dart';
 import '../styles/app_theme.dart';
 
 /// Settings > Sync: estado da sincronização entre aparelhos.

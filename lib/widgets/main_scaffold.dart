@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:Sysyphus/data/services/sync_service.dart';
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
@@ -9,6 +12,9 @@ import '../screens/templaate_edit_screen.dart';
 import '../screens/question_bank_screen.dart';
 import '../screens/detailed_statistics_screen.dart';
 import '../screens/session_edit_screen.dart';
+import '../screens/sync_settings_screen.dart';
+import '../data/models/sync_models.dart';
+import '../data/services/sync_service.dart';
 import 'new_tag_dialog.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -33,9 +39,93 @@ class MainScaffold extends StatefulWidget {
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> {
+class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver {
   OverlayEntry? _overlayEntry;
   bool _isMenuOpen = false;
+
+  // ---- sincronização ----
+  bool _syncing = false;
+  DateTime? _lastAutoSync;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Ao abrir o app: sincroniza em silêncio (se houver servidor e a conta estiver ligada).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoSync());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Ao voltar para o app (ex.: depois de estudar no outro aparelho).
+    if (state == AppLifecycleState.resumed) _autoSync();
+  }
+
+  /// Botão de sincronizar da barra de cima.
+  Future<void> _onSyncPressed() async {
+    if (_syncing) return;
+    final service = SyncService.instance;
+
+    // Sem servidor/conta, ou com a sincronização ainda desligada neste
+    // aparelho: abre Settings > Sync, que explica e deixa ligar.
+    if (!service.isConfigured || !(await service.status()).enabled) {
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
+      );
+      return;
+    }
+    await _runSync(showMessage: true);
+  }
+
+  /// Sincronização automática: silenciosa, no máximo uma por minuto (a menos
+  /// que [force]) e só se o servidor estiver configurado e o aparelho ligado.
+  Future<void> _autoSync({bool force = false}) async {
+    final service = SyncService.instance;
+    if (_syncing || !service.isConfigured) return;
+
+    final now = DateTime.now();
+    final last = _lastAutoSync;
+    if (!force && last != null && now.difference(last) < const Duration(minutes: 1)) return;
+
+    if (!(await service.status()).enabled) return;
+    _lastAutoSync = now;
+    await _runSync(showMessage: false);
+  }
+
+  Future<void> _runSync({required bool showMessage}) async {
+    if (_syncing) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _syncing = true);
+
+    String? message;
+    try {
+      final report = await SyncService.instance.syncNow();
+      message = _syncMessage(report);
+      // Chegou coisa nova de outro aparelho: a Home recarrega.
+      if (report.applied > 0 || report.adopted > 0) widget.onItemCreated?.call();
+    } catch (e) {
+      debugPrint('Erro na sincronização: $e');
+      // Automática e offline não deve incomodar: só avisa quando foi o usuário que pediu.
+      message = showMessage ? 'Não foi possível sincronizar: $e' : null;
+    }
+
+    if (!mounted) return;
+    setState(() => _syncing = false);
+    if (showMessage && message != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  String _syncMessage(SyncReport r) {
+    final parts = <String>[
+      if (r.applied > 0) '${r.applied} recebidas',
+      if (r.pushed > 0) '${r.pushed} enviadas',
+      if (r.adopted > 0) '${r.adopted} fundidas',
+    ];
+    return parts.isEmpty ? 'Tudo sincronizado.' : 'Sincronizado: ${parts.join(', ')}.';
+  }
 
   void _toggleMenu() {
     if (_isMenuOpen) {
@@ -168,6 +258,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         widget.onItemCreated?.call();
         break;
     }
+
+    // O que acabou de ser criado sobe para o servidor (se a sincronização estiver ligada).
+    unawaited(_autoSync(force: true));
   }
 
   // Só o ícone (o rótulo vira tooltip, para acessibilidade).
@@ -237,6 +330,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _closeMenu();
     super.dispose();
   }
@@ -263,8 +357,15 @@ class _MainScaffoldState extends State<MainScaffold> {
               const Text('Sysyphus', style: bigText),
             ]),
             IconButton(
-              icon: Icon(Icons.sync, color: context.colors.mutedText),
-              onPressed: () {},
+              tooltip: 'Sincronizar',
+              icon: _syncing
+                  ? SizedBox(
+                      width: context.icon(20),
+                      height: context.icon(20),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.accent),
+                    )
+                  : Icon(Icons.sync, color: context.colors.mutedText),
+              onPressed: _syncing ? null : _onSyncPressed,
             ),
           ],
         ),

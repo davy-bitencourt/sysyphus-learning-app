@@ -71,11 +71,11 @@ abstract class SyncTransport {
 }
 
 class SyncReport {
-  int applied = 0; // mudanças remotas aplicadas
-  int skipped = 0; // ignoradas (referência faltando ou exclusão local mais nova)
-  int kept = 0; // a edição local era mais nova e foi mantida
-  int adopted = 0; // itens de mesmo nome fundidos na primeira ligação
-  int pushed = 0; // mudanças locais enviadas
+  int applied = 0;
+  int skipped = 0;
+  int kept = 0; 
+  int adopted = 0;
+  int pushed = 0;
 
   @override
   String toString() =>

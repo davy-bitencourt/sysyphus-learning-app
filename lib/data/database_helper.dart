@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
-import 'sync/sync_schema.dart';
+import 'schema/sync_schema.dart';
 
 class DatabaseHelper{
   static final DatabaseHelper instance = DatabaseHelper._init();
