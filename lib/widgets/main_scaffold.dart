@@ -43,7 +43,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   OverlayEntry? _overlayEntry;
   bool _isMenuOpen = false;
 
-  // ---- sincronização ----
   bool _syncing = false;
   DateTime? _lastAutoSync;
 
@@ -51,7 +50,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Ao abrir o app: sincroniza em silêncio (se houver servidor e a conta estiver ligada).
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoSync());
   }
 
@@ -103,11 +101,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     try {
       final report = await SyncService.instance.syncNow();
       message = _syncMessage(report);
-      // Chegou coisa nova de outro aparelho: a Home recarrega.
       if (report.applied > 0 || report.adopted > 0) widget.onItemCreated?.call();
     } catch (e) {
       debugPrint('Erro na sincronização: $e');
-      // Automática e offline não deve incomodar: só avisa quando foi o usuário que pediu.
       message = showMessage ? 'Não foi possível sincronizar: $e' : null;
     }
 
