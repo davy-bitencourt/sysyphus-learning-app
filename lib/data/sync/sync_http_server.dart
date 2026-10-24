@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'sync_auth.dart';
-import '../models/sync_models.dart';
+import 'sync_models.dart';
 
 /// Servidor de sincronização: HTTP para os dados e UDP para ser achado na
 /// rede. Não depende de Flutter nem de tela, então o mesmo código pode rodar
@@ -67,8 +67,6 @@ class SyncHttpServer {
     }
   }
 
-  // ------------------------------------------------------------ descoberta
-
   Future<void> _startDiscovery() async {
     try {
       final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, kSyncPort, reuseAddress: true);
@@ -87,8 +85,6 @@ class SyncHttpServer {
       discoveryError = '$e';
     }
   }
-
-  // ------------------------------------------------------------------ HTTP
 
   Future<List<int>?> _readBody(HttpRequest req) async {
     final builder = BytesBuilder(copy: false);

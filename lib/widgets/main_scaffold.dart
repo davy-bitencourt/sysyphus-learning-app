@@ -13,7 +13,7 @@ import '../screens/question_bank_screen.dart';
 import '../screens/detailed_statistics_screen.dart';
 import '../screens/session_edit_screen.dart';
 import '../screens/sync_settings_screen.dart';
-import '../data/models/sync_models.dart';
+import '../data/sync/sync_models.dart';
 import '../data/services/sync_service.dart';
 import 'new_tag_dialog.dart';
 

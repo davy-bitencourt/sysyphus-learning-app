@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'sync_auth.dart';
-import '../models/sync_models.dart';
+import 'sync_models.dart';
 
 /// ID recusado pelo servidor (ID errado ou relógios muito diferentes).
 class SyncAuthException implements Exception {

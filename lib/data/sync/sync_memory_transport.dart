@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../models/sync_models.dart';
+import 'sync_models.dart';
 
 class _Record {
   final String entity;

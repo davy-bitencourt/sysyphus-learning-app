@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../models/sync_models.dart';
+import 'sync_models.dart';
 
 /// Cópia central dos registros (o lado "servidor"), guardada em tabelas
 /// próprias do mesmo banco e em arquivos para a mídia. Mesma regra do

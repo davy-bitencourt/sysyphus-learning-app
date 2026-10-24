@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-/// Copia arquivos escolhidos (imagem/áudio) para dentro do diretório de
 /// documentos do app. O picker geralmente devolve um arquivo em cache
 /// temporário, que o sistema operacional pode limpar a qualquer momento --
 /// por isso persistimos uma cópia própria e guardamos esse caminho no banco.

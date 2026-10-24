@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
+import 'data/sync/sync_service.dart';
 import 'screens/home.dart';
 import 'styles/app_theme.dart';
 
@@ -16,6 +17,9 @@ Future<void> main() async {
 
   // Carrega tema, cores e idioma salvos (precisa vir depois do init do banco).
   await AppSettings.instance.load();
+
+  // Retoma a conta de sincronização; se este aparelho é o host, o servidor volta a responder.
+  await SyncService.instance.init();
 
   runApp(const StudyApp());
 }
@@ -32,7 +36,7 @@ class StudyApp extends StatelessWidget {
       builder: (context, _) {
         final settings = AppSettings.instance;
         return MaterialApp(
-          title: 'Sysyphus',
+          title: 'Study App',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(settings, Brightness.light),
           darkTheme: AppTheme.build(settings, Brightness.dark),

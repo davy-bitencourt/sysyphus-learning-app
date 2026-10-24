@@ -1,7 +1,7 @@
 import '../database_helper.dart';
 import 'media_storage_service.dart';
 import '../sync/sync_engine.dart';
-import '../models/sync_models.dart';
+import '../sync/sync_models.dart';
 
 /// Porta de entrada da sincronização para o resto do app.
 ///
