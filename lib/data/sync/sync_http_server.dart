@@ -6,12 +6,6 @@ import 'sync_auth.dart';
 import 'sync_discovery.dart';
 import 'sync_models.dart';
 
-/// Servidor de sincronização: HTTP para os dados e UDP para ser achado na
-/// rede. Não depende de Flutter nem de tela, então o mesmo código pode rodar
-/// num servidor na internet no futuro (atrás de HTTPS).
-///
-/// Toda requisição precisa de assinatura válida do ID da conta (ver
-/// signRequest). Sem ela, a resposta é 401.
 class SyncHttpServer {
   SyncHttpServer({
     required this.transport,
@@ -20,7 +14,6 @@ class SyncHttpServer {
     this.enableDiscovery = true,
   });
 
-  /// Onde os dados ficam (SqliteSyncStore no app; MemorySyncTransport nos testes).
   final SyncTransport transport;
   final String accountId;
   final int port;
@@ -29,8 +22,6 @@ class SyncHttpServer {
   HttpServer? _server;
   RawDatagramSocket? _udp;
 
-  /// Preenchido se a descoberta automática não pôde ser ligada (o HTTP segue
-  /// funcionando; o outro aparelho precisa então do endereço digitado).
   String? discoveryError;
 
   bool get isRunning => _server != null;

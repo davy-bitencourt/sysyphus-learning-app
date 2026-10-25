@@ -10,10 +10,6 @@ import 'sync_schema.dart';
 
 const Set<String> _imageExts = {'.png', '.jpg', '.jpeg', '.webp', '.gif'};
 
-// ---------------------------------------------------------------------------
-// Utilidades
-// ---------------------------------------------------------------------------
-
 int? _asInt(Object? v) => v is num ? v.toInt() : null;
 
 Map<String, dynamic> _decodeMap(String? s) {
@@ -47,12 +43,6 @@ class _Pending {
   const _Pending(this.op, this.ts);
 }
 
-// ---------------------------------------------------------------------------
-// Operações locais (não precisam de servidor)
-// ---------------------------------------------------------------------------
-
-/// Liga o registro de mudanças e enfileira TUDO o que já existe (o primeiro
-/// envio sobe o banco inteiro).
 Future<void> syncEnable(Database db) async {
   await db.transaction((txn) async {
     await setSyncMeta(txn, 'enabled', '1');
@@ -88,19 +78,6 @@ Future<SyncStatus> syncStatus(Database db) async {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Motor
-// ---------------------------------------------------------------------------
-
-/// Sincronização em dois passos: baixa e aplica o que mudou no servidor e
-/// depois envia o que mudou aqui.
-///
-/// Regras de conflito:
-///  - conteúdo e agendamento: vale a edição mais recente (`updated_at`);
-///  - exclusão: vale se for mais recente que a edição;
-///  - histórico (revlog): só acrescenta; apagar o histórico também propaga;
-///  - pacote/template apagado num aparelho que ainda tem questão nele no
-///    outro: o item é mantido e volta para o servidor.
 class SyncEngine {
   SyncEngine({
     required this.db,
@@ -111,11 +88,7 @@ class SyncEngine {
 
   final Database db;
   final SyncTransport transport;
-
-  /// Grava um arquivo baixado e devolve o caminho local.
   final Future<String> Function(List<int> bytes, String extension, bool isImage) saveMedia;
-
-  /// Lê um arquivo local (null se não existir).
   final Future<List<int>?> Function(String path) readFile;
 
   bool _running = false;
@@ -133,16 +106,13 @@ class SyncEngine {
       final deviceId = await getSyncMeta(db, 'device_id');
       final cursor = int.tryParse(await getSyncMeta(db, 'cursor')) ?? 0;
 
-      // ---- 1) baixar ----
       final pull = await transport.pull(cursor);
-      // As próprias mudanças voltam no pull: ignora (o cursor avança igual).
       final remote = pull.changes.where((c) => c.device != deviceId && kSyncEntities.contains(c.entity)).toList();
 
-      // Arquivos são baixados ANTES da transação (nada de rede com o banco travado).
       final media = await _prefetchMedia(remote);
 
       await db.transaction((txn) async {
-        await setSyncMeta(txn, 'applying', '1'); // gatilhos não registram o que vem de fora
+        await setSyncMeta(txn, 'applying', '1'); 
         final ups = remote.where((c) => c.op == 'upsert').toList()
           ..sort((a, b) => syncEntityIndex(a.entity).compareTo(syncEntityIndex(b.entity)));
         for (final c in ups) {
@@ -157,7 +127,6 @@ class SyncEngine {
         await setSyncMeta(txn, 'applying', '0');
       });
 
-      // ---- 2) enviar ----
       report.pushed = await _push(deviceId);
       await setSyncMeta(db, 'last_sync', '${DateTime.now().millisecondsSinceEpoch}');
       return report;
@@ -165,8 +134,6 @@ class SyncEngine {
       _running = false;
     }
   }
-
-  // ------------------------------------------------------------- consultas
 
   Future<Map<String, Object?>?> _find(DatabaseExecutor x, String entity, String uuid) async {
     final rows = entity == 'state'
@@ -210,8 +177,6 @@ class SyncEngine {
     final rows = await x.rawQuery('SELECT $kSyncNowSql AS t');
     return _asInt(rows.first['t']) ?? DateTime.now().millisecondsSinceEpoch;
   }
-
-  // ----------------------------------------------------------------- mídia
 
   Future<Map<String, String>> _prefetchMedia(List<SyncChange> changes) async {
     final out = <String, String>{};
@@ -289,7 +254,6 @@ class SyncEngine {
     }
   }
 
-  /// UPDATE (se a linha existe) ou INSERT de [cols] + uuid + updated_at.
   Future<void> _saveRow(
     DatabaseExecutor x,
     String table,
@@ -410,9 +374,6 @@ class SyncEngine {
     return false;
   }
 
-  /// Primeira ligação: tag, pacote ou sessão com o MESMO NOME criados offline
-  /// nos dois aparelhos viram um só. Só adota o que ainda não foi enviado.
-  /// Templates e questões não são fundidos (poderiam ter conteúdo diferente).
   Future<bool> _tryAdopt(DatabaseExecutor x, SyncChange c, Map<String, String> media) async {
     if (c.entity != 'tag' && c.entity != 'package' && c.entity != 'session') return false;
     final title = c.data?['title'];
@@ -453,13 +414,12 @@ class SyncEngine {
     }
     final localTs = _asInt(row['updated_at']) ?? 0;
     if (localTs > c.ts) {
-      report.kept++; // houve edição local DEPOIS da exclusão: a edição vale
+      report.kept++; 
       return;
     }
     final id = _asInt(row['id']);
-    if (id == null) return; // 'state' nunca é apagado por aqui
-
-    // Pacote/template que ainda tem questão aqui: a exclusão remota perde.
+    if (id == null) return; 
+    
     final childColumn = const {'package': 'package_id', 'templates': 'template_id'}[c.entity];
     if (childColumn != null) {
       final used = await x.rawQuery('SELECT 1 FROM question WHERE $childColumn = ? LIMIT 1', [id]);
@@ -483,7 +443,6 @@ class SyncEngine {
     await _clearPending(x, c.entity, c.uuid, c.ts);
   }
 
-  /// A exclusão remota conflita com algo novo daqui: mantém o item e o reenvia.
   Future<void> _resurrect(DatabaseExecutor x, String entity, int id, String uuid) async {
     final ts = await _now(x);
     await x.rawUpdate('UPDATE $entity SET updated_at = ? WHERE id = ?', [ts, id]);
@@ -493,8 +452,6 @@ class SyncEngine {
     );
   }
 
-  // ---------------------------------------------------------------- enviar
-
   Future<int> _push(String deviceId) async {
     final rows = await db.rawQuery('SELECT seq, entity, uuid, op, ts FROM sync_log ORDER BY seq');
     if (rows.isEmpty) return 0;
@@ -502,7 +459,7 @@ class SyncEngine {
     final maxSeq = _asInt(rows.last['seq']) ?? 0;
     final latest = <String, Map<String, Object?>>{};
     for (final r in rows) {
-      latest['${r['entity']}|${r['uuid']}'] = r; // a última entrada de cada item vale
+      latest['${r['entity']}|${r['uuid']}'] = r; 
     }
     final entries = latest.values.toList()
       ..sort((a, b) => syncEntityIndex(a['entity'] as String).compareTo(syncEntityIndex(b['entity'] as String)));
@@ -519,7 +476,7 @@ class SyncEngine {
         continue;
       }
       final row = await _find(db, entity, uuid);
-      if (row == null) continue; // apagado depois: a entrada 'delete' cuida disso
+      if (row == null) continue; 
       out.add(SyncChange(
         entity: entity,
         uuid: uuid,

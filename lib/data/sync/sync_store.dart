@@ -6,10 +6,6 @@ import 'package:sqflite/sqflite.dart';
 
 import 'sync_models.dart';
 
-/// Cópia central dos registros (o lado "servidor"), guardada em tabelas
-/// próprias do mesmo banco e em arquivos para a mídia. Mesma regra do
-/// servidor em memória que foi testado: por entidade+uuid vale o registro de
-/// maior `ts` (empate: o último a chegar).
 class SqliteSyncStore implements SyncTransport {
   SqliteSyncStore({required this.db, required this.blobDir});
 
@@ -32,7 +28,6 @@ class SqliteSyncStore implements SyncTransport {
     if (!await blobDir.exists()) await blobDir.create(recursive: true);
   }
 
-  /// Apaga a cópia central (ao sair da conta ou criar uma nova).
   Future<void> wipe() async {
     await _ensureTable();
     await db.rawDelete('DELETE FROM sync_srv_records');
@@ -80,7 +75,7 @@ class SqliteSyncStore implements SyncTransport {
           'SELECT ts FROM sync_srv_records WHERE entity = ? AND uuid = ?',
           [c.entity, c.uuid],
         );
-        if (cur.isNotEmpty && (cur.first['ts'] as num).toInt() > c.ts) continue; // mais antigo: ignora
+        if (cur.isNotEmpty && (cur.first['ts'] as num).toInt() > c.ts) continue;
         seq++;
         await txn.rawInsert(
           'INSERT OR REPLACE INTO sync_srv_records (entity, uuid, op, ts, data, device, seq) '

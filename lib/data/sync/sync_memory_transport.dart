@@ -2,15 +2,11 @@ import 'dart:convert';
 
 import 'sync_models.dart';
 
-/// Servidor falso em memória: serve para testes e para desenvolver sem
-/// servidor. Passa os dados por JSON (como a rede faria) para pegar erros de
-/// serialização.
 class MemorySyncTransport implements SyncTransport {
   final Map<String, ({SyncChange change, int seq})> _records = {};
   final Map<String, List<int>> _blobs = {};
   int _seq = 0;
 
-  /// Quantas vezes um arquivo foi realmente enviado (para testar o envio por hash).
   int blobUploads = 0;
 
   int get seq => _seq;

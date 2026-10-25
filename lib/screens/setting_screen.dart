@@ -10,7 +10,7 @@ class SettingsScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _settings = const [
     {'icon': Icons.settings,        'title': 'General',       'sub': 'Language • Studying • System-wide'},
     {'icon': Icons.rate_review,     'title': 'Reviewing',     'sub': 'Scheduling • Keep screen on'},
-    {'icon': Icons.sync,            'title': 'Sync',          'sub': 'Account • Automatic synchronization'},
+    {'icon': Icons.sync,            'title': 'Sync',          'sub': 'Account • Synchronization'},
     {'icon': Icons.notifications,   'title': 'Notifications', 'sub': 'Notify when • Vibrate • Blink light'},
     {'icon': Icons.palette,         'title': 'Appearance',    'sub': 'Themes • Accent • Heatmap'},
     {'icon': Icons.tune,            'title': 'Controls',      'sub': 'Gestures • Keyboard • Bluetooth'},

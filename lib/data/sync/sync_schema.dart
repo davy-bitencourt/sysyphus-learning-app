@@ -1,23 +1,11 @@
-// Migração do esquema de sincronização. As instruções SQL repetitivas
-// (colunas, índices e gatilhos por tabela) são montadas por funções abaixo;
-// o SQL resultante é idêntico ao da versão anterior, que foi testada em dois
-// aparelhos simulados. Mudou a lógica daqui? Refaça os cenários de sincronização.
 import 'package:sqflite/sqflite.dart';
 
 import 'sync_models.dart';
-
-/// Expressão SQL do "agora" em milissegundos (mesma escala de `updated_at`).
 const String kSyncNowSql = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
-
-/// Tabelas que ganham `uuid` (a `state` usa o uuid da questão).
 final List<String> kSyncUuidTables = [
   for (final e in kSyncEntities)
     if (e != 'state') e,
 ];
-
-// ---------------------------------------------------------------------------
-// Metadados (tabela sync_meta)
-// ---------------------------------------------------------------------------
 
 Future<String> getSyncMeta(DatabaseExecutor x, String key) async {
   final rows = await x.rawQuery('SELECT value FROM sync_meta WHERE key = ?', [key]);
@@ -27,10 +15,6 @@ Future<String> getSyncMeta(DatabaseExecutor x, String key) async {
 Future<void> setSyncMeta(DatabaseExecutor x, String key, String value) async {
   await x.rawInsert('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', [key, value]);
 }
-
-// ---------------------------------------------------------------------------
-// Gatilhos
-// ---------------------------------------------------------------------------
 
 const String _notApplying = "(SELECT value FROM sync_meta WHERE key = 'applying') = '0'";
 const String _enabled = "(SELECT value FROM sync_meta WHERE key = 'enabled') = '1'";
@@ -62,7 +46,6 @@ BEGIN
     SELECT '$t', OLD.uuid, 'delete', $kSyncNowSql WHERE OLD.uuid IS NOT NULL AND $_enabled;
 END''';
 
-// `state` não tem uuid próprio (usa o da questão) e nunca é apagada por aqui.
 String _triggerState(String suffix, String event, String condition) =>
     '''CREATE TRIGGER IF NOT EXISTS sync_state_$suffix AFTER $event ON state
 WHEN $condition
@@ -71,10 +54,6 @@ BEGIN
   INSERT INTO sync_log (entity, uuid, op, ts)
     SELECT 'state', q.uuid, 'upsert', $kSyncNowSql FROM question q WHERE q.id = NEW.question_id AND $_enabled;
 END''';
-
-// ---------------------------------------------------------------------------
-// Instruções da migração
-// ---------------------------------------------------------------------------
 
 const List<String> _preStatements = [
   r'''CREATE TABLE IF NOT EXISTS sync_meta (key TEXT PRIMARY KEY, value TEXT)''',
@@ -93,7 +72,6 @@ const List<String> _preStatements = [
   r'''CREATE TABLE IF NOT EXISTS sync_media (hash TEXT PRIMARY KEY, path TEXT NOT NULL)''',
 ];
 
-// tabela, coluna, tipo (só é adicionada se ainda não existir)
 final List<List<String>> _newColumns = [
   for (final t in kSyncUuidTables) [t, 'uuid', 'TEXT'],
   for (final t in [...kSyncUuidTables, 'state']) [t, 'updated_at', 'INTEGER'],
@@ -111,15 +89,13 @@ final List<String> _postStatements = [
   for (final t in kSyncUuidTables) 'CREATE UNIQUE INDEX IF NOT EXISTS idx_${t}_uuid ON $t (uuid)',
   for (final t in kSyncUuidTables) ...[
     _triggerInsert(t, t == 'revlog' ? _revlogQuestionUuid : ''),
-    if (t != 'revlog') _triggerUpdate(t), // histórico só acrescenta: sem gatilho de edição
+    if (t != 'revlog') _triggerUpdate(t), 
     _triggerDelete(t),
   ],
   _triggerState('ai', 'INSERT', _notApplying),
   _triggerState('au', 'UPDATE', '$_notApplying AND $_unchanged'),
 ];
 
-/// Migração v4: uuid + updated_at nas tabelas, fila de mudanças (`sync_log`) e
-/// gatilhos que a alimentam. Idempotente: pode rodar mais de uma vez.
 Future<void> applySyncSchema(DatabaseExecutor db) async {
   for (final sql in _preStatements) {
     await db.execute(sql);

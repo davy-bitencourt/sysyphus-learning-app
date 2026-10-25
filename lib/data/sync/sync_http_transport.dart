@@ -5,7 +5,6 @@ import 'dart:io';
 import 'sync_auth.dart';
 import 'sync_models.dart';
 
-/// ID recusado pelo servidor (ID errado ou relógios muito diferentes).
 class SyncAuthException implements Exception {
   final String message;
   const SyncAuthException([this.message = 'ID incorreto ou relógios dos aparelhos muito diferentes.']);
@@ -19,7 +18,6 @@ class _Resp {
   const _Resp(this.status, this.body);
 }
 
-/// Cliente do servidor de sincronização, por HTTP com requisições assinadas.
 class HttpSyncTransport implements SyncTransport {
   HttpSyncTransport({
     required this.host,
@@ -62,7 +60,6 @@ class HttpSyncTransport implements SyncTransport {
     return r;
   }
 
-  /// Testa a conexão e o ID. Lança se o host não responde ou recusa o ID.
   Future<void> ping() async {
     _ok(await _send('GET', '/v1/ping'));
   }
