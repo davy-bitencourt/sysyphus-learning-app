@@ -5,8 +5,6 @@ import '../styles/app_theme.dart';
 import '../widgets/stats_widgets.dart';
 import 'home.dart';
 
-/// Aba de estatísticas da Home: resumo breve e rápido.
-/// As análises completas ficam em DetailedStatisticsScreen (menu lateral).
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
 
@@ -21,7 +19,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   void initState() {
     super.initState();
-    Home.packagesChanged.addListener(_load); // ex.: histórico apagado
+    Home.packagesChanged.addListener(_load); 
     _load();
   }
 
@@ -97,12 +95,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _summary(BuildContext context, ReviewStats stats) {
-    final c = context.colors;
     final streak = stats.currentStreak;
     final longest = stats.longestStreak;
     final week = stats.lastDays(7);
     final weekDays = [for (var i = 6; i >= 0; i--) addDays(stats.today, -i)];
-    final studiedThisWeek = week.where((v) => v > 0).length;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -135,11 +131,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             highlight: 6,
             height: 90,
           ),
-        ),
-        Text(
-          'You studied on $studiedThisWeek of the last 7 days. '
-          'Open "Statistics" in the side menu for the full analysis.',
-          style: TextStyle(fontSize: 12, color: c.mutedText),
         ),
       ],
     );

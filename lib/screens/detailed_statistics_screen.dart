@@ -6,10 +6,6 @@ import '../styles/app_theme.dart';
 import '../widgets/stats_widgets.dart';
 import 'home.dart';
 
-/// Estatísticas detalhadas, acessadas pelo menu lateral.
-///
-/// A aba de estatísticas da Home fica só com o resumo rápido; aqui entram as
-/// análises completas (todas calculadas a partir do histórico de revisões).
 class DetailedStatisticsScreen extends StatefulWidget {
   const DetailedStatisticsScreen({super.key});
 
@@ -106,13 +102,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     }
 
     return [
-      Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Text(
-          'In-depth analysis of your review history. Pull down to refresh.',
-          style: TextStyle(fontSize: 13, color: c.mutedText),
-        ),
-      ),
       _overview(stats),
       _recentActivity(context, stats),
       _last30Days(stats),
@@ -122,8 +111,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
       _weekdays(context, stats),
     ];
   }
-
-  // --------------------------------------------------------------- seções
 
   Widget _overview(ReviewStats s) {
     return StatCard(
@@ -252,7 +239,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
   }
 
   Widget _weekdays(BuildContext context, ReviewStats s) {
-    final c = context.colors;
     final averages = s.weekdayAverages;
     final busiest = s.busiestWeekday;
     return StatCard(
@@ -270,44 +256,15 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             highlight: busiest,
             height: 90,
           ),
-          if (busiest != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Most active: ${kWeekdayLong[busiest]} (average of ${formatAverage(averages[busiest])} reviews). '
-              'Averages count the days you did not study too.',
-              style: TextStyle(fontSize: 12, color: c.mutedText),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  // ----------------------------------------------------------------- dados
-
-  /// Gestão dos dados de estatística.
   Widget _buildDataSection(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: c.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+    return  Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Data',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Deleting the review history clears the heatmap and every statistic '
-            'built from it. Your questions and their review schedule are kept.',
-            style: TextStyle(fontSize: 12, color: c.mutedText),
-          ),
-          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -323,7 +280,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 
@@ -355,7 +311,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await RevlogDao().deleteAll();
-      // A Home recarrega quando esse aviso muda (heatmap e contagens).
       Home.packagesChanged.value++;
       await _load();
       messenger.showSnackBar(const SnackBar(content: Text('Review history deleted.')));
