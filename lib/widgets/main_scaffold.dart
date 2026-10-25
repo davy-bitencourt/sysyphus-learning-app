@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:Sysyphus/data/services/sync_service.dart';
 import 'package:flutter/material.dart';
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
@@ -60,67 +59,61 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   }
 
   /// Botão de sincronizar da barra de cima.
+  ///  - sem conta neste aparelho: abre Settings > Sync para cadastrar;
+  ///  - com conta: só mostra um pop-up enquanto a atualização acontece.
   Future<void> _onSyncPressed() async {
     if (_syncing) return;
     final service = SyncService.instance;
 
-    // Sem servidor/conta, ou com a sincronização ainda desligada neste
-    // aparelho: abre Settings > Sync, que explica e deixa ligar.
-    if (!service.isConfigured || !(await service.status()).enabled) {
-      if (!mounted) return;
+    if (!service.hasAccount) {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
       );
       return;
     }
-    await _runSync(showMessage: true);
+
+    setState(() => _syncing = true);
+    // Se uma sincronização automática já está rodando, o serviço devolve a
+    // mesma execução (nunca há duas ao mesmo tempo).
+    final outcome = service.syncNow().then(
+          (report) => _SyncOutcome(report: report),
+          onError: (Object e) => _SyncOutcome(error: e),
+        );
+    final result = await showDialog<_SyncOutcome>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SyncProgressDialog(outcome: outcome),
+    );
+    if (!mounted) return;
+    setState(() => _syncing = false);
+    _notifyIfChanged(result?.report);
+  }
+
+  void _notifyIfChanged(SyncReport? report) {
+    if (report != null && (report.applied > 0 || report.adopted > 0)) {
+      widget.onItemCreated?.call();
+    }
   }
 
   /// Sincronização automática: silenciosa, no máximo uma por minuto (a menos
-  /// que [force]) e só se o servidor estiver configurado e o aparelho ligado.
+  /// que [force]) e só se este aparelho já tiver uma conta funcionando.
   Future<void> _autoSync({bool force = false}) async {
     final service = SyncService.instance;
-    if (_syncing || !service.isConfigured) return;
+    if (!mounted || _syncing || !service.isConfigured) return;
 
     final now = DateTime.now();
     final last = _lastAutoSync;
     if (!force && last != null && now.difference(last) < const Duration(minutes: 1)) return;
-
-    if (!(await service.status()).enabled) return;
     _lastAutoSync = now;
-    await _runSync(showMessage: false);
-  }
 
-  Future<void> _runSync({required bool showMessage}) async {
-    if (_syncing) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _syncing = true);
-
-    String? message;
     try {
-      final report = await SyncService.instance.syncNow();
-      message = _syncMessage(report);
-      if (report.applied > 0 || report.adopted > 0) widget.onItemCreated?.call();
+      _notifyIfChanged(await service.syncNow());
     } catch (e) {
-      debugPrint('Erro na sincronização: $e');
-      message = showMessage ? 'Não foi possível sincronizar: $e' : null;
+      debugPrint('Erro na sincronização automática: $e');
     }
-
-    if (!mounted) return;
-    setState(() => _syncing = false);
-    if (showMessage && message != null) {
-      messenger.showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
-
-  String _syncMessage(SyncReport r) {
-    final parts = <String>[
-      if (r.applied > 0) '${r.applied} recebidas',
-      if (r.pushed > 0) '${r.pushed} enviadas',
-      if (r.adopted > 0) '${r.adopted} fundidas',
-    ];
-    return parts.isEmpty ? 'Tudo sincronizado.' : 'Sincronizado: ${parts.join(', ')}.';
+    if (mounted) setState(() => _syncing = false);
   }
 
   void _toggleMenu() {
@@ -438,4 +431,64 @@ class _CenterNotchClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+/// Resultado de uma sincronização (nunca lança: o erro vai em [error]).
+class _SyncOutcome {
+  final SyncReport? report;
+  final Object? error;
+  const _SyncOutcome({this.report, this.error});
+}
+
+/// Pop-up de "atualização em andamento". Fecha sozinho ao terminar; se
+/// falhar, mostra o motivo e um botão para fechar.
+class _SyncProgressDialog extends StatefulWidget {
+  final Future<_SyncOutcome> outcome;
+  const _SyncProgressDialog({required this.outcome});
+
+  @override
+  State<_SyncProgressDialog> createState() => _SyncProgressDialogState();
+}
+
+class _SyncProgressDialogState extends State<_SyncProgressDialog> {
+  _SyncOutcome? _failed;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.outcome.then((o) {
+      if (!mounted) return;
+      if (o.error == null) {
+        Navigator.pop(context, o);
+      } else {
+        setState(() => _failed = o);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = _failed;
+    return PopScope(
+      canPop: failed != null, // enquanto atualiza, não fecha
+      child: AlertDialog(
+        content: failed == null
+            ? Row(
+                children: [
+                  SizedBox(
+                    width: context.icon(24),
+                    height: context.icon(24),
+                    child: CircularProgressIndicator(strokeWidth: 3, color: context.colors.accent),
+                  ),
+                  const SizedBox(width: 20),
+                  const Expanded(child: Text('Atualizando…')),
+                ],
+              )
+            : Text('Não foi possível sincronizar: ${failed.error}'),
+        actions: failed == null
+            ? null
+            : [TextButton(onPressed: () => Navigator.pop(context, failed), child: const Text('OK'))],
+      ),
+    );
+  }
 }

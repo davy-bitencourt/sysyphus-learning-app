@@ -8,21 +8,11 @@ import '../transfer/pack_models.dart';
 import 'sync_models.dart';
 import 'sync_schema.dart';
 
-const String _nowSql = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 const Set<String> _imageExts = {'.png', '.jpg', '.jpeg', '.webp', '.gif'};
 
 // ---------------------------------------------------------------------------
 // Utilidades
 // ---------------------------------------------------------------------------
-
-Future<String> _meta(DatabaseExecutor x, String key) async {
-  final rows = await x.rawQuery('SELECT value FROM sync_meta WHERE key = ?', [key]);
-  return rows.isEmpty ? '' : ((rows.first['value'] as String?) ?? '');
-}
-
-Future<void> _setMeta(DatabaseExecutor x, String key, String value) async {
-  await x.rawInsert('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', [key, value]);
-}
 
 int? _asInt(Object? v) => v is num ? v.toInt() : null;
 
@@ -65,7 +55,7 @@ class _Pending {
 /// envio sobe o banco inteiro).
 Future<void> syncEnable(Database db) async {
   await db.transaction((txn) async {
-    await _setMeta(txn, 'enabled', '1');
+    await setSyncMeta(txn, 'enabled', '1');
     await txn.rawDelete('DELETE FROM sync_log');
     for (final t in kSyncUuidTables) {
       await txn.rawInsert(
@@ -81,18 +71,18 @@ Future<void> syncEnable(Database db) async {
 
 Future<void> syncDisable(Database db) async {
   await db.transaction((txn) async {
-    await _setMeta(txn, 'enabled', '0');
-    await _setMeta(txn, 'cursor', '0');
+    await setSyncMeta(txn, 'enabled', '0');
+    await setSyncMeta(txn, 'cursor', '0');
     await txn.rawDelete('DELETE FROM sync_log');
   });
 }
 
 Future<SyncStatus> syncStatus(Database db) async {
   final pending = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM sync_log')) ?? 0;
-  final last = int.tryParse(await _meta(db, 'last_sync'));
+  final last = int.tryParse(await getSyncMeta(db, 'last_sync'));
   return SyncStatus(
-    enabled: (await _meta(db, 'enabled')) == '1',
-    deviceId: await _meta(db, 'device_id'),
+    enabled: (await getSyncMeta(db, 'enabled')) == '1',
+    deviceId: await getSyncMeta(db, 'device_id'),
     pendingChanges: pending,
     lastSync: last == null ? null : DateTime.fromMillisecondsSinceEpoch(last),
   );
@@ -140,8 +130,8 @@ class SyncEngine {
     _running = true;
     try {
       final report = SyncReport();
-      final deviceId = await _meta(db, 'device_id');
-      final cursor = int.tryParse(await _meta(db, 'cursor')) ?? 0;
+      final deviceId = await getSyncMeta(db, 'device_id');
+      final cursor = int.tryParse(await getSyncMeta(db, 'cursor')) ?? 0;
 
       // ---- 1) baixar ----
       final pull = await transport.pull(cursor);
@@ -152,7 +142,7 @@ class SyncEngine {
       final media = await _prefetchMedia(remote);
 
       await db.transaction((txn) async {
-        await _setMeta(txn, 'applying', '1'); // gatilhos não registram o que vem de fora
+        await setSyncMeta(txn, 'applying', '1'); // gatilhos não registram o que vem de fora
         final ups = remote.where((c) => c.op == 'upsert').toList()
           ..sort((a, b) => syncEntityIndex(a.entity).compareTo(syncEntityIndex(b.entity)));
         for (final c in ups) {
@@ -163,13 +153,13 @@ class SyncEngine {
         for (final c in dels) {
           await _applyDelete(txn, c, report);
         }
-        await _setMeta(txn, 'cursor', '${pull.latestSeq}');
-        await _setMeta(txn, 'applying', '0');
+        await setSyncMeta(txn, 'cursor', '${pull.latestSeq}');
+        await setSyncMeta(txn, 'applying', '0');
       });
 
       // ---- 2) enviar ----
       report.pushed = await _push(deviceId);
-      await _setMeta(db, 'last_sync', '${DateTime.now().millisecondsSinceEpoch}');
+      await setSyncMeta(db, 'last_sync', '${DateTime.now().millisecondsSinceEpoch}');
       return report;
     } finally {
       _running = false;
@@ -216,12 +206,8 @@ class SyncEngine {
     );
   }
 
-  Future<bool> _exists(DatabaseExecutor x, String sql, List<Object?> args) async {
-    return (await x.rawQuery(sql, args)).isNotEmpty;
-  }
-
   Future<int> _now(DatabaseExecutor x) async {
-    final rows = await x.rawQuery('SELECT $_nowSql AS t');
+    final rows = await x.rawQuery('SELECT $kSyncNowSql AS t');
     return _asInt(rows.first['t']) ?? DateTime.now().millisecondsSinceEpoch;
   }
 
@@ -277,7 +263,6 @@ class SyncEngine {
     Map<String, String> media,
     SyncReport report,
   ) async {
-    final data = c.data ?? const <String, dynamic>{};
     final local = await _find(x, c.entity, c.uuid);
 
     if (local == null) {
@@ -290,23 +275,39 @@ class SyncEngine {
         report.adopted++;
         return;
       }
-      if (await _writeRow(x, c.entity, c.uuid, c.ts, data, media, exists: false)) {
-        report.applied++;
-        await _clearPending(x, c.entity, c.uuid, c.ts);
-      } else {
-        report.skipped++;
-      }
+    } else if (c.ts < (_asInt(local['updated_at']) ?? 0)) {
+      report.kept++; // a edição local é mais nova: vale a local (ela será enviada)
       return;
     }
 
-    final localTs = _asInt(local['updated_at']) ?? 0;
-    if (c.ts >= localTs) {
-      if (await _writeRow(x, c.entity, c.uuid, c.ts, data, media, exists: true)) {
-        report.applied++;
-        await _clearPending(x, c.entity, c.uuid, c.ts);
-      }
+    final data = c.data ?? const <String, dynamic>{};
+    if (await _writeRow(x, c.entity, c.uuid, c.ts, data, media, exists: local != null)) {
+      report.applied++;
+      await _clearPending(x, c.entity, c.uuid, c.ts);
+    } else if (local == null) {
+      report.skipped++;
+    }
+  }
+
+  /// UPDATE (se a linha existe) ou INSERT de [cols] + uuid + updated_at.
+  Future<void> _saveRow(
+    DatabaseExecutor x,
+    String table,
+    String uuid,
+    int ts,
+    Map<String, Object?> cols, {
+    required bool exists,
+  }) async {
+    if (exists) {
+      final sets = [for (final k in cols.keys) '$k = ?', 'updated_at = ?'].join(', ');
+      await x.rawUpdate('UPDATE $table SET $sets WHERE uuid = ?', [...cols.values, ts, uuid]);
     } else {
-      report.kept++; // a edição local é mais nova: vale a local (ela será enviada)
+      final names = [...cols.keys, 'uuid', 'updated_at'];
+      final marks = List.filled(names.length, '?').join(', ');
+      await x.rawInsert(
+        'INSERT INTO $table (${names.join(', ')}) VALUES ($marks)',
+        [...cols.values, uuid, ts],
+      );
     }
   }
 
@@ -319,21 +320,16 @@ class SyncEngine {
     Map<String, String> media, {
     required bool exists,
   }) async {
+    Future<void> save(Map<String, Object?> cols) =>
+        _saveRow(x, entity, uuid, ts, cols, exists: exists);
+
     switch (entity) {
       case 'tag':
-        if (exists) {
-          await x.rawUpdate('UPDATE tag SET title = ?, updated_at = ? WHERE uuid = ?', [d['title'], ts, uuid]);
-        } else {
-          await x.rawInsert('INSERT INTO tag (title, uuid, updated_at) VALUES (?, ?, ?)', [d['title'], uuid, ts]);
-        }
+        await save({'title': d['title']});
         return true;
 
       case 'templates':
-        if (exists) {
-          await x.rawUpdate('UPDATE templates SET template = ?, updated_at = ? WHERE uuid = ?', [d['template'], ts, uuid]);
-        } else {
-          await x.rawInsert('INSERT INTO templates (template, uuid, updated_at) VALUES (?, ?, ?)', [d['template'], uuid, ts]);
-        }
+        await save({'template': d['template']});
         return true;
 
       case 'session':
@@ -348,44 +344,27 @@ class SyncEngine {
               if (tagId != null && qty != null) filters.add({'tag_id': tagId, 'quantity': qty});
             }
           }
-          final tf = filters.isEmpty ? null : jsonEncode(filters);
-          if (exists) {
-            await x.rawUpdate(
-              'UPDATE session SET title = ?, time_limit = ?, total_q = ?, tag_filters = ?, updated_at = ? WHERE uuid = ?',
-              [d['title'], d['time_limit'], d['total_q'], tf, ts, uuid],
-            );
-          } else {
-            await x.rawInsert(
-              'INSERT INTO session (title, time_limit, total_q, tag_filters, uuid, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-              [d['title'], d['time_limit'], d['total_q'], tf, uuid, ts],
-            );
-          }
+          await save({
+            'title': d['title'],
+            'time_limit': d['time_limit'],
+            'total_q': d['total_q'],
+            'tag_filters': filters.isEmpty ? null : jsonEncode(filters),
+          });
           return true;
         }
 
       case 'package':
-        {
-          final sessionId = await _idOf(x, 'session', d['session_uuid'] as String?);
-          if (exists) {
-            await x.rawUpdate(
-              'UPDATE package SET title = ?, session_id = ?, updated_at = ? WHERE uuid = ?',
-              [d['title'], sessionId, ts, uuid],
-            );
-          } else {
-            await x.rawInsert(
-              'INSERT INTO package (title, session_id, uuid, updated_at) VALUES (?, ?, ?, ?)',
-              [d['title'], sessionId, uuid, ts],
-            );
-          }
-          return true;
-        }
+        await save({
+          'title': d['title'],
+          'session_id': await _idOf(x, 'session', d['session_uuid'] as String?),
+        });
+        return true;
 
       case 'question':
         {
           final packageId = await _idOf(x, 'package', d['package_uuid'] as String?);
           final templateId = await _idOf(x, 'templates', d['template_uuid'] as String?);
           if (packageId == null || templateId == null) return false; // pai ainda não existe
-          final tagId = await _idOf(x, 'tag', d['tag_uuid'] as String?);
 
           final values = <String, Object?>{};
           final raw = d['questions'];
@@ -394,18 +373,12 @@ class SyncEngine {
               values['$k'] = (v is String && v.startsWith('blob:')) ? media[v] : v;
             });
           }
-          final json = jsonEncode(values);
-          if (exists) {
-            await x.rawUpdate(
-              'UPDATE question SET package_id = ?, tag_id = ?, template_id = ?, questions = ?, updated_at = ? WHERE uuid = ?',
-              [packageId, tagId, templateId, json, ts, uuid],
-            );
-          } else {
-            await x.rawInsert(
-              'INSERT INTO question (package_id, tag_id, template_id, questions, uuid, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-              [packageId, tagId, templateId, json, uuid, ts],
-            );
-          }
+          await save({
+            'package_id': packageId,
+            'tag_id': await _idOf(x, 'tag', d['tag_uuid'] as String?),
+            'template_id': templateId,
+            'questions': jsonEncode(values),
+          });
           return true;
         }
 
@@ -425,11 +398,12 @@ class SyncEngine {
         {
           if (exists) return true; // histórico só acrescenta
           final questionUuid = d['question_uuid'] as String?;
-          final questionId = await _idOf(x, 'question', questionUuid) ?? 0;
-          await x.rawInsert(
-            'INSERT INTO revlog (question_id, data, time, uuid, question_uuid, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-            [questionId, d['data'], d['time'], uuid, questionUuid, ts],
-          );
+          await save({
+            'question_id': await _idOf(x, 'question', questionUuid) ?? 0,
+            'data': d['data'],
+            'time': d['time'],
+            'question_uuid': questionUuid,
+          });
           return true;
         }
     }
@@ -485,17 +459,15 @@ class SyncEngine {
     final id = _asInt(row['id']);
     if (id == null) return; // 'state' nunca é apagado por aqui
 
-    if (c.entity == 'package' &&
-        await _exists(x, 'SELECT 1 FROM question WHERE package_id = ? LIMIT 1', [id])) {
-      await _resurrect(x, c.entity, id, c.uuid);
-      report.kept++;
-      return;
-    }
-    if (c.entity == 'templates' &&
-        await _exists(x, 'SELECT 1 FROM question WHERE template_id = ? LIMIT 1', [id])) {
-      await _resurrect(x, c.entity, id, c.uuid);
-      report.kept++;
-      return;
+    // Pacote/template que ainda tem questão aqui: a exclusão remota perde.
+    final childColumn = const {'package': 'package_id', 'templates': 'template_id'}[c.entity];
+    if (childColumn != null) {
+      final used = await x.rawQuery('SELECT 1 FROM question WHERE $childColumn = ? LIMIT 1', [id]);
+      if (used.isNotEmpty) {
+        await _resurrect(x, c.entity, id, c.uuid);
+        report.kept++;
+        return;
+      }
     }
     if (c.entity == 'session') {
       await x.rawUpdate('UPDATE package SET session_id = NULL WHERE session_id = ?', [id]);

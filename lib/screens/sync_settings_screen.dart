@@ -5,7 +5,7 @@ import '../data/sync/sync_auth.dart';
 import '../data/sync/sync_discovery.dart';
 import '../data/sync/sync_http_transport.dart';
 import '../data/sync/sync_models.dart';
-import '../data/sync/sync_service.dart';
+import '../data/services/sync_service.dart';
 import '../styles/app_theme.dart';
 
 /// Settings > Sync: sincronização entre os seus aparelhos pela rede local.

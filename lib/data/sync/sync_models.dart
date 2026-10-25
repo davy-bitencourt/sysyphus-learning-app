@@ -73,7 +73,7 @@ abstract class SyncTransport {
 class SyncReport {
   int applied = 0;
   int skipped = 0;
-  int kept = 0; 
+  int kept = 0;
   int adopted = 0;
   int pushed = 0;
 

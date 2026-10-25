@@ -62,10 +62,3 @@ bool constantTimeEquals(String a, String b) {
   }
   return diff == 0;
 }
-
-/// Identificador usado na descoberta (UDP). Não revela o ID: só permite achar
-/// o host que pertence à mesma conta.
-String discoveryHint(String accountId) => sha256
-    .convert(utf8.encode('disc:${normalizeAccountId(accountId)}'))
-    .toString()
-    .substring(0, 16);

@@ -18,21 +18,23 @@ class SqliteSyncStore implements SyncTransport {
 
   static final RegExp _hashRe = RegExp(r'^[0-9a-f]{64}$');
 
-  Future<void> open() async {
+  Future<void> _ensureTable() async {
     await db.execute(
       'CREATE TABLE IF NOT EXISTS sync_srv_records ('
       'entity TEXT NOT NULL, uuid TEXT NOT NULL, op TEXT NOT NULL, ts INTEGER NOT NULL, '
       'data TEXT, device TEXT NOT NULL, seq INTEGER NOT NULL, PRIMARY KEY (entity, uuid))',
     );
+  }
+
+  Future<void> open() async {
+    await _ensureTable();
     await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_srv_seq ON sync_srv_records (seq)');
     if (!await blobDir.exists()) await blobDir.create(recursive: true);
   }
 
   /// Apaga a cópia central (ao sair da conta ou criar uma nova).
   Future<void> wipe() async {
-    await db.execute('CREATE TABLE IF NOT EXISTS sync_srv_records ('
-        'entity TEXT NOT NULL, uuid TEXT NOT NULL, op TEXT NOT NULL, ts INTEGER NOT NULL, '
-        'data TEXT, device TEXT NOT NULL, seq INTEGER NOT NULL, PRIMARY KEY (entity, uuid))');
+    await _ensureTable();
     await db.rawDelete('DELETE FROM sync_srv_records');
     if (await blobDir.exists()) await blobDir.delete(recursive: true);
   }
@@ -104,7 +106,6 @@ class SqliteSyncStore implements SyncTransport {
     if (sha256.convert(bytes).toString() != hash) {
       throw ArgumentError('o conteúdo não confere com o hash informado');
     }
-    if (!await blobDir.exists()) await blobDir.create(recursive: true);
     await f.writeAsBytes(bytes, flush: true);
   }
 

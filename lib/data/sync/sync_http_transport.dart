@@ -51,11 +51,11 @@ class HttpSyncTransport implements SyncTransport {
     await for (final chunk in res.timeout(timeout)) {
       builder.add(chunk);
     }
+    if (res.statusCode == 401) throw const SyncAuthException();
     return _Resp(res.statusCode, builder.takeBytes());
   }
 
   _Resp _ok(_Resp r) {
-    if (r.status == 401) throw const SyncAuthException();
     if (r.status < 200 || r.status >= 300) {
       throw HttpException('O servidor respondeu ${r.status}', uri: Uri(host: host, port: port));
     }
@@ -90,9 +90,7 @@ class HttpSyncTransport implements SyncTransport {
 
   @override
   Future<bool> hasBlob(String hash) async {
-    final r = await _send('HEAD', '/v1/blob/$hash');
-    if (r.status == 401) throw const SyncAuthException();
-    return r.status == 200;
+    return (await _send('HEAD', '/v1/blob/$hash')).status == 200;
   }
 
   @override
@@ -103,7 +101,6 @@ class HttpSyncTransport implements SyncTransport {
   @override
   Future<List<int>?> getBlob(String hash) async {
     final r = await _send('GET', '/v1/blob/$hash');
-    if (r.status == 401) throw const SyncAuthException();
     return r.status == 200 ? r.body : null;
   }
 

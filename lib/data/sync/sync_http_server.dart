@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'sync_auth.dart';
+import 'sync_discovery.dart';
 import 'sync_models.dart';
 
 /// Servidor de sincronização: HTTP para os dados e UDP para ser achado na
@@ -54,33 +55,9 @@ class SyncHttpServer {
     await server?.close(force: true);
   }
 
-  /// Endereços IPv4 desta máquina na rede (para mostrar ao usuário).
-  static Future<List<String>> localAddresses() async {
-    try {
-      final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLoopback: false,
-      );
-      return [for (final i in interfaces) for (final a in i.addresses) a.address];
-    } catch (_) {
-      return const [];
-    }
-  }
-
   Future<void> _startDiscovery() async {
     try {
-      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, kSyncPort, reuseAddress: true);
-      _udp = socket;
-      final hint = discoveryHint(accountId);
-      final request = 'SYSY?1:$hint';
-      socket.listen((event) {
-        if (event != RawSocketEvent.read) return;
-        final dg = socket.receive();
-        if (dg == null) return;
-        if (utf8.decode(dg.data, allowMalformed: true) == request) {
-          socket.send(utf8.encode('SYSY!1:$hint:$boundPort'), dg.address, dg.port);
-        }
-      });
+      _udp = await startDiscoveryResponder(accountId, () => boundPort);
     } catch (e) {
       discoveryError = '$e';
     }
@@ -104,6 +81,11 @@ class SyncHttpServer {
     if ((DateTime.now().millisecondsSinceEpoch - t).abs() > kSyncClockToleranceMs) return false;
     final expected = signRequest(accountId, req.method, path, t, body);
     return constantTimeEquals(expected, signature);
+  }
+
+  Future<void> _sendStatus(HttpResponse res, int status) async {
+    res.statusCode = status;
+    await res.close();
   }
 
   Future<void> _sendJson(HttpResponse res, int status, Object json) async {
@@ -158,15 +140,13 @@ class SyncHttpServer {
       if (blob != null) {
         final hash = blob.group(1)!;
         if (method == 'HEAD') {
-          res.statusCode = await transport.hasBlob(hash) ? 200 : 404;
-          await res.close();
+          await _sendStatus(res, await transport.hasBlob(hash) ? 200 : 404);
           return;
         }
         if (method == 'GET') {
           final bytes = await transport.getBlob(hash);
           if (bytes == null) {
-            res.statusCode = 404;
-            await res.close();
+            await _sendStatus(res, 404);
           } else {
             res.statusCode = 200;
             res.headers.contentType = ContentType.binary;

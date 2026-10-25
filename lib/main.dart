@@ -3,7 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
-import 'data/sync/sync_service.dart';
+import 'data/services/sync_service.dart';
 import 'screens/home.dart';
 import 'styles/app_theme.dart';
 

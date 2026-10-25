@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 import '../data/DAO/tag_dao.dart';
 import '../styles/app_theme.dart';
 
-/// Abre o diálogo de nova tag.
-///
-/// Ao salvar, a tag é criada e o diálogo continua aberto com o campo vazio,
-/// para cadastrar a próxima (mesmo comportamento das telas de questão, pacote,
-/// template e sessão). "Concluir" fecha o diálogo.
-///
-/// Quem chama deve recarregar suas listas depois do `await`, já que o diálogo
-/// pode ser fechado tocando fora ou com o botão voltar.
 Future<void> showNewTagDialog(BuildContext context) {
   return showDialog<void>(
     context: context,

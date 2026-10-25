@@ -2,22 +2,11 @@ import 'dart:convert';
 
 import 'sync_models.dart';
 
-class _Record {
-  final String entity;
-  final String uuid;
-  final String op;
-  final int ts;
-  final String? dataJson;
-  final String device;
-  final int seq;
-  const _Record(this.entity, this.uuid, this.op, this.ts, this.dataJson, this.device, this.seq);
-}
-
 /// Servidor falso em memória: serve para testes e para desenvolver sem
 /// servidor. Passa os dados por JSON (como a rede faria) para pegar erros de
 /// serialização.
 class MemorySyncTransport implements SyncTransport {
-  final Map<String, _Record> _records = {};
+  final Map<String, ({SyncChange change, int seq})> _records = {};
   final Map<String, List<int>> _blobs = {};
   int _seq = 0;
 
@@ -30,20 +19,7 @@ class MemorySyncTransport implements SyncTransport {
   Future<PullResult> pull(int sinceSeq) async {
     final list = _records.values.where((r) => r.seq > sinceSeq).toList()
       ..sort((a, b) => a.seq.compareTo(b.seq));
-    return PullResult(
-      changes: [
-        for (final r in list)
-          SyncChange(
-            entity: r.entity,
-            uuid: r.uuid,
-            op: r.op,
-            ts: r.ts,
-            data: r.dataJson == null ? null : Map<String, dynamic>.from(jsonDecode(r.dataJson!) as Map),
-            device: r.device,
-          ),
-      ],
-      latestSeq: _seq,
-    );
+    return PullResult(changes: [for (final r in list) r.change], latestSeq: _seq);
   }
 
   @override
@@ -51,16 +27,11 @@ class MemorySyncTransport implements SyncTransport {
     for (final c in changes) {
       final key = '${c.entity}|${c.uuid}';
       final current = _records[key];
-      if (current != null && current.ts > c.ts) continue; // mais antigo: ignora
-      _seq++;
-      _records[key] = _Record(
-        c.entity,
-        c.uuid,
-        c.op,
-        c.ts,
-        c.data == null ? null : jsonEncode(c.data),
-        deviceId,
-        _seq,
+      if (current != null && current.change.ts > c.ts) continue; // mais antigo: ignora
+      final wire = jsonDecode(jsonEncode({...c.toJson(), 'device': deviceId}));
+      _records[key] = (
+        change: SyncChange.fromJson(Map<String, dynamic>.from(wire as Map)),
+        seq: ++_seq,
       );
     }
   }
