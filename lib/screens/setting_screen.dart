@@ -39,7 +39,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: ListView(
+      body: SafeArea(
+          top: false, // a AppBar já cuida do topo
+          child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
           // Barra de busca
@@ -130,6 +132,7 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+        ),
     );
   }
 }
@@ -156,7 +159,9 @@ class GeneralSettingsScreen extends StatelessWidget {
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
-          body: ListView(
+          body: SafeArea(
+          top: false, // a AppBar já cuida do topo
+          child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               _sectionTitle(context, 'Language'),
@@ -164,6 +169,7 @@ class GeneralSettingsScreen extends StatelessWidget {
               _languageTile(context, s),
             ],
           ),
+        ),
         );
       },
     );
@@ -259,7 +265,9 @@ class AppearanceSettingsScreen extends StatelessWidget {
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
-          body: ListView(
+          body: SafeArea(
+          top: false, // a AppBar já cuida do topo
+          child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               _sectionTitle(context, 'Theme'),
@@ -308,6 +316,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ...AppOptions.heatmaps.map((p) => _heatmapOption(context, s, p)),
             ],
           ),
+        ),
         );
       },
     );
@@ -401,7 +410,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
-          body: ListView(
+          body: SafeArea(
+          top: false, // a AppBar já cuida do topo
+          child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               _sectionTitle(context, 'Font size'),
@@ -445,6 +456,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
         );
       },
     );
