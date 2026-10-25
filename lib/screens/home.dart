@@ -11,6 +11,8 @@ import 'statistic_screen.dart';
 import 'questions_screen.dart';
 import 'package_edit_screen.dart';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+
 class Home extends StatefulWidget {
   // TODO: substituir por um profile real assim que a tela de seleção
   // de perfil existir.
@@ -31,6 +33,13 @@ class _HomeState extends State<Home> {
   final PageController _pageController = PageController();
 
   final RevlogSchema _revlogSchema = RevlogSchema();
+
+  /// Windows, Linux e macOS usam a interface de desktop; Android, iOS (e o
+  /// restante) usam a mobile. A plataforma não muda com o app aberto.
+  late final bool _isDesktop = switch (defaultTargetPlatform) {
+    TargetPlatform.windows || TargetPlatform.linux || TargetPlatform.macOS => true,
+    TargetPlatform.android || TargetPlatform.iOS || TargetPlatform.fuchsia => false,
+  };
 
   Map<int, String> _packages = {};
   Map<DateTime, int> _activityMap = {};
@@ -98,7 +107,7 @@ class _HomeState extends State<Home> {
         controller: _pageController,
         onPageChanged: (i) => setState(() => _currentIndex = i),
         children: [
-          _buildMobileBody(),
+          _isDesktop ? _buildDesktopBody() : _buildMobileBody(),
           const StatisticsScreen(),
         ],
       ),
@@ -145,38 +154,44 @@ class _HomeState extends State<Home> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
                 HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
                 const SizedBox(height: 24),
-                _buildDeckTable(),
+                if (_packages.isEmpty)
+                  _noPackagesMessage('Clique no + para criar o primeiro.')
+                else
+                  _buildDeckTable(),
+                const SizedBox(height: 80),
               ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
+
+  Widget _noPackagesMessage(String hint) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text('Nenhum pacote ainda. $hint', style: TextStyle(color: Colors.grey[500])),
+      );
 
   Widget _sectionLabel(String text) => Text(text,
     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
       color: context.colors.text));
 
   Widget _buildDeckList() {
-    if (_packages.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('Nenhum pacote ainda. Toque no + para criar o primeiro.',
-          style: TextStyle(color: Colors.grey[500])),
-      );
-    }
+    if (_packages.isEmpty) return _noPackagesMessage('Toque no + para criar o primeiro.');
     return Column(
       children: _packages.entries.map(_buildDeckCard).toList(),
     );
