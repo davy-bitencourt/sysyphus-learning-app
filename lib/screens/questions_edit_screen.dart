@@ -635,7 +635,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         return _buildTextField(
           _textControllers[field.id]!,
           field.isStatement ? '${field.label} *' : field.label,
-          maxLines: 3,
+          minLines: 3, // começa com 3 linhas e cresce conforme se digita
         );
       case FieldType.image:
         return _buildMediaField(field, isImage: true);
@@ -719,6 +719,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           (i) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Checkbox(
                   value: corrects[i],
@@ -728,6 +729,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                 Expanded(
                   child: TextField(
                     controller: controllers[i],
+                    minLines: 1,
+                    maxLines: null, // cresce verticalmente conforme se digita
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: 'Opção ${i + 1}',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -746,13 +751,15 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Widget _buildTextField(
     TextEditingController controller,
     String label, {
-    int maxLines = 1,
+    int minLines = 1,
     TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
+      minLines: minLines,
+      maxLines: null, // sem limite: o campo cresce verticalmente
+      keyboardType: keyboardType ?? TextInputType.multiline,
+      textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

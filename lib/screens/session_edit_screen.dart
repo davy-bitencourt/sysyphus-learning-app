@@ -36,7 +36,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   final _nameController = TextEditingController();
   final _timeController = TextEditingController(text: '30');
   String _timeUnit = 'min'; // unidade do tempo limite: 's' | 'min' | 'h'
-  final _totalController = TextEditingController(text: '20');
+  final _totalController = TextEditingController(); // vazio = ilimitado
 
   List<Map<String, dynamic>> _tags = [];
   Map<int, int> _tagCounts = {}; // tag_id -> questões que existem naquela tag
@@ -90,7 +90,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     }
 
     final total = (s['total_q'] as num?)?.toInt();
-    if (total != null) _totalController.text = total.toString();
+    _totalController.text = total == null ? '' : total.toString(); // null = ilimitado
 
     // Filtros de tags que ainda existem (tag apagada some do filtro).
     final filters = SessionDao.parseTagFilters(s['tag_filters'] as String?);
@@ -121,9 +121,19 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     return n * (_unitSeconds[_timeUnit] ?? 60);
   }
 
-  int get _total => int.tryParse(_totalController.text.trim()) ?? 0;
+  /// Total de questões da sessão; null = campo vazio = ilimitado (todas as
+  /// questões do pacote).
+  int? get _total {
+    final n = int.tryParse(_totalController.text.trim());
+    return (n == null || n < 1) ? null : n;
+  }
+
+  bool get _unlimitedQuestions => _total == null;
   int get _quotaSum => _quotas.fold(0, (sum, q) => sum + q.quantity);
-  int get _remaining => _total - _quotaSum;
+
+  /// Quantas questões ainda podem ser distribuídas entre tags; null = sem teto.
+  int? get _remaining => _total == null ? null : _total! - _quotaSum;
+  bool get _canAddToQuota => _remaining == null || _remaining! > 0;
 
   void _showError(String message) => _showMessage(message);
 
@@ -136,7 +146,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _nameController.clear();
     _timeController.text = '30';
     _timeUnit = 'min';
-    _totalController.text = '20';
+    _totalController.clear();
     _unlimitedTime = true;
     _filterByTag = false;
     _quotas.clear();
@@ -159,7 +169,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     setState(() {
       _quotas.add(_TagQuota(
         tagId: free.first['id'] as int,
-        quantity: _remaining > 0 ? 1 : 0,
+        quantity: _canAddToQuota ? 1 : 0,
       ));
     });
   }
@@ -171,11 +181,13 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       return;
     }
 
-    final total = _total;
-    if (total < 1) {
-      _showError('Defina quantas questões a sessão terá.');
+    // Vazio = ilimitado. Mas "0" digitado é um erro, não "ilimitado".
+    final totalText = _totalController.text.trim();
+    if (totalText.isNotEmpty && (int.tryParse(totalText) ?? 0) < 1) {
+      _showError('A quantidade de questões deve ser maior que zero (ou deixe vazio para ilimitado).');
       return;
     }
+    final int? total = _total; // null = ilimitado
 
     int? limitSeconds;
     if (!_unlimitedTime) {
@@ -196,7 +208,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         _showError('Cada tag precisa de pelo menos 1 questão.');
         return;
       }
-      if (_quotaSum > total) {
+      if (total != null && _quotaSum > total) {
         _showError(
           'A soma das questões por tag ($_quotaSum) não pode passar do '
           'total da sessão ($total).',
@@ -326,13 +338,15 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 _sectionTitle('Quantidade de questões'),
                 const SizedBox(height: 4),
                 Text(
-                  'Quantas questões poderão ser feitas nesta sessão de estudo.',
+                  'Quantas questões poderão ser feitas nesta sessão de estudo. '
+                  'Deixe vazio para ilimitado (todas as questões do pacote).',
                   style: TextStyle(fontSize: 12, color: context.colors.mutedText),
                 ),
                 const SizedBox(height: 10),
                 _numberField(
                   _totalController,
                   'Total de questões',
+                  hint: 'Ilimitado',
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 28),
@@ -422,6 +436,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   Widget _numberField(
     TextEditingController controller,
     String label, {
+    String? hint,
     ValueChanged<String>? onChanged,
   }) {
     return TextField(
@@ -431,6 +446,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
+        floatingLabelBehavior: hint != null ? FloatingLabelBehavior.always : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
@@ -450,8 +467,10 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         ),
         Text(
           _filterByTag
-              ? 'Escolha quantas questões vêm de cada tag. A soma não pode '
-                'passar do total da sessão.'
+              ? (_unlimitedQuestions
+                  ? 'Escolha quantas questões vêm de cada tag.'
+                  : 'Escolha quantas questões vêm de cada tag. A soma não pode '
+                    'passar do total da sessão.')
               : 'Sem filtro: a sessão usa questões de qualquer tag.',
           style: TextStyle(fontSize: 12, color: c.mutedText),
         ),
@@ -536,7 +555,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               Text('${quota.quantity}',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
               IconButton(
-                onPressed: _remaining > 0 ? () => setState(() => quota.quantity++) : null,
+                onPressed: _canAddToQuota ? () => setState(() => quota.quantity++) : null,
                 icon: Icon(Icons.add_circle_outline, size: context.icon(22)),
               ),
               const Spacer(),
@@ -554,13 +573,27 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   }
 
   Widget _buildRemainingInfo() {
-    final over = _remaining < 0;
+    final remaining = _remaining;
+    if (remaining == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(
+          'Distribuídas $_quotaSum · total ilimitado',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: context.colors.mutedText,
+          ),
+        ),
+      );
+    }
+    final over = remaining < 0;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Text(
         over
             ? 'A soma das tags ($_quotaSum) passa do total da sessão ($_total).'
-            : 'Distribuídas $_quotaSum de $_total · restam $_remaining',
+            : 'Distribuídas $_quotaSum de $_total · restam $remaining',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
