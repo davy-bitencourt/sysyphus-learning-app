@@ -77,55 +77,47 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
       );
 
-  // --- MENU DE AÇÕES (3 pontinhos) ---
-  Widget _moreButton(VoidCallback onTap) => IconButton(
-        tooltip: 'Opções',
-        onPressed: onTap,
-        icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
-      );
-
-  Future<void> _showItemActions({
+  // --- MENU DE AÇÕES (3 pontinhos, popup) ---
+  Widget _itemMenu({
     VoidCallback? onEdit,
     VoidCallback? onExport,
     required VoidCallback onDelete,
   }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.colors.surface,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    const danger = Color(0xFFC62828);
+
+    PopupMenuItem<String> item(String value, IconData icon, String label, {Color? color}) {
+      final c = color ?? context.colors.text;
+      return PopupMenuItem<String>(
+        value: value,
+        child: Row(
           children: [
-            if (onEdit != null)
-              ListTile(
-                leading: Icon(Icons.edit_outlined, color: context.colors.text),
-                title: Text('Editar', style: TextStyle(color: context.colors.text)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  onEdit();
-                },
-              ),
-            if (onExport != null)
-              ListTile(
-                leading: Icon(Icons.file_upload_outlined, color: context.colors.text),
-                title: Text('Exportar', style: TextStyle(color: context.colors.text)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  onExport();
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-              title: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                onDelete();
-              },
-            ),
+            Icon(icon, size: context.icon(20), color: c),
+            const SizedBox(width: 10),
+            Text(label, style: TextStyle(color: c)),
           ],
         ),
-      ),
+      );
+    }
+
+    return PopupMenuButton<String>(
+      tooltip: 'Opções',
+      color: context.colors.surface,
+      icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
+      onSelected: (value) {
+        switch (value) {
+          case 'edit':
+            onEdit?.call();
+          case 'export':
+            onExport?.call();
+          case 'delete':
+            onDelete();
+        }
+      },
+      itemBuilder: (_) => [
+        if (onEdit != null) item('edit', Icons.edit_outlined, 'Editar'),
+        if (onExport != null) item('export', Icons.file_upload_outlined, 'Exportar'),
+        item('delete', Icons.delete_outline, 'Excluir', color: danger),
+      ],
     );
   }
 
@@ -460,10 +452,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   style: TextStyle(fontSize: 14, color: context.colors.text),
                 ),
               ),
-              _moreButton(() => _showItemActions(
+              _itemMenu(
                     onEdit: () => _editQuestion(question),
                     onDelete: () => _deleteQuestion(question),
-                  )),
+                  ),
             ],
           ),
         );
@@ -532,11 +524,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     child: Icon(Icons.drag_handle, color: Colors.grey[500]),
                   ),
                   title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-                  trailing: _moreButton(() => _showItemActions(
+                  trailing: _itemMenu(
                         onEdit: () => _editPackage(pkg),
                         onExport: _exportPackagePlaceholder,
                         onDelete: () => _deletePackage(pkg),
-                      )),
+                      ),
                 ),
               );
             },
@@ -593,11 +585,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
           child: ListTile(
             title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-            trailing: _moreButton(() => _showItemActions(
+            trailing: _itemMenu(
                   onEdit: () => _editPackage(pkg),
                   onExport: _exportPackagePlaceholder,
                   onDelete: () => _deletePackage(pkg),
-                )),
+                ),
           ),
         );
       },
@@ -669,10 +661,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                             child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
                           ),
                           Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                          _moreButton(() => _showItemActions(
+                          _itemMenu(
                                 onEdit: () => _editTemplate(template),
                                 onDelete: () => _deleteTemplate(template),
-                              )),
+                              ),
                         ],
                       ),
                     );
@@ -730,10 +722,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
               ),
               Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              _moreButton(() => _showItemActions(
+              _itemMenu(
                     onEdit: () => _editTemplate(template),
                     onDelete: () => _deleteTemplate(template),
-                  )),
+                  ),
             ],
           ),
         );
@@ -781,9 +773,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                             ),
                           ),
                           // Tags não têm tela de edição: só "Excluir".
-                          _moreButton(() => _showItemActions(
+                          _itemMenu(
                                 onDelete: () => _deleteTag(tag),
-                              )),
+                              ),
                         ],
                       ),
                     );
@@ -897,10 +889,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               ],
                             ),
                           ),
-                          _moreButton(() => _showItemActions(
+                          _itemMenu(
                                 onEdit: () => _editSession(session),
                                 onDelete: () => _deleteSession(session),
-                              )),
+                              ),
                         ],
                       ),
                     );

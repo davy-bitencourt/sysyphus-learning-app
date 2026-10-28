@@ -114,7 +114,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
   Widget _overview(ReviewStats s) {
     return StatCard(
       title: 'Overview',
-      icon: Icons.insights_outlined,
       child: StatGrid(children: [
         StatTile(label: 'Total reviews', value: formatCount(s.total), outlined: true),
         StatTile(
@@ -143,7 +142,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     final c = context.colors;
     return StatCard(
       title: 'Recent activity',
-      icon: Icons.event_note_outlined,
       child: Column(
         children: [
           PeriodRow(label: 'Today', value: s.reviewsToday, previous: s.reviewsYesterday),
@@ -169,7 +167,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     String pct(int n, int of) => '$n of $of days (${(n / of * 100).round()}%)';
     return StatCard(
       title: 'Streaks and consistency',
-      icon: Icons.local_fire_department_outlined,
       child: Column(
         children: [
           StatRow('Current streak', formatDays(current.length)),
@@ -194,7 +191,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     final month = s.bestMonth;
     return StatCard(
       title: 'Records',
-      icon: Icons.emoji_events_outlined,
       child: Column(
         children: [
           if (day != null) StatRow('Best day', '${formatCount(day.count)} · ${formatDay(day.start)}'),
