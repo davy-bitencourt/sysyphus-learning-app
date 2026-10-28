@@ -6,7 +6,6 @@ import 'stats_widgets.dart';
 
 enum ChartRange { week, days30, months12 }
 
-/// Um único card de gráfico; a seta abre uma gaveta para trocar o período.
 class PeriodChartCard extends StatefulWidget {
   const PeriodChartCard({super.key, required this.stats});
 
@@ -47,26 +46,28 @@ class _PeriodChartCardState extends State<PeriodChartCard> {
     if (picked != null) setState(() => _range = picked);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return StatCard(
-      title: _names[_range]!,
-      icon: _range == ChartRange.months12 ? Icons.calendar_month_outlined : Icons.show_chart,
-      child: Column(
-        children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              tooltip: 'Change period',
-              onPressed: _pickRange,
-              icon: Icon(Icons.keyboard_arrow_down, color: context.colors.text),
-            ),
-          ),
-          _chart(),
-        ],
+@override
+Widget build(BuildContext context) {
+  return Stack(
+    children: [
+      StatCard(
+        title: _names[_range]!,
+        icon: _range == ChartRange.months12 ? Icons.calendar_month_outlined : Icons.show_chart,
+        child: _chart(),
       ),
-    );
-  }
+      Positioned(
+        top: 6,
+        right: 6,
+        child: IconButton(
+          tooltip: 'Change period',
+          onPressed: _pickRange,
+          visualDensity: VisualDensity.compact,
+          icon: Icon(Icons.keyboard_arrow_down, color: context.colors.text),
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _chart() {
     final s = widget.stats;
