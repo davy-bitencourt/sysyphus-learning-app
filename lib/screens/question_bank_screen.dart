@@ -77,6 +77,106 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
       );
 
+  // --- MENU DE AÇÕES (3 pontinhos) ---
+  Widget _moreButton(VoidCallback onTap) => IconButton(
+        tooltip: 'Opções',
+        onPressed: onTap,
+        icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
+      );
+
+  Future<void> _showItemActions({
+    VoidCallback? onEdit,
+    VoidCallback? onExport,
+    required VoidCallback onDelete,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: context.colors.surface,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onEdit != null)
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: context.colors.text),
+                title: Text('Editar', style: TextStyle(color: context.colors.text)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  onEdit();
+                },
+              ),
+            if (onExport != null)
+              ListTile(
+                leading: Icon(Icons.file_upload_outlined, color: context.colors.text),
+                title: Text('Exportar', style: TextStyle(color: context.colors.text)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  onExport();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+              title: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                onDelete();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editQuestion(Question question) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
+      ),
+    );
+    if (result == true) _loadQuestionsForSelectedPackage();
+  }
+
+  Future<void> _editPackage(Map<String, dynamic> pkg) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PackageEditScreen(
+          packageId: pkg['id'] as int,
+          initialTitle: pkg['title'] as String,
+        ),
+      ),
+    );
+    if (result == true) {
+      Home.packagesChanged.value++;
+      _load();
+    }
+  }
+
+  // Placeholder: a exportação de um único pacote ainda não existe.
+  void _exportPackagePlaceholder() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Exportação de pacote em breve.')),
+    );
+  }
+
+  Future<void> _editTemplate(TemplateModel template) async {
+    final res = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
+    );
+    if (res == true) _load();
+  }
+
+  Future<void> _deleteTemplate(TemplateModel template) async {
+    if (template.id == null) return;
+    await TemplateDao().delete(template.id!);
+    _load();
+  }
+
+
   Future<void> _load() async {
     setState(() => _loading = true);
 
@@ -360,22 +460,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   style: TextStyle(fontSize: 14, color: context.colors.text),
                 ),
               ),
-              IconButton(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => QuestionsEditScreen(question: question, packageId: _selectedPackageId),
-                    ),
-                  );
-                  if (result == true) _loadQuestionsForSelectedPackage();
-                },
-                icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
-              ),
-              IconButton(
-                onPressed: () => _deleteQuestion(question),
-                icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
-              ),
+              _moreButton(() => _showItemActions(
+                    onEdit: () => _editQuestion(question),
+                    onDelete: () => _deleteQuestion(question),
+                  )),
             ],
           ),
         );
@@ -444,10 +532,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     child: Icon(Icons.drag_handle, color: Colors.grey[500]),
                   ),
                   title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-                    onPressed: () => _deletePackage(pkg),
-                  ),
+                  trailing: _moreButton(() => _showItemActions(
+                        onEdit: () => _editPackage(pkg),
+                        onExport: _exportPackagePlaceholder,
+                        onDelete: () => _deletePackage(pkg),
+                      )),
                 ),
               );
             },
@@ -504,10 +593,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
           child: ListTile(
             title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFC62828)),
-              onPressed: () => _deletePackage(pkg),
-            ),
+            trailing: _moreButton(() => _showItemActions(
+                  onEdit: () => _editPackage(pkg),
+                  onExport: _exportPackagePlaceholder,
+                  onDelete: () => _deletePackage(pkg),
+                )),
           ),
         );
       },
@@ -579,25 +669,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                             child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
                           ),
                           Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                          IconButton(
-                            onPressed: () async {
-                              final res = await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
-                              );
-                              if (res == true) _load();
-                            },
-                            icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
-                          ),
-                          IconButton(
-                            onPressed: () async {
-                              if (template.id != null) {
-                                await TemplateDao().delete(template.id!);
-                                _load();
-                              }
-                            },
-                            icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
-                          ),
+                          _moreButton(() => _showItemActions(
+                                onEdit: () => _editTemplate(template),
+                                onDelete: () => _deleteTemplate(template),
+                              )),
                         ],
                       ),
                     );
@@ -655,25 +730,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
               ),
               Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              IconButton(
-                onPressed: () async {
-                  final res = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => TemplateEditScreen(template: template)),
-                  );
-                  if (res == true) _load();
-                },
-                icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
-              ),
-              IconButton(
-                onPressed: () async {
-                  if (template.id != null) {
-                    await TemplateDao().delete(template.id!);
-                    _load();
-                  }
-                },
-                icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
-              ),
+              _moreButton(() => _showItemActions(
+                    onEdit: () => _editTemplate(template),
+                    onDelete: () => _deleteTemplate(template),
+                  )),
             ],
           ),
         );
@@ -720,10 +780,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => _deleteTag(tag),
-                            icon: Icon(Icons.delete_outline, size: context.icon(20), color: const Color(0xFFC62828)),
-                          ),
+                          // Tags não têm tela de edição: só "Excluir".
+                          _moreButton(() => _showItemActions(
+                                onDelete: () => _deleteTag(tag),
+                              )),
                         ],
                       ),
                     );
@@ -837,14 +897,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               ],
                             ),
                           ),
-                          IconButton(
-                            onPressed: () => _editSession(session),
-                            icon: Icon(Icons.edit_outlined, size: context.icon(18), color: Colors.grey[500]),
-                          ),
-                          IconButton(
-                            onPressed: () => _deleteSession(session),
-                            icon: Icon(Icons.delete_outline, size: context.icon(18), color: const Color(0xFFC62828)),
-                          ),
+                          _moreButton(() => _showItemActions(
+                                onEdit: () => _editSession(session),
+                                onDelete: () => _deleteSession(session),
+                              )),
                         ],
                       ),
                     );

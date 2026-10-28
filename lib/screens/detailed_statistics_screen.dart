@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/DAO/revlog_dao.dart';
 import '../data/stats/review_stats.dart';
 import '../styles/app_theme.dart';
+import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
 import 'home.dart';
 
@@ -104,11 +105,9 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     return [
       _overview(stats),
       _recentActivity(context, stats),
-      _last30Days(stats),
-      _last12Months(stats),
+      PeriodChartCard(stats: stats),
       _streaks(stats),
       _records(stats),
-      _weekdays(context, stats),
     ];
   }
 
@@ -164,36 +163,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     );
   }
 
-  Widget _last30Days(ReviewStats s) {
-    final days = [for (var i = 29; i >= 0; i--) addDays(s.today, -i)];
-    final values = s.lastDays(30);
-    return StatCard(
-      title: 'Last 30 days',
-      icon: Icons.show_chart,
-      child: BarChart(
-        values: values,
-        tooltips: [for (var i = 0; i < 30; i++) '${formatDayShort(days[i])}: ${formatCount(values[i])}'],
-        highlight: 29,
-        footerStart: formatDayShort(days.first),
-        footerEnd: 'Today',
-      ),
-    );
-  }
-
-  Widget _last12Months(ReviewStats s) {
-    final months = s.lastMonths(12);
-    return StatCard(
-      title: 'Last 12 months',
-      icon: Icons.calendar_month_outlined,
-      child: BarChart(
-        values: [for (final m in months) m.count],
-        labels: [for (final m in months) kMonthNames[m.month.month - 1]],
-        tooltips: [for (final m in months) '${formatMonth(m.month)}: ${formatCount(m.count)}'],
-        highlight: 11,
-      ),
-    );
-  }
-
   Widget _streaks(ReviewStats s) {
     final current = s.currentStreak;
     final longest = s.longestStreak;
@@ -233,29 +202,6 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             StatRow('Best week', '${formatCount(week.count)} · week of ${formatDayShort(week.start)}'),
           if (month != null)
             StatRow('Best month', '${formatCount(month.count)} · ${formatMonth(month.start)}'),
-        ],
-      ),
-    );
-  }
-
-  Widget _weekdays(BuildContext context, ReviewStats s) {
-    final averages = s.weekdayAverages;
-    final busiest = s.busiestWeekday;
-    return StatCard(
-      title: 'Weekly pattern',
-      icon: Icons.date_range_outlined,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BarChart(
-            values: averages,
-            labels: kWeekdayShort,
-            tooltips: [
-              for (var i = 0; i < 7; i++) '${kWeekdayLong[i]}: ${formatAverage(averages[i])} per day',
-            ],
-            highlight: busiest,
-            height: 90,
-          ),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/stats/review_stats.dart';
 import '../styles/app_theme.dart';
+import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
 import 'home.dart';
 
@@ -97,8 +98,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Widget _summary(BuildContext context, ReviewStats stats) {
     final streak = stats.currentStreak;
     final longest = stats.longestStreak;
-    final week = stats.lastDays(7);
-    final weekDays = [for (var i = 6; i >= 0; i--) addDays(stats.today, -i)];
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -119,19 +118,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
         ]),
         const SizedBox(height: 12),
-        StatCard(
-          title: 'Last 7 days',
-          icon: Icons.show_chart,
-          child: BarChart(
-            values: week,
-            labels: [for (final d in weekDays) kWeekdayShort[d.weekday - 1]],
-            tooltips: [
-              for (var i = 0; i < 7; i++) '${formatDayShort(weekDays[i])}: ${formatCount(week[i])}',
-            ],
-            highlight: 6,
-            height: 90,
-          ),
-        ),
+        PeriodChartCard(stats: stats),
       ],
     );
   }

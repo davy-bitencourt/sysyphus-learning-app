@@ -499,8 +499,6 @@ class AccessibilitySettingsScreen extends StatelessWidget {
     );
   }
 
-  /// Os três tamanhos de fonte do app (Grande, Médio e Pequeno). Os valores
-  /// em pt mudam conforme a barra de tamanho de fonte é movida.
   Widget _fontPreview(BuildContext context, AppSettings s) {
     final c = context.colors;
 
