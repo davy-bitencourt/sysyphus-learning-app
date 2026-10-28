@@ -24,45 +24,29 @@ class _PeriodChartCardState extends State<PeriodChartCard> {
     ChartRange.months12: 'Last 12 months',
   };
 
-  Future<void> _pickRange() async {
-    final picked = await showModalBottomSheet<ChartRange>(
-      context: context,
-      backgroundColor: context.colors.surface,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final r in ChartRange.values)
-              ListTile(
-                title: Text(_names[r]!, style: TextStyle(color: context.colors.text)),
-                trailing: r == _range ? Icon(Icons.check, color: context.colors.accent) : null,
-                onTap: () => Navigator.pop(sheetContext, r),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (picked != null) setState(() => _range = picked);
-  }
-
 @override
 Widget build(BuildContext context) {
   return Stack(
     children: [
       StatCard(
         title: _names[_range]!,
-        icon: _range == ChartRange.months12 ? Icons.calendar_month_outlined : Icons.show_chart,
         child: _chart(),
       ),
       Positioned(
         top: 6,
         right: 6,
-        child: IconButton(
+        child: PopupMenuButton<ChartRange>(
           tooltip: 'Change period',
-          onPressed: _pickRange,
-          visualDensity: VisualDensity.compact,
+          color: context.colors.surface,
+          onSelected: (r) => setState(() => _range = r),
           icon: Icon(Icons.keyboard_arrow_down, color: context.colors.text),
+          itemBuilder: (_) => [
+            for (final r in ChartRange.values)
+              PopupMenuItem(
+                value: r,
+                child: Text(_names[r]!, style: TextStyle(color: context.colors.text)),
+              ),
+          ],
         ),
       ),
     ],
