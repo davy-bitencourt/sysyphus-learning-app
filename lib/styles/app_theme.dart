@@ -310,6 +310,20 @@ extension AppColorsContext on BuildContext {
       Theme.of(this).extension<AppColors>() ?? AppColors.fallback;
 }
 
+class NoTransitionsBuilder extends PageTransitionsBuilder {
+  const NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) =>
+      child;
+}
+
 class AppTheme {
   AppTheme._();
 
@@ -357,6 +371,16 @@ class AppTheme {
         style: TextButton.styleFrom(foregroundColor: c.accent),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: c.accent),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: NoTransitionsBuilder(),
+          TargetPlatform.iOS: NoTransitionsBuilder(),
+          TargetPlatform.macOS: NoTransitionsBuilder(),
+          TargetPlatform.windows: NoTransitionsBuilder(),
+          TargetPlatform.linux: NoTransitionsBuilder(),
+          TargetPlatform.fuchsia: NoTransitionsBuilder(),
+        },
+      ),
       // Ícones sem tamanho explícito seguem a escala de ícones.
       iconTheme: IconThemeData(size: 24 * settings.iconScale),
       iconButtonTheme: IconButtonThemeData(

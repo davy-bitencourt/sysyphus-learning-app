@@ -95,12 +95,8 @@ class _HomeState extends State<Home> {
     return MainScaffold(
       title: 'Home',
       currentIndex: _currentIndex,
-      onTap: (i) => _pageController.animateToPage(
-        i,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      ),
-      onStatisticsTap: () => _pageController.animateToPage(1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
+      onTap: (i) => _pageController.jumpToPage(i),
+      onStatisticsTap: () => _pageController.jumpToPage(1),
       onItemCreated: _loadData,
 
       body: PageView(
