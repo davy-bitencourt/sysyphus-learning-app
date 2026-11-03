@@ -4,6 +4,7 @@ import '../data/stats/review_stats.dart';
 import '../styles/app_theme.dart';
 import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
+import '../widgets/responsive_columns.dart';
 import 'home.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -95,31 +96,35 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _summary(BuildContext context, ReviewStats stats) {
-    final streak = stats.currentStreak;
-    final longest = stats.longestStreak;
+ Widget _summary(BuildContext context, ReviewStats stats) {
+  final streak = stats.currentStreak;
+  final longest = stats.longestStreak;
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        StatGrid(children: [
-          StatTile(label: 'Today', value: formatCount(stats.reviewsToday), caption: 'reviews'),
-          StatTile(
-            label: 'Current streak',
-            value: formatDays(streak.length),
-            caption: 'Longest: ${formatDays(longest.length)}',
-          ),
-          StatTile(label: 'Last 7 days', value: formatCount(stats.last7), caption: 'reviews'),
-          StatTile(
-            label: 'Total',
-            value: formatCount(stats.total),
-            caption: 'in ${formatDays(stats.daysStudied)} studied',
-          ),
-        ]),
-        const SizedBox(height: 12),
-        PeriodChartCard(stats: stats),
-      ],
-    );
-  }
+  return ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    children: [
+      ResponsiveColumns(
+        maxColumns: 2, // só 2 blocos, então 3 colunas deixariam uma vazia
+        children: [
+          StatGrid(children: [
+            StatTile(label: 'Today', value: formatCount(stats.reviewsToday), caption: 'reviews'),
+            StatTile(
+              label: 'Current streak',
+              value: formatDays(streak.length),
+              caption: 'Longest: ${formatDays(longest.length)}',
+            ),
+            StatTile(label: 'Last 7 days', value: formatCount(stats.last7), caption: 'reviews'),
+            StatTile(
+              label: 'Total',
+              value: formatCount(stats.total),
+              caption: 'in ${formatDays(stats.daysStudied)} studied',
+            ),
+          ]),
+          PeriodChartCard(stats: stats),
+        ],
+      ),
+    ],
+  );
+}
 }

@@ -5,6 +5,7 @@ import '../data/stats/review_stats.dart';
 import '../styles/app_theme.dart';
 import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
+import '../widgets/responsive_columns.dart';
 import 'home.dart';
 
 class DetailedStatisticsScreen extends StatefulWidget {
@@ -103,11 +104,13 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     }
 
     return [
-      _overview(stats),
-      _recentActivity(context, stats),
-      PeriodChartCard(stats: stats),
-      _streaks(stats),
-      _records(stats),
+        ResponsiveColumns(children: [
+        _overview(stats),
+        _recentActivity(context, stats),
+        PeriodChartCard(stats: stats),
+        _streaks(stats),
+        _records(stats),
+      ]),
     ];
   }
 
