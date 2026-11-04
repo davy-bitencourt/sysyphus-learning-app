@@ -64,6 +64,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Map<String, List<TextEditingController>> _optionControllers = {};
   Map<String, List<bool>> _optionCorrect = {};
 
+  final Map<String, dynamic> _buffer = {};
+
   List<TemplateModel> _templates = [];
   List<Map<String, dynamic>> _tags = [];
   List<Map<String, dynamic>> _packages = [];
@@ -78,7 +80,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   bool _loading = true;
   bool _saving = false;
-  bool _createdAny = false; // criou ao menos uma questão nesta tela (avisa quem abriu)
+  bool _createdAny = false; 
 
   bool get _isEditing => widget.question != null;
 
@@ -126,11 +128,17 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       }
       _selectedTemplate = match ?? (_templates.isNotEmpty ? _templates.first : null);
       if (_selectedTemplate != null) {
-        _setupControllersForTemplate(_selectedTemplate!, initialValues: q.values);
+        _setupControllersForTemplate(
+          _selectedTemplate!,
+          initialValues: {...q.values, ..._bufferValuesFor(_selectedTemplate!)},
+        );
       }
     } else if (_templates.isNotEmpty) {
       _selectedTemplate = _templates.first;
-      _setupControllersForTemplate(_selectedTemplate!);
+      _setupControllersForTemplate(
+        _selectedTemplate!,
+        initialValues: _bufferValuesFor(_selectedTemplate!),
+      );
     }
 
     if (mounted) setState(() => _loading = false);
@@ -176,6 +184,20 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
   }
 
+  String _bufferKey(FieldDefinition f) => '${f.type}:${f.id}';
+
+  void _saveToBuffer(TemplateModel template) {
+    final values = _collectValues(template);
+    for (final f in template.fields) {
+      _buffer[_bufferKey(f)] = values[f.id];
+    }
+  }
+
+  Map<String, dynamic> _bufferValuesFor(TemplateModel template) => {
+        for (final f in template.fields)
+          if (_buffer.containsKey(_bufferKey(f))) f.id: _buffer[_bufferKey(f)],
+      };
+
   Future<void> _openNewPackage() async {
     final previousIds = _packages.map((p) => p['id']).toSet();
     final result = await Navigator.push(
@@ -199,6 +221,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       MaterialPageRoute(builder: (_) => const TemplateEditScreen()),
     );
     if (result == true) {
+      if (_selectedTemplate != null) _saveToBuffer(_selectedTemplate!);
       setState(() => _loading = true);
       await _loadOptions();
     }
@@ -231,9 +254,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     super.dispose();
   }
 
-  /// Esvazia o formulário para a próxima questão. Pacote e template ficam
-  /// como estão (quem cadastra várias questões seguidas costuma manter os dois).
   void _resetForm() {
+    _buffer.clear();
     for (final c in _textControllers.values) {
       c.clear();
     }
@@ -374,7 +396,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         await dao.insert(dto);
         _createdAny = true;
         if (!mounted) return;
-        // Continua na tela com os campos vazios, pronto para a próxima questão.
         setState(_resetForm);
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -405,9 +426,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
-  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
-  /// da transição de rota.
   void _leave() {
     ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _createdAny);
@@ -424,8 +442,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Voltar (seta ou gesto do sistema) devolve `true` se alguma questão foi
-    // criada aqui, para a tela anterior recarregar a lista.
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -548,10 +564,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                 value: _selectedTemplate,
                 items: _templates.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
                 onChanged: (t) {
-                  if (t == null) return;
+                  if (t == null || t == _selectedTemplate) return;
                   setState(() {
+                    if (_selectedTemplate != null) _saveToBuffer(_selectedTemplate!);
                     _selectedTemplate = t;
-                    _setupControllersForTemplate(t);
+                    _setupControllersForTemplate(t, initialValues: _bufferValuesFor(t));
                   });
                 },
               ),
@@ -635,7 +652,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         return _buildTextField(
           _textControllers[field.id]!,
           field.isStatement ? '${field.label} *' : field.label,
-          minLines: 3, // começa com 3 linhas e cresce conforme se digita
+          minLines: 3, 
         );
       case FieldType.image:
         return _buildMediaField(field, isImage: true);
@@ -730,7 +747,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                   child: TextField(
                     controller: controllers[i],
                     minLines: 1,
-                    maxLines: null, // cresce verticalmente conforme se digita
+                    maxLines: null, 
                     keyboardType: TextInputType.multiline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
@@ -757,7 +774,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return TextField(
       controller: controller,
       minLines: minLines,
-      maxLines: null, // sem limite: o campo cresce verticalmente
+      maxLines: null, 
       keyboardType: keyboardType ?? TextInputType.multiline,
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
