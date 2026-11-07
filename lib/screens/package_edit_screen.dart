@@ -201,7 +201,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<int?>(
-                  value: _selectedSessionId,
+                  initialValue: _selectedSessionId,
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Sem sessão vinculada')),
                     ..._sessions.map((s) => DropdownMenuItem(

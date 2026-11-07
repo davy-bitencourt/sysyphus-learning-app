@@ -13,7 +13,7 @@ class PackageDao {
   }
 
   /* deve ser executada quando escolher o profile */
-  Future<List<Map<String, dynamic>>> getProfilePackages(int profile_id) async {
+  Future<List<Map<String, dynamic>>> getProfilePackages(int profileId) async {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery(
       '''
@@ -22,7 +22,7 @@ class PackageDao {
         INNER JOIN package
         ON profile.package_id = package.id
         WHERE profile.id = ?
-      ''', [profile_id]
+      ''', [profileId]
     );
   } 
 

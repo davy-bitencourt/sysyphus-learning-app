@@ -24,15 +24,15 @@ class DatabaseHelper{
     return _database!;
   }
 
-  Future<Database> _initDB(String file_nane) async {
-    final dir_db = await getDatabasesPath();
-    print('DB: $dir_db');    
+  Future<Database> _initDB(String fileNane) async {
+    final dirDb = await getDatabasesPath();
+    print('DB: $dirDb');    
 
     final String dir;
     if(Platform.isWindows){
-      dir = '$dir_db\\$file_nane';
+      dir = '$dirDb\\$fileNane';
     } else {
-      dir = '$dir_db/$file_nane';
+      dir = '$dirDb/$fileNane';
     }
 
     return await openDatabase(
@@ -44,11 +44,6 @@ class DatabaseHelper{
     );
   }
 
-  /* v2: o histórico de revisões deixou de ser preso às questões.
-   * O revlog perdeu a FOREIGN KEY para question, então apagar uma questão
-   * (ou um pacote) não apaga mais o histórico e o heatmap se mantém.
-   * SQLite não altera constraints, por isso a tabela é recriada.
-   * Obs.: o sqflite já roda o onUpgrade dentro de uma transação. */
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
@@ -66,21 +61,15 @@ class DatabaseHelper{
       await db.execute('DROP TABLE revlog');
       await db.execute('ALTER TABLE revlog_new RENAME TO revlog');
     }
-    // v3: sessão guarda o filtro por tag (JSON: [{"tag_id": 1, "quantity": 10}]).
-    // time_limit: minutos (texto) ou NULL = sem limite. total_q: total de questões.
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE session ADD COLUMN tag_filters TEXT');
     }
-    // v4: sincronização entre aparelhos (uuid + updated_at + fila de mudanças).
-    // Invisível para o usuário; não muda nenhuma tela nem DAO.
     if (oldVersion < 4) {
       await applySyncSchema(db);
     }
   }
 
   Future<void> _createDB(Database db, int version) async {
-    /* batch() é um agrupador  de operações SQLite que, facilitando o debug, 
-     * serão todos enviados e executados através do commit() */
     final batch = db.batch(); 
 
     batch.execute(
@@ -191,7 +180,6 @@ class DatabaseHelper{
 
     await batch.commit();
 
-    // Banco novo já nasce com as colunas e os gatilhos de sincronização.
     await applySyncSchema(db);
   }
 }

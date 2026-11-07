@@ -345,7 +345,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: selectedPackage['id'] as int,
+                        initialValue: selectedPackage['id'] as int,
                         items: _packages
                             .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
                             .toList(),
