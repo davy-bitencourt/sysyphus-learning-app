@@ -409,6 +409,20 @@ class _QuestionScreenState extends State<QuestionScreen> {
       );
     }
 
+    PopupMenuItem<String> item(String value, IconData icon, String label, {Color? color}) {
+      final c = color ?? context.colors.text;
+      return PopupMenuItem<String>(
+        value: value,
+        child: Row(
+          children: [
+            Icon(icon, size: context.icon(20), color: c),
+            const SizedBox(width: 10),
+            Text(label, style: TextStyle(color: c)),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: context.colors.bg,
       appBar: AppBar(
@@ -444,14 +458,16 @@ class _QuestionScreenState extends State<QuestionScreen> {
             : null,
         actions: [
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: context.colors.text),
+            tooltip: 'Opções',
+            color: context.colors.surface,
+            icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
             onSelected: (value) {
               if (value == 'edit') _openEditQuestion();
               if (value == 'add') _openNewQuestion();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Editar')),
-              PopupMenuItem(value: 'add', child: Text('Adicionar')),
+            itemBuilder: (_) => [
+              item('edit', Icons.edit_outlined, 'Editar'),
+              item('add', Icons.add, 'Adicionar'),
             ],
           ),
         ],
