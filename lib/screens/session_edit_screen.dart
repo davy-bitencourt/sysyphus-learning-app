@@ -553,7 +553,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             isEmpty: _quotas.isEmpty && _tagInputController.text.isEmpty,
             decoration: InputDecoration(
               labelText: 'Tags',
-              hintText: 'ex: tag=2',
+              hintText: 'Ex: tag=2',
               floatingLabelBehavior: FloatingLabelBehavior.always,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -59,7 +59,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
         ),
       ),
       body: SafeArea(
-        top: false, // a AppBar já cuida do topo
+        top: false, 
         child: RefreshIndicator(
           onRefresh: _load,
           child: ListView(

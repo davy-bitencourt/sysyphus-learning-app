@@ -650,7 +650,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       case FieldType.text:
         return _buildTextField(
           _textControllers[field.id]!,
-          field.isStatement ? '${field.label} *' : field.label,
+          field.isStatement ? '${field.label}*' : field.label,
           minLines: 3, 
         );
       case FieldType.image:

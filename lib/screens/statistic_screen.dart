@@ -105,7 +105,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
     children: [
       ResponsiveColumns(
-        maxColumns: 2, // só 2 blocos, então 3 colunas deixariam uma vazia
+        maxColumns: 2,
         children: [
           StatGrid(children: [
             StatTile(label: 'Today', value: formatCount(stats.reviewsToday), caption: 'reviews'),

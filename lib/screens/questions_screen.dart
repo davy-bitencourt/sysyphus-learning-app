@@ -38,23 +38,16 @@ class _QuestionScreenState extends State<QuestionScreen> {
   bool _answered = false;
   String? _playingFieldId;
 
-  // ---- sessão do pacote (tempo limite e limite de questões) ----
-  // O cronômetro só existe se a sessão do pacote tiver tempo limite. Ele usa
-  // o horário de término (e não um contador), então continua correto se o app
-  // ficar em segundo plano.
   Timer? _timer;
   DateTime? _endsAt;
   bool _timerStarted = false;
-  bool _timeUpPending = false; // acabou o tempo com outra tela aberta por cima
+  bool _timeUpPending = false; 
   int _answeredCount = 0;
   final ValueNotifier<Duration?> _timeLeft = ValueNotifier<Duration?>(null);
 
   final Map<String, int?> _selectedOptionByField = {};
   final Map<String, Map<int, bool>> _vofAnswersByField = {};
 
-  // Embaralha as alternativas de múltipla escolha para efetivar o estudo.
-  // A chave inclui o índice da questão para que o embaralhamento seja
-  // recalculado a cada nova questão, mas fique estável durante rebuilds.
   final Map<String, List<OptionValue>> _shuffledOptionsCache = {};
 
   LoadedQuestion get _current => _questions[_currentQuestion];
@@ -88,8 +81,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
 
-    // A sessão do pacote (se houver) define quantas questões entram na rodada,
-    // o filtro por tag e o tempo limite. Sem sessão, vale o limite padrão.
     final session = await SessionDao().getByPackage(widget.packageId);
     final totalQ = (session?['total_q'] as num?)?.toInt();
     final limitSeconds = SessionDao.parseTimeLimitSeconds(session?['time_limit'] as String?);
@@ -129,8 +120,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
       _loading = false;
     });
 
-    // O cronômetro começa na primeira vez que a rodada abre com questões;
-    // recarregar depois de editar uma questão não reinicia o tempo.
     if (loaded.isNotEmpty && limitSeconds != null) _startTimer(limitSeconds);
   }
 
@@ -161,8 +150,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     await _audioPlayer.stop();
     if (!mounted) return;
 
-    // Se outra tela (ex.: editar questão) estiver aberta por cima, espera ela
-    // fechar para encerrar a sessão (ver _openNewQuestion/_openEditQuestion).
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) {
       _timeUpPending = true;
       return;
@@ -231,10 +218,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   bool _hasGradableField(LoadedQuestion q) =>
       q.template.fields.any((f) => f.type == FieldType.options || f.type == FieldType.vof);
 
-  /// Seleção múltipla = comportamento do antigo V/F: o usuário marca/desmarca
-  /// várias opções e a resposta só é certa se o conjunto marcado bater
-  /// exatamente com o conjunto de corretas. Vale para o `vof` legado e para
-  /// a múltipla escolha que tenha MAIS DE UMA opção correta.
   bool _isMultiSelect(LoadedQuestion q, FieldDefinition field) {
     if (field.type == FieldType.vof) return true;
     if (field.type != FieldType.options) return false;
@@ -265,14 +248,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return anyGraded;
   }
 
-  /// Nota da resposta atual, de 0.0 a 1.0 (ou null se não há múltipla escolha).
-  ///
-  /// Seleção múltipla: (corretas marcadas - erradas marcadas) / total de
-  /// corretas, com mínimo 0. Deixar uma opção errada sem marcar NÃO conta
-  /// como acerto (senão marcar só uma errada já daria pontos), e marcar tudo
-  /// também não dá 100%, porque cada errada marcada desconta.
-  /// Escolha única: 1.0 se acertou, 0.0 se errou.
-  /// Com mais de um campo de múltipla escolha, tira a média entre eles.
   double? _answerScore(LoadedQuestion q) {
     double sum = 0;
     int fields = 0;
@@ -309,8 +284,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   String _formatDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// Grava a revisão em `revlog` (alimenta o heatmap) e avança o estado
-  /// de repetição espaçada em `state`.
   Future<void> _registerAndNext(bool correct) async {
     final question = _current.question;
     final dao = QuestionDao();
@@ -443,8 +416,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
           icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => Navigator.pop(context),
         ),
-        // Contador de questão e barra de progresso ficam juntos e
-        // centralizados na app bar; os ícones de ação vão à direita.
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -485,14 +456,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // O enunciado aparece na posição que o template definiu.
             ..._current.template.questionFields.map((f) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: f.isStatement ? _buildStatement() : _buildFieldDisplay(f),
                 )),
             if (_answered) ...[
-              // A divisória (com o ícone de certo/errado) aparece sempre depois
-              // de responder, mesmo que o template não tenha campos de resposta.
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: Divider(color: context.colors.border, thickness: 1.5)),
@@ -519,7 +487,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 
   Widget _buildStatement() {
-    // Sem decoration: o fundo atrás do texto do enunciado é transparente.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -528,8 +495,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
-  // Porcentagem de acerto, exibida logo abaixo da divisória (só em
-  // questões com múltipla escolha).
   Widget _buildScoreLabel() {
     if (!_hasGradableField(_current)) return const SizedBox.shrink();
   
@@ -554,9 +519,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
-  // Ícone exibido no divisor entre pergunta e resposta depois que a questão
-  // é respondida: verde (certo) / vermelho (errado) em múltipla escolha, ou
-  // uma interrogação quando não há múltipla escolha para corrigir.
   Widget _buildAnswerStatusIcon() {
     if (!_hasGradableField(_current)) {
       return Icon(Icons.help_outline, size: context.icon(20), color: Colors.grey[400]);
@@ -578,15 +540,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
       case FieldType.image:
         final path = _current.question.textFor(field.id);
         if (path == null) return const SizedBox.shrink();
-        // Sem limite no template: comportamento original (largura total).
         if (field.maxWidth == null && field.maxHeight == null) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.file(File(path), width: double.infinity, fit: BoxFit.cover),
           );
         }
-        // Com limite: a imagem é reduzida para caber na largura/altura máximas
-        // (sem distorcer, sem ampliar) e fica centralizada.
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -603,7 +562,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final path = _current.question.textFor(field.id);
         if (path == null) return const SizedBox.shrink();
         final playing = _playingFieldId == field.id;
-        // Só o ícone, centralizado: sem container, borda, sombra nem rótulo.
         return Center(
           child: IconButton(
             iconSize: context.icon(64),
@@ -650,8 +608,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
         return GestureDetector(
           onTap: _answered ? null : () => setState(() => _selectedOptionByField[field.id] = i),
           child: Container(
-            // Expande horizontalmente até a margem; só cresce verticalmente
-            // conforme o texto da alternativa precisar de mais espaço.
             width: double.infinity,
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -667,9 +623,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
     );
   }
 
-  // Seleção múltipla (comportamento do antigo V/F). Usa _optionsFor para que
-  // a múltipla escolha com várias corretas continue embaralhada; o `vof`
-  // legado não embaralha (o _optionsFor só embaralha o tipo `options`).
   Widget _buildMultiSelectDisplay(FieldDefinition field) {
     final options = _optionsFor(field);
     final answers = _vofAnswersByField.putIfAbsent(field.id, () => {});
