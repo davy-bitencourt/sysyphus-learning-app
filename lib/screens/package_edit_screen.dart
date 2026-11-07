@@ -83,8 +83,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
         await dao.insert(_selectedSessionId, title);
         _createdAny = true;
         if (!mounted) return;
-        // Continua na tela com o nome vazio, pronto para o próximo pacote.
-        // A sessão escolhida é mantida (costuma ser a mesma em sequência).
         _titleController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Pacote "$title" salvo.')),
@@ -126,8 +124,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
 
     setState(() => _saving = true);
     try {
-      // Apaga as questões, o estado e o pacote numa transação só
-      // (o delete simples do PackageDao falha por causa das FKs).
       await QuestionDao().deletePackageCascade(widget.packageId!);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -140,9 +136,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     }
   }
 
-  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
-  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
-  /// da transição de rota.
   void _leave() {
     ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _createdAny);
@@ -150,8 +143,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Voltar (seta ou gesto do sistema) devolve `true` se algum pacote foi
-    // criado aqui, para a tela anterior recarregar a lista.
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

@@ -3,9 +3,6 @@ import 'package:Sysyphus/styles/app_theme.dart';
 import 'package:Sysyphus/data/DAO/template_dao.dart';
 import 'package:Sysyphus/data/models/field_model.dart';
 
-/// Marcador que representa a linha divisória dentro da lista reordenável.
-/// Tudo que fica ANTES dela na lista vira `section: question`, tudo que
-/// fica DEPOIS vira `section: answer`.
 class _DividerMarker {
   const _DividerMarker();
 }
@@ -13,8 +10,7 @@ class _DividerMarker {
 const _divider = _DividerMarker();
 
 class TemplateEditScreen extends StatefulWidget {
-  final TemplateModel? template; // null = criar novo
-
+  final TemplateModel? template; 
   const TemplateEditScreen({super.key, this.template});
 
   @override
@@ -23,10 +19,9 @@ class TemplateEditScreen extends StatefulWidget {
 
 class _TemplateEditScreenState extends State<TemplateEditScreen> {
   final _nameController = TextEditingController();
-  late List<Object> _items; // FieldDefinition ou _DividerMarker, nessa ordem
+  late List<Object> _items;  
   bool _saving = false;
-  bool _createdAny = false; // criou ao menos um template nesta tela (avisa quem abriu)
-
+  bool _createdAny = false; 
   bool get _isEditing => widget.template != null;
 
   @override
@@ -36,8 +31,6 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     _items = _buildItems(widget.template?.fields ?? const <FieldDefinition>[]);
   }
 
-  /// Monta a lista reordenável: campos da pergunta, divisória, campos da resposta.
-  /// Com lista vazia sobra só o enunciado (obrigatório) acima da divisória.
   List<Object> _buildItems(List<FieldDefinition> source) {
     final fields = TemplateModel.withStatement(source);
     final questionFields = fields.where((f) => f.section == FieldSection.question).toList();
@@ -61,7 +54,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     );
     if (field == null) return;
     setState(() {
-      _items.insert(_dividerIndex, field); // sempre entra logo acima da divisória
+      _items.insert(_dividerIndex, field); 
     });
   }
 
@@ -99,7 +92,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
   }
 
   void _removeField(FieldDefinition field) {
-    if (field.isStatement) return; // enunciado é obrigatório
+    if (field.isStatement) return; 
     setState(() => _items.remove(field));
   }
 
@@ -112,10 +105,6 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     });
   }
 
-  /// Alternativas, V/F e o enunciado só fazem sentido antes de responder --
-  /// se o usuário arrastar um desses campos pra baixo da divisória, ele volta
-  /// pra cima automaticamente. (O enunciado pode ficar em qualquer posição
-  /// acima da divisória.)
   void _snapGradableFieldsAboveDivider() {
     final dividerIndex = _dividerIndex;
     for (int i = _items.length - 1; i > dividerIndex; i--) {
@@ -172,7 +161,6 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
         await dao.insert(json);
         _createdAny = true;
         if (!mounted) return;
-        // Continua na tela com tudo zerado, pronto para o próximo template.
         setState(() {
           _nameController.clear();
           _items = _buildItems(const <FieldDefinition>[]);
@@ -201,9 +189,6 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
-  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
-  /// da transição de rota.
   void _leave() {
     ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _createdAny);
@@ -211,8 +196,6 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Voltar (seta ou gesto do sistema) devolve `true` se algum template foi
-    // criado aqui, para a tela anterior recarregar a lista.
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -413,7 +396,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
       id: 'field_${DateTime.now().microsecondsSinceEpoch}',
       type: _type,
       label: _labelController.text.trim(),
-      section: FieldSection.question, // entra acima da divisória; arraste pra mudar
+      section: FieldSection.question, 
       optionCount: _optionCount,
       maxWidth: _type == FieldType.image ? _parseLimit(_maxWidthController.text) : null,
       maxHeight: _type == FieldType.image ? _parseLimit(_maxHeightController.text) : null,
@@ -504,14 +487,12 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
 }
 
 
-/// Limites de exibição de um campo de imagem (null = sem limite).
 class _ImageLimits {
   final double? width;
   final double? height;
   const _ImageLimits(this.width, this.height);
 }
 
-/// Aceita vírgula ou ponto; vazio, zero ou inválido = sem limite.
 double? _parseLimit(String text) {
   final v = double.tryParse(text.trim().replaceAll(',', '.'));
   return (v != null && v > 0) ? v : null;

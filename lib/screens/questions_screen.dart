@@ -21,7 +21,7 @@ class QuestionScreen extends StatefulWidget {
   const QuestionScreen({
     super.key,
     required this.packageId,
-    this.limit = 20,
+    this.limit = 999,
   });
 
   @override
