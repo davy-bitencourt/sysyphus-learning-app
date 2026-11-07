@@ -9,21 +9,13 @@ import '../data/DAO/tag_dao.dart';
 import '../data/DTO/session_dto.dart';
 import '../styles/app_theme.dart';
 
-/// Quanto de uma tag entra na sessão (ex.: 10 questões de #matemática).
 class _TagQuota {
   int? tagId;
   int quantity;
   _TagQuota({this.tagId, this.quantity = 1});
 }
 
-/// Criação de uma sessão de estudo:
-///  - nome;
-///  - tempo limite em minutos, ou sem limite (infinito);
-///  - total de questões que poderão ser feitas na sessão;
-///  - filtro opcional por tag: quantas questões vêm de cada tag. A soma das
-///    quantidades por tag não pode passar do total da sessão.
 class SessionEditScreen extends StatefulWidget {
-  /// Linha da tabela `session` para editar; null = criar nova.
   final Map<String, dynamic>? session;
 
   const SessionEditScreen({super.key, this.session});
@@ -35,24 +27,29 @@ class SessionEditScreen extends StatefulWidget {
 class _SessionEditScreenState extends State<SessionEditScreen> {
   final _nameController = TextEditingController();
   final _timeController = TextEditingController(text: '30');
-  String _timeUnit = 'min'; // unidade do tempo limite: 's' | 'min' | 'h'
-  final _totalController = TextEditingController(); // vazio = ilimitado
+  String _timeUnit = 'min';   
+  final _totalController = TextEditingController(); 
 
   List<Map<String, dynamic>> _tags = [];
-  Map<int, int> _tagCounts = {}; // tag_id -> questões que existem naquela tag
+  Map<int, int> _tagCounts = {}; 
   final List<_TagQuota> _quotas = [];
+  final _tagInputController = TextEditingController();
+  String _tagQuery = '';
+  final _tagFocus = FocusNode();
+  _TagQuota? _editingQuota; // tag que está sendo editada (saiu da lista temporariamente)
+  static final _quotaPattern = RegExp(r'^#?([^\s=#]+)=(\d+)$');
 
   bool get _isEditing => widget.session != null;
 
   bool _unlimitedTime = true;
-  bool _filterByTag = false;
   bool _loading = true;
   bool _saving = false;
-  bool _createdAny = false; // criou ao menos uma sessão nesta tela (avisa quem abriu)
+  bool _createdAny = false; 
 
   @override
   void initState() {
     super.initState();
+    _tagFocus.addListener(_onTagFocusChanged);
     _loadTags();
   }
 
@@ -68,15 +65,12 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     });
   }
 
-  /// Preenche o formulário com a sessão que está sendo editada.
   void _applySession(Map<String, dynamic> s) {
     _nameController.text = (s['title'] as String?) ?? '';
 
-    // time_limit: "<n>s" (segundos) ou só dígitos (minutos, sessões antigas).
     final seconds = SessionDao.parseTimeLimitSeconds(s['time_limit'] as String?);
     _unlimitedTime = seconds == null;
     if (seconds != null) {
-      // Mostra na maior unidade que divide o tempo certinho.
       if (seconds % 3600 == 0) {
         _timeUnit = 'h';
         _timeController.text = (seconds ~/ 3600).toString();
@@ -90,9 +84,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     }
 
     final total = (s['total_q'] as num?)?.toInt();
-    _totalController.text = total == null ? '' : total.toString(); // null = ilimitado
+    _totalController.text = total == null ? '' : total.toString();
 
-    // Filtros de tags que ainda existem (tag apagada some do filtro).
     final filters = SessionDao.parseTagFilters(s['tag_filters'] as String?);
     _quotas
       ..clear()
@@ -101,7 +94,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           if (_tags.any((t) => t['id'] == f['tag_id']))
             _TagQuota(tagId: f['tag_id'], quantity: f['quantity']!),
       ]);
-    _filterByTag = _quotas.isNotEmpty;
   }
 
   @override
@@ -109,31 +101,28 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _nameController.dispose();
     _timeController.dispose();
     _totalController.dispose();
+    _tagFocus.removeListener(_onTagFocusChanged);
+    _tagFocus.dispose();
+    _tagInputController.dispose();
     super.dispose();
   }
 
   static const Map<String, int> _unitSeconds = {'s': 1, 'min': 60, 'h': 3600};
 
-  /// Tempo limite digitado convertido para segundos (null se vazio ou zero).
   int? get _limitSeconds {
     final n = int.tryParse(_timeController.text.trim());
     if (n == null || n < 1) return null;
     return n * (_unitSeconds[_timeUnit] ?? 60);
   }
 
-  /// Total de questões da sessão; null = campo vazio = ilimitado (todas as
-  /// questões do pacote).
   int? get _total {
     final n = int.tryParse(_totalController.text.trim());
     return (n == null || n < 1) ? null : n;
   }
 
-  bool get _unlimitedQuestions => _total == null;
   int get _quotaSum => _quotas.fold(0, (sum, q) => sum + q.quantity);
 
-  /// Quantas questões ainda podem ser distribuídas entre tags; null = sem teto.
   int? get _remaining => _total == null ? null : _total! - _quotaSum;
-  bool get _canAddToQuota => _remaining == null || _remaining! > 0;
 
   void _showError(String message) => _showMessage(message);
 
@@ -141,53 +130,156 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Volta o formulário ao estado de "nova sessão".
   void _resetForm() {
     _nameController.clear();
     _timeController.text = '30';
     _timeUnit = 'min';
     _totalController.clear();
     _unlimitedTime = true;
-    _filterByTag = false;
     _quotas.clear();
+    _tagInputController.clear();
+    _tagQuery = '';
+    _editingQuota = null;
   }
 
-  void _onFilterToggled(bool value) {
-    setState(() {
-      _filterByTag = value;
-      if (value && _quotas.isEmpty && _tags.isNotEmpty) _addQuota();
-    });
+  String _tagTitle(int? id) => _tags.firstWhere(
+        (t) => t['id'] == id,
+        orElse: () => {'title': '?'},
+      )['title'] as String;
+
+  void _quickWarning(String message) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ));
   }
 
-  void _addQuota() {
-    final used = _quotas.map((q) => q.tagId).toSet();
-    final free = _tags.where((t) => !used.contains(t['id'] as int)).toList();
-    if (free.isEmpty) {
-      _showError('Todas as tags já foram adicionadas.');
+  static String _clean(String s) =>
+      s.trim().replaceAll(RegExp(r',+$'), '').trim();
+
+  void _onTagInputChanged(String text) {
+    // espaço ou vírgula no final = fecha o token "tag=num" e vira tag
+    final closed = text.endsWith(' ') || text.endsWith(',');
+    if (closed && _quotaPattern.hasMatch(_clean(text))) {
+      _commitTagInput();
       return;
     }
+    final token = text.split(RegExp(r'[\s,]+')).last;
+    setState(() => _tagQuery = token.contains('=') ? '' : token);
+  }
+
+  void _selectSuggestedTag(String title) {
+    _tagInputController.value = TextEditingValue(
+      text: '$title=',
+      selection: TextSelection.collapsed(offset: title.length + 1),
+    );
+    setState(() => _tagQuery = '');
+    _tagFocus.requestFocus();
+  }
+
+  /// Transforma o texto do campo em tag. Retorna false se não conseguiu.
+  bool _commitTagInput({bool warnFormat = true}) {
+    final raw = _clean(_tagInputController.text);
+    if (raw.isEmpty) return true;
+
+    final m = _quotaPattern.firstMatch(raw);
+    if (m == null) {
+      if (warnFormat) {
+        _quickWarning('Use o formato tag=quantidade, ex.: matematica=4');
+      }
+      return false;
+    }
+
+    final name = m.group(1)!;
+    final qty = int.parse(m.group(2)!);
+    final tag = _tags
+        .where((t) => (t['title'] as String).toLowerCase() == name.toLowerCase())
+        .firstOrNull;
+
+    if (tag == null) {
+      _quickWarning('A tag "$name" não existe.');
+      return false;
+    }
+    if (qty < 1) {
+      _quickWarning('Cada tag precisa de pelo menos 1 questão.');
+      return false;
+    }
+
+    final id = tag['id'] as int;
+    final others = _quotas
+        .where((q) => q.tagId != id)
+        .fold<int>(0, (s, q) => s + q.quantity);
+
+    if (_total != null && others + qty > _total!) {
+      _quickWarning(
+        'A soma não pode passar do total da sessão ($_total).',
+      );
+      return false;
+    }
+
     setState(() {
-      _quotas.add(_TagQuota(
-        tagId: free.first['id'] as int,
-        quantity: _canAddToQuota ? 1 : 0,
-      ));
+      _quotas.removeWhere((q) => q.tagId == id);
+      _quotas.add(_TagQuota(tagId: id, quantity: qty));
+      _tagInputController.clear();
+      _tagQuery = '';
+      _editingQuota = null;
+    });
+    return true;
+  }
+
+  void _editQuota(_TagQuota q) {
+    if (_tagInputController.text.trim().isNotEmpty && !_commitTagInput()) return;
+    final text = '${_tagTitle(q.tagId)}=${q.quantity}';
+    setState(() {
+      _quotas.remove(q);
+      _editingQuota = q;
+      _tagInputController.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+      _tagQuery = '';
+    });
+    _tagFocus.requestFocus();
+  }
+
+  void _onTagFocusChanged() {
+    if (!mounted) return;
+    if (_tagFocus.hasFocus) {
+      setState(() {});
+      return;
+    }
+    if (_commitTagInput(warnFormat: false)) {
+      setState(() {});
+      return;
+    }
+    final editing = _editingQuota;
+    setState(() {
+      if (editing != null) {
+        _quotas.add(editing);
+        _editingQuota = null;
+        _tagInputController.clear();
+        _tagQuery = '';
+      }
     });
   }
 
   Future<void> _save() async {
+    if (_tagInputController.text.trim().isNotEmpty && !_commitTagInput()) return;
+
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       _showError('Dê um nome à sessão.');
       return;
     }
 
-    // Vazio = ilimitado. Mas "0" digitado é um erro, não "ilimitado".
     final totalText = _totalController.text.trim();
     if (totalText.isNotEmpty && (int.tryParse(totalText) ?? 0) < 1) {
       _showError('A quantidade de questões deve ser maior que zero (ou deixe vazio para ilimitado).');
       return;
     }
-    final int? total = _total; // null = ilimitado
+    final int? total = _total;
 
     int? limitSeconds;
     if (!_unlimitedTime) {
@@ -199,11 +291,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     }
 
     List<Map<String, int>>? filters;
-    if (_filterByTag) {
-      if (_quotas.isEmpty) {
-        _showError('Escolha ao menos uma tag ou desligue o filtro por tag.');
-        return;
-      }
+    if (_quotas.isNotEmpty) {
       if (_quotas.any((q) => q.tagId == null || q.quantity < 1)) {
         _showError('Cada tag precisa de pelo menos 1 questão.');
         return;
@@ -225,7 +313,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       final dto = SessionDto(
         id: widget.session?['id'] as int?,
         title: name,
-        time_limit: SessionDao.formatTimeLimit(limitSeconds), // "<n>s" ou null = sem limite
+        time_limit: SessionDao.formatTimeLimit(limitSeconds), 
         total_q: total,
         tagFilters: filters == null ? null : jsonEncode(filters),
       );
@@ -236,7 +324,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         await SessionDao().insert(dto);
         _createdAny = true;
         if (!mounted) return;
-        // Continua na tela com o formulário nos valores iniciais.
         setState(() {
           _resetForm();
           _saving = false;
@@ -251,9 +338,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     }
   }
 
-  /// Sai da tela devolvendo se algo foi criado. Limpa antes o SnackBar de
-  /// "salvo": senão ele migra para o Scaffold da tela anterior (Home) no meio
-  /// da transição de rota.
   void _leave() {
     ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _createdAny);
@@ -261,8 +345,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Voltar (seta ou gesto do sistema) devolve `true` se alguma sessão foi
-    // criada aqui, para a tela anterior recarregar a lista.
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -300,15 +382,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                 ),
-                const SizedBox(height: 28),
 
-                _sectionTitle('Tempo limite'),
-                const SizedBox(height: 4),
-                Text(
-                  'Sem limite: a sessão só termina quando você acabar as questões.',
-                  style: TextStyle(fontSize: 12, color: context.colors.mutedText),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<bool>(
@@ -333,26 +408,16 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                   const SizedBox(height: 12),
                   _buildTimeLimitInput(),
                 ],
-                const SizedBox(height: 28),
-
-                _sectionTitle('Quantidade de questões'),
-                const SizedBox(height: 4),
-                Text(
-                  'Quantas questões poderão ser feitas nesta sessão de estudo. '
-                  'Deixe vazio para ilimitado (todas as questões do pacote).',
-                  style: TextStyle(fontSize: 12, color: context.colors.mutedText),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 _numberField(
                   _totalController,
                   'Total de questões',
                   hint: 'Ilimitado',
                   onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
 
                 _buildTagFilter(),
-                const SizedBox(height: 16),
               ],
             ),
       bottomNavigationBar: SafeArea(
@@ -378,12 +443,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     );
   }
 
-  Widget _sectionTitle(String text) {
-    return Text(text,
-      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text));
-  }
-
-  /// Número + "gaveta" para escolher a unidade (segundos, minutos ou horas).
   Widget _buildTimeLimitInput() {
     final c = context.colors;
     final seconds = _limitSeconds;
@@ -455,119 +514,133 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   }
 
   Widget _buildTagFilter() {
-    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: _sectionTitle('Filtrar por tag')),
-            Switch(value: _filterByTag, onChanged: _onFilterToggled),
-          ],
-        ),
-        Text(
-          _filterByTag
-              ? (_unlimitedQuestions
-                  ? 'Escolha quantas questões vêm de cada tag.'
-                  : 'Escolha quantas questões vêm de cada tag. A soma não pode '
-                    'passar do total da sessão.')
-              : 'Sem filtro: a sessão usa questões de qualquer tag.',
-          style: TextStyle(fontSize: 12, color: c.mutedText),
-        ),
-        if (_filterByTag) ...[
-          const SizedBox(height: 12),
-          if (_tags.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Nenhuma tag cadastrada ainda. Crie uma pelo botão + (Nova tag).',
-                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-              ),
-            )
-          else ...[
-            for (int i = 0; i < _quotas.length; i++) _buildQuotaRow(_quotas[i], i),
-            _buildRemainingInfo(),
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _addQuota,
-                icon: Icon(Icons.add, size: context.icon(20), color: c.accent),
-                label: Text('Adicionar tag', style: TextStyle(color: c.accent)),
-              ),
+        if (_tags.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Nenhuma tag cadastrada ainda. Crie uma pelo botão + (Nova tag).',
+              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
-          ],
+          )
+        else ...[
+          _buildTagInput(),
+          const SizedBox(height: 6),
+          _buildRemainingInfo(),
         ],
       ],
     );
   }
 
-  Widget _buildQuotaRow(_TagQuota quota, int index) {
-    final c = context.colors;
-    // Cada tag só pode aparecer uma vez: esta linha enxerga a própria tag e
-    // as que ainda não foram usadas por outra linha.
-    final options = _tags.where((t) {
-      final id = t['id'] as int;
-      return id == quota.tagId || !_quotas.any((o) => o.tagId == id);
-    }).toList();
-    final inTag = quota.tagId == null ? null : _tagCounts[quota.tagId];
+  Widget _buildTagInput() {
+    final query = _tagQuery.toLowerCase();
+    final matches = query.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : _tags
+            .where((t) => (t['title'] as String).toLowerCase().contains(query))
+            .toList();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 6),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: quota.tagId,
-                  isExpanded: true,
-                  items: options
-                      .map((t) => DropdownMenuItem(
-                            value: t['id'] as int,
-                            child: Text('#${t['title']}'),
-                          ))
-                      .toList(),
-                  onChanged: (v) => setState(() => quota.tagId = v),
-                  decoration: InputDecoration(
-                    labelText: 'Tag',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => _tagFocus.requestFocus(),
+          child: InputDecorator(
+            isFocused: _tagFocus.hasFocus,
+            isEmpty: _quotas.isEmpty && _tagInputController.text.isEmpty,
+            decoration: InputDecoration(
+              labelText: 'Tags',
+              hintText: 'ex: tag=2',
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final q in _quotas) _buildQuotaChip(q),
+                SizedBox(
+                  width: 150,
+                  child: TextField(
+                    controller: _tagInputController,
+                    focusNode: _tagFocus,
+                    onChanged: _onTagInputChanged,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      _commitTagInput();
+                      _tagFocus.requestFocus();
+                    },
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => setState(() => _quotas.removeAt(index)),
-                icon: Icon(Icons.close, size: context.icon(18), color: Colors.grey[500]),
-              ),
-            ],
+              ],
+            ),
           ),
-          Row(
+        ),
+        if (matches.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text('Questões:', style: TextStyle(fontSize: 13, color: c.text)),
-              IconButton(
-                onPressed: quota.quantity > 1 ? () => setState(() => quota.quantity--) : null,
-                icon: Icon(Icons.remove_circle_outline, size: context.icon(22)),
-              ),
-              Text('${quota.quantity}',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
-              IconButton(
-                onPressed: _canAddToQuota ? () => setState(() => quota.quantity++) : null,
-                icon: Icon(Icons.add_circle_outline, size: context.icon(22)),
-              ),
-              const Spacer(),
-              if (inTag != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Text('$inTag com esta tag',
-                    style: TextStyle(fontSize: 11, color: c.mutedText)),
+              for (final t in matches)
+                ActionChip(
+                  label: Text('#${t['title']} · ${_tagCounts[t['id']] ?? 0}'),
+                  backgroundColor: context.colors.accent.withValues(alpha: 0.15),
+                  side: BorderSide.none,
+                  onPressed: () => _selectSuggestedTag(t['title'] as String),
                 ),
             ],
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildQuotaChip(_TagQuota q) {
+    final c = context.colors;
+    return GestureDetector(
+      onDoubleTap: () => _editQuota(q),
+      child: Container(
+        padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
+        decoration: BoxDecoration(
+          color: c.accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${_tagTitle(q.tagId)} ${q.quantity}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: c.text,
+              ),
+            ),
+            const SizedBox(width: 2),
+            InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => setState(() => _quotas.remove(q)),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(Icons.close, size: 16, color: c.mutedText),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -593,7 +666,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       child: Text(
         over
             ? 'A soma das tags ($_quotaSum) passa do total da sessão ($_total).'
-            : 'Distribuídas $_quotaSum de $_total · restam $remaining',
+            : 'Distribuídas $_quotaSum de $_total',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,

@@ -614,14 +614,13 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Tag (opcional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
-        const SizedBox(height: 8),
         TextField(
           controller: _tagInputController,
           minLines: 1,
           maxLines: null,
           onChanged: _onTagInputChanged,
           decoration: InputDecoration(
+            labelText: "Tag (opcional)",
             hintText: '#historia #matematica',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
