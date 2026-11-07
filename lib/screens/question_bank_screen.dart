@@ -144,10 +144,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  void _exportPackagePlaceholder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exportação de pacote em breve.')),
-    );
+  Future<void> _exportPackage(Map<String, dynamic> pkg) async {
+    await startPackExport(context, packageIds: {pkg['id'] as int});
   }
 
   Future<void> _editTemplate(TemplateModel template) async {
@@ -516,7 +514,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
                   trailing: _itemMenu(
                         onEdit: () => _editPackage(pkg),
-                        onExport: _exportPackagePlaceholder,
+                        onExport: () => _exportPackage(pkg),
                         onDelete: () => _deletePackage(pkg),
                       ),
                 ),
@@ -575,7 +573,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
             trailing: _itemMenu(
                   onEdit: () => _editPackage(pkg),
-                  onExport: _exportPackagePlaceholder,
+                  onExport: () => _exportPackage(pkg),
                   onDelete: () => _deletePackage(pkg),
                 ),
           ),

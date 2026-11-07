@@ -28,12 +28,6 @@ String _outcomeText(ImportOutcome o) {
   return text;
 }
 
-// ---------------------------------------------------------------------------
-// Importar
-// ---------------------------------------------------------------------------
-
-/// Escolhe o .zip, valida SEM gravar e abre a tela de resumo. Só grava se o
-/// usuário confirmar. Devolve true se algo foi importado.
 Future<bool> startPackImport(BuildContext context) async {
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
@@ -346,11 +340,6 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Exportar
-// ---------------------------------------------------------------------------
-
-/// Gera o .zip com tudo (ou só [packageIds]) e pede onde salvar.
 Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async {
   final messenger = ScaffoldMessenger.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
@@ -385,7 +374,6 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
       allowedExtensions: const ['zip'],
       bytes: export.bytes,
     );
-    // No desktop o seletor só devolve o caminho escolhido: grava os bytes.
     if (savedPath != null && !Platform.isAndroid) {
       await File(savedPath).writeAsBytes(export.bytes);
     }

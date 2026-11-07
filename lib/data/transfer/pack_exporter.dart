@@ -46,14 +46,8 @@ String _slug(String title) {
   return s.isEmpty ? 'pacote' : s;
 }
 
-// ---------------------------------------------------------------------------
-// Utilidades de XML
-// ---------------------------------------------------------------------------
-
-/// Remove caracteres proibidos em XML 1.0 (controles, exceto tab, LF e CR).
 String _xmlSafe(String s) => s.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]'), '');
 
-/// Valor de atributo: sem controles e com espaços/quebras colapsados.
 String _attr(String s) => _xmlSafe(s).replaceAll(RegExp(r'\s+'), ' ').trim();
 
 XmlElement _el(
@@ -67,8 +61,6 @@ XmlElement _el(
       children,
     );
 
-/// Intercala quebras de linha + indentação entre os filhos. Só estrutura:
-/// o conteúdo de texto dos campos nunca passa por aqui, então não é alterado.
 List<XmlNode> _indented(List<XmlElement> items, String indent, String closeIndent) {
   if (items.isEmpty) return const <XmlNode>[];
   return <XmlNode>[
@@ -77,8 +69,6 @@ List<XmlNode> _indented(List<XmlElement> items, String indent, String closeInden
   ];
 }
 
-/// Rótulos únicos dentro do template (o formato exige). O Enunciado sempre
-/// fica com o nome "Enunciado".
 Map<String, String> _uniqueLabels(TemplateModel t) {
   final taken = <String>{};
   final out = <String, String>{};
@@ -95,8 +85,6 @@ Map<String, String> _uniqueLabels(TemplateModel t) {
   return out;
 }
 
-/// Gera o .zip com templates, sessões, pacotes, questões (.xml) e mídias.
-/// [packageIds] null = exporta tudo; senão só esses pacotes (e o que eles usam).
 Future<ExportResult> buildExport({Set<int>? packageIds}) async {
   final db = await DatabaseHelper.instance.database;
   final warnings = <String>[];
@@ -109,14 +97,12 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
   void addText(String name, String text) => addBytes(name, utf8.encode(text));
   String pretty(Object json) => const JsonEncoder.withIndent('  ').convert(json);
 
-  // ---- leitura do banco ----
   final templateModels = <int, TemplateModel>{};
   for (final r in await db.rawQuery('SELECT id, template FROM templates ORDER BY id')) {
     try {
       final id = r['id'] as int;
       templateModels[id] = TemplateModel.fromJson(id, r['template'] as String);
     } catch (_) {
-      // template ilegível: fica de fora
     }
   }
 
@@ -149,7 +135,6 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
     if (sid is int) usedSessionIds.add(sid);
   }
 
-  // ---- templates ----
   final exportTemplateIds = (packageIds == null ? templateModels.keys.toSet() : usedTemplateIds.intersection(templateModels.keys.toSet())).toList()
     ..sort();
   final templateNames = <int, String>{};
@@ -289,7 +274,6 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
       final labels = templateLabels[tid]!;
       final tagId = q['tag_id'];
       final tagName = tagId is int ? tagTitles[tagId] : null;
-      // O parser separa tags por ',' e '#', então eles não podem ficar no nome.
       final cleanTag = tagName == null ? '' : _attr(tagName.replaceAll(RegExp(r'[,#]'), ' '));
 
       final fieldEls = <XmlElement>[];
@@ -359,7 +343,6 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
     addText('packages/$slug/questoes.xml', '<?xml version="1.0" encoding="UTF-8"?>\n${root.toXmlString()}\n');
   }
 
-  // ---- arquivos de topo ----
   final stamp = DateTime.now().toIso8601String().substring(0, 10);
   addText('manifest.json', pretty({'format': 'sysyphus-pack', 'version': 2, 'name': 'Sysyphus $stamp'}));
   addText('templates.json', pretty({'templates': templatesJson}));
