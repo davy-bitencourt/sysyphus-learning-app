@@ -444,7 +444,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _type,
+            initialValue: _type,
             items: FieldType.all
                 .map((t) => DropdownMenuItem(value: t, child: Text(FieldType.label(t))))
                 .toList(),

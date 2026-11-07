@@ -39,10 +39,6 @@ class SessionDao {
     return rows.isEmpty ? null : (rows.first['session_id'] as num?)?.toInt();
   }
 
-  /// O `time_limit` é guardado como texto:
-  ///  - "<n>s"      = n SEGUNDOS (formato atual, escolhido na tela de sessão);
-  ///  - só dígitos  = n MINUTOS (sessões criadas antes das unidades);
-  ///  - null/vazio  = sem limite.
   static int? parseTimeLimitSeconds(String? raw) {
     final t = raw?.trim() ?? '';
     if (t.isEmpty) return null;

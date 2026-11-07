@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 
 import 'data/services/sync_service.dart';
@@ -15,10 +14,7 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Carrega tema, cores e idioma salvos (precisa vir depois do init do banco).
   await AppSettings.instance.load();
-
-  // Retoma a conta de sincronização; se este aparelho é o host, o servidor volta a responder.
   await SyncService.instance.init();
 
   runApp(const StudyApp());
@@ -29,8 +25,6 @@ class StudyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Reconstrói o MaterialApp sempre que as configurações mudam
-    // (modo claro/escuro, cor de destaque, paleta do heatmap).
     return ListenableBuilder(
       listenable: AppSettings.instance,
       builder: (context, _) {
@@ -41,7 +35,6 @@ class StudyApp extends StatelessWidget {
           theme: AppTheme.build(settings, Brightness.light),
           darkTheme: AppTheme.build(settings, Brightness.dark),
           themeMode: settings.themeMode,
-          // Escala de fonte (Settings > Accessibility), somada à do sistema.
           builder: (context, child) {
             final mq = MediaQuery.of(context);
             return MediaQuery(

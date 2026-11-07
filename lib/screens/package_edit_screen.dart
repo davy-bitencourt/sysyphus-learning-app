@@ -26,7 +26,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
   int? _selectedSessionId;
   bool _loading = true;
   bool _saving = false;
-  bool _createdAny = false; // criou ao menos um pacote nesta tela (avisa quem abriu)
+  bool _createdAny = false;
 
   bool get _isEditing => widget.packageId != null;
 
@@ -41,8 +41,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
   Future<void> _loadSessions() async {
     _sessions = await SessionDao().getAll();
 
-    // Editando pelo botão de engrenagem: quem abriu a tela nem sempre sabe a
-    // sessão do pacote, então busca a sessão já vinculada para pré-selecionar.
     if (_isEditing && _selectedSessionId == null) {
       final rows = await PackageDao().getAll();
       for (final row in rows) {
@@ -53,8 +51,6 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
       }
     }
 
-    // Sessão que não existe mais (apagada) não pode ficar selecionada no
-    // dropdown, senão o Flutter reclama de valor fora da lista.
     if (_selectedSessionId != null &&
         !_sessions.any((s) => s['id'] == _selectedSessionId)) {
       _selectedSessionId = null;

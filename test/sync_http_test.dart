@@ -6,13 +6,13 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../lib/data/sync/sync_auth.dart';
-import '../lib/data/sync/sync_engine.dart';
-import '../lib/data/sync/sync_http_server.dart';
-import '../lib/data/sync/sync_http_transport.dart';
-import '../lib/data/sync/sync_memory_transport.dart';
-import '../lib/data/sync/sync_models.dart';
-import '../lib/data/sync/sync_schema.dart';
+import 'package:Sysyphus/data/sync/sync_auth.dart';
+import 'package:Sysyphus/data/sync/sync_engine.dart';
+import 'package:Sysyphus/data/sync/sync_http_server.dart';
+import 'package:Sysyphus/data/sync/sync_http_transport.dart';
+import 'package:Sysyphus/data/sync/sync_memory_transport.dart';
+import 'package:Sysyphus/data/sync/sync_models.dart';
+import 'package:Sysyphus/data/sync/sync_schema.dart';
 
 const String _id = 'K7QF2-MZP9X-HD4TR-AWB3E-6YNCLH';
 

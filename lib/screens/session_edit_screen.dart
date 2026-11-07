@@ -463,7 +463,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             SizedBox(
               width: 150,
               child: DropdownButtonFormField<String>(
-                value: _timeUnit,
+                initialValue: _timeUnit,
                 isExpanded: true,
                 items: const [
                   DropdownMenuItem(value: 's', child: Text('Segundos')),

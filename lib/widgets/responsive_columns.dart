@@ -17,9 +17,7 @@ class ResponsiveColumns extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final cols = (constraints.maxWidth / minColumnWidth)
-          .floor()
-          .clamp(1, maxColumns);
+      final cols = (constraints.maxWidth / minColumnWidth).floor().clamp(1, maxColumns);
 
       Widget stack(List<Widget> items) => Column(
             children: [
@@ -32,7 +30,6 @@ class ResponsiveColumns extends StatelessWidget {
 
       if (cols == 1) return stack(children);
 
-      // distribui os cards em rodízio: 0,1,2,0,1,2...
       final buckets = List.generate(cols, (_) => <Widget>[]);
       for (var i = 0; i < children.length; i++) {
         buckets[i % cols].add(children[i]);

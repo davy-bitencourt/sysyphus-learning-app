@@ -791,7 +791,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     required void Function(T?) onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       items: items,
       onChanged: onChanged,
       decoration: InputDecoration(

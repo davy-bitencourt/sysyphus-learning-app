@@ -14,7 +14,7 @@ class TemplateSchema {
     for( final item in result ) {
       template_schema[item['id'] as int] =
           jsonDecode(item['template'] as String) as Map<String, dynamic>;
-    };
+    }
   }
 
 
@@ -23,14 +23,14 @@ class TemplateSchema {
     template_schema[id] = template;
   }
 
-  Future<void> isOnCache(int templateId_atual) async {
+  Future<void> isOnCache(int templateidAtual) async {
     
-    if(!template_schema.containsKey(templateId_atual)){
+    if(!template_schema.containsKey(templateidAtual)){
       TemplateDao dao = TemplateDao(); 
-      List<Map<String, dynamic>> template = await dao.getTemplateById(templateId_atual);
+      List<Map<String, dynamic>> template = await dao.getTemplateById(templateidAtual);
 
       final decoded = jsonDecode(template[0]['template'] as String) as Map<String, dynamic>;
-      add(templateId_atual, decoded);
+      add(templateidAtual, decoded);
     }
 
     if(template_schema.length >= 5){

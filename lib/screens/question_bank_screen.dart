@@ -179,10 +179,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
     if (!mounted) return;
 
-    // O pacote selecionado tem de existir na lista nova. Se ele foi apagado, a
-    // seleção passa para o primeiro que sobrou (ou fica vazia). Isso precisa
-    // ser decidido ANTES do setState: o Dropdown exige exatamente um item com
-    // o valor selecionado e quebra na hora se o id sumiu.
     final packageIds = packageRows.map((p) => p['id'] as int).toList();
     final selected = packageIds.contains(_selectedPackageId)
         ? _selectedPackageId
