@@ -474,7 +474,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: _centered(Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ..._current.template.questionFields.map((f) => Padding(
@@ -501,7 +501,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             ],
             const SizedBox(height: 100),
           ],
-        ),
+        )),
       ),
       bottomNavigationBar: _buildFooter(),
     );
@@ -716,7 +716,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       child: Container(
         color: context.colors.bg,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: !_answered
+        child: _centered(!_answered
           ? _fullWidthButton('Mostrar Resposta', _showAnswer)
           : _hasGradableField(_current)
               ? _fullWidthButton('Continuar', () => _registerAndNext(_isCurrentAnswerCorrect(_current)))
@@ -747,6 +747,20 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     ),
                   ),
                 ]),
+        maxWidth: 350,
+        ),
+      ),
+    );
+  }
+
+  static const double _contentMaxWidth = 720;
+
+  Widget _centered(Widget child, {double maxWidth = _contentMaxWidth}) {
+    return Center(
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }
