@@ -40,34 +40,10 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false,
           child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // Barra de busca
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: context.colors.surfaceAlt,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: context.icon(20)),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
 
           // Lista de itens
