@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
 
 import '../DAO/session_dao.dart';
 import '../database_helper.dart';
@@ -45,6 +46,37 @@ String _slug(String title) {
   return s.isEmpty ? 'pacote' : s;
 }
 
+// ---------------------------------------------------------------------------
+// Utilidades de XML
+// ---------------------------------------------------------------------------
+
+/// Remove caracteres proibidos em XML 1.0 (controles, exceto tab, LF e CR).
+String _xmlSafe(String s) => s.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]'), '');
+
+/// Valor de atributo: sem controles e com espaços/quebras colapsados.
+String _attr(String s) => _xmlSafe(s).replaceAll(RegExp(r'\s+'), ' ').trim();
+
+XmlElement _el(
+  String name, {
+  Map<String, String> attrs = const {},
+  List<XmlNode> children = const [],
+}) =>
+    XmlElement(
+      XmlName(name),
+      [for (final e in attrs.entries) XmlAttribute(XmlName(e.key), e.value)],
+      children,
+    );
+
+/// Intercala quebras de linha + indentação entre os filhos. Só estrutura:
+/// o conteúdo de texto dos campos nunca passa por aqui, então não é alterado.
+List<XmlNode> _indented(List<XmlElement> items, String indent, String closeIndent) {
+  if (items.isEmpty) return const <XmlNode>[];
+  return <XmlNode>[
+    for (final e in items) ...[XmlText('\n$indent'), e],
+    XmlText('\n$closeIndent'),
+  ];
+}
+
 /// Rótulos únicos dentro do template (o formato exige). O Enunciado sempre
 /// fica com o nome "Enunciado".
 Map<String, String> _uniqueLabels(TemplateModel t) {
@@ -63,7 +95,7 @@ Map<String, String> _uniqueLabels(TemplateModel t) {
   return out;
 }
 
-/// Gera o .zip com templates, sessões, pacotes, questões (.md) e mídias.
+/// Gera o .zip com templates, sessões, pacotes, questões (.xml) e mídias.
 /// [packageIds] null = exporta tudo; senão só esses pacotes (e o que eles usam).
 Future<ExportResult> buildExport({Set<int>? packageIds}) async {
   final db = await DatabaseHelper.instance.database;
@@ -236,7 +268,7 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
     final sessionTitle = sessionId is int ? sessionTitles[sessionId] : null;
     addText('packages/$slug/package.json', pretty({'title': title, 'session': sessionTitle}));
 
-    final blocks = <String>[];
+    final questionEls = <XmlElement>[];
     for (final q in questionsByPackage[pid] ?? const <Map<String, Object?>>[]) {
       final tid = q['template_id'];
       final template = tid is int ? templateModels[tid] : null;
@@ -255,18 +287,15 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
       }
 
       final labels = templateLabels[tid]!;
-      final b = StringBuffer();
-      b.writeln('template: ${templateNames[tid]}');
       final tagId = q['tag_id'];
       final tagName = tagId is int ? tagTitles[tagId] : null;
-      if (tagName != null && tagName.trim().isNotEmpty) {
-        b.writeln('tag: ${tagName.replaceAll(RegExp(r'[,#]'), ' ').trim()}');
-      }
-      b.writeln();
+      // O parser separa tags por ',' e '#', então eles não podem ficar no nome.
+      final cleanTag = tagName == null ? '' : _attr(tagName.replaceAll(RegExp(r'[,#]'), ' '));
 
+      final fieldEls = <XmlElement>[];
       for (final f in template.fields) {
         final v = values[f.id];
-        b.writeln('## ${labels[f.id]}');
+        final children = <XmlNode>[];
 
         if (f.type == FieldType.text) {
           var text = v is String ? v : '';
@@ -274,22 +303,20 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
             text = '(sem enunciado)';
             warnings.add('Questão ${q['id']} não tinha enunciado: exportada como "(sem enunciado)".');
           }
-          final normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
-          if (normalized.isNotEmpty) {
-            b.writeln(normalized.split('\n').map(packEscapeLine).join('\n'));
-          }
+          final normalized = _xmlSafe(text.replaceAll('\r\n', '\n').replaceAll('\r', '\n')).trim();
+          if (normalized.isNotEmpty) children.add(XmlText(normalized));
         } else if (f.type == FieldType.image || f.type == FieldType.audio) {
           if (v is String && v.isNotEmpty) {
             final isImage = f.type == FieldType.image;
             final name = await addMedia(v, isImage);
-            if (name != null) b.writeln(isImage ? '![]($name)' : '[]($name)');
+            if (name != null) children.add(_el('media', attrs: {'src': name}));
           }
         } else if (FieldType.isGradable(f.type)) {
           final raw = v is List ? v : const <Object?>[];
           final options = <PackOption>[];
           for (final o in raw) {
             if (o is Map) {
-              final text = (o['text'] is String ? o['text'] as String : '').replaceAll(RegExp(r'\s*\n\s*'), ' ').trim();
+              final text = _xmlSafe(o['text'] is String ? o['text'] as String : '').replaceAll(RegExp(r'\s*\n\s*'), ' ').trim();
               options.add(PackOption(text.isEmpty ? '(vazio)' : text, o['correct'] == true));
             }
           }
@@ -300,21 +327,41 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
             }
             if (options.length > f.optionCount) options.removeRange(f.optionCount, options.length);
           }
-          for (final o in options) {
-            b.writeln('- [${o.correct ? 'x' : ' '}] ${o.text}');
-          }
+          children.addAll(_indented(
+            [
+              for (final o in options)
+                _el(
+                  'option',
+                  attrs: o.correct ? {'correct': 'true'} : const {},
+                  children: [XmlText(o.text)],
+                ),
+            ],
+            '      ',
+            '    ',
+          ));
         }
-        b.writeln();
+
+        fieldEls.add(_el('field', attrs: {'label': _attr(labels[f.id]!)}, children: children));
       }
-      blocks.add(b.toString());
+
+      questionEls.add(_el(
+        'question',
+        attrs: {
+          'template': _attr(templateNames[tid]!),
+          if (cleanTag.isNotEmpty) 'tag': cleanTag,
+        },
+        children: _indented(fieldEls, '    ', '  '),
+      ));
       questionTotal++;
     }
-    addText('packages/$slug/questoes.md', blocks.join('---\n'));
+
+    final root = _el('questions', children: _indented(questionEls, '  ', ''));
+    addText('packages/$slug/questoes.xml', '<?xml version="1.0" encoding="UTF-8"?>\n${root.toXmlString()}\n');
   }
 
   // ---- arquivos de topo ----
   final stamp = DateTime.now().toIso8601String().substring(0, 10);
-  addText('manifest.json', pretty({'format': 'sysyphus-pack', 'version': 1, 'name': 'Sysyphus $stamp'}));
+  addText('manifest.json', pretty({'format': 'sysyphus-pack', 'version': 2, 'name': 'Sysyphus $stamp'}));
   addText('templates.json', pretty({'templates': templatesJson}));
   if (sessionsJson.isNotEmpty) addText('sessions.json', pretty({'sessions': sessionsJson}));
 

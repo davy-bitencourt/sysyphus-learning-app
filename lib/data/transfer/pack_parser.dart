@@ -1,31 +1,18 @@
 import 'dart:convert';
 
+import 'package:xml/xml.dart';
+
 import 'pack_models.dart';
 
 const Set<String> _types = {'text', 'image', 'audio', 'options', 'vof'};
 
-final RegExp _headingRe = RegExp(r'^##\s+(.+?)\s*$');
-final RegExp _headerRe = RegExp(r'^([A-Za-z_]+)\s*:\s*(.*)$');
-final RegExp _optionRe = RegExp(r'^\s*[-*]\s+\[( |x|X)\]\s+(.+?)\s*$');
-final RegExp _linkRe = RegExp(r'\]\(([^)]+)\)');
-final RegExp _bareRe = RegExp(r'^\S+$');
+/// Versão atual do formato (questões em XML). A v1 usava Markdown e não é
+/// mais importada.
+const int _kPackVersion = 2;
 
 /// Lê um pacote já descompactado (nome da entrada -> bytes) SEM tocar no banco.
-/// Devolve o conteúdo e a lista de erros/avisos (cada um com arquivo e linha).
+/// Devolve o conteúdo e a lista de erros/avisos (cada um com arquivo e questão).
 PackParseResult parsePack(Map<String, List<int>> files) => _PackParser(files).run();
-
-class _Chunk {
-  final int start; // número da primeira linha (1-based)
-  final List<String> lines;
-  const _Chunk(this.start, this.lines);
-}
-
-class _Section {
-  final String label;
-  final int line;
-  final List<String> lines = [];
-  _Section(this.label, this.line);
-}
 
 class _PackParser {
   _PackParser(this.files);
@@ -37,7 +24,6 @@ class _PackParser {
   final Map<String, PackSession> _sessions = {};
   final List<PackPackage> _packages = [];
   final Set<String> _seenQuestions = {};
-  final Set<String> _filesWithQuestions = {};
 
   void _err(String where, String message) =>
       _issues.add(PackIssue(PackIssueLevel.error, where, message));
@@ -77,8 +63,21 @@ class _PackParser {
     }
 
     final manifest = _readJson('manifest.json');
-    if (manifest != null && (manifest['format'] != 'sysyphus-pack' || manifest['version'] != 1)) {
-      _err('manifest.json', "esperado format 'sysyphus-pack' e version 1");
+    if (manifest != null) {
+      if (manifest['format'] != 'sysyphus-pack') {
+        _err('manifest.json', "esperado format 'sysyphus-pack'");
+      } else if (manifest['version'] == 1) {
+        _err('manifest.json',
+            'pacote no formato antigo (v1, questões em Markdown); reexporte pelo app para gerar o formato atual (v$_kPackVersion, XML)');
+        // Não adianta ler o resto: o conteúdo é de outro formato.
+        return PackParseResult(
+          data: const PackData(templates: [], sessions: [], packages: []),
+          issues: _issues,
+          mediaUsed: <String>{},
+        );
+      } else if (manifest['version'] != _kPackVersion) {
+        _err('manifest.json', 'esperado version $_kPackVersion');
+      }
     }
 
     _parseTemplates();
@@ -339,131 +338,73 @@ class _PackParser {
       }
 
       final questions = <PackQuestion>[];
-      final mdFiles = files.keys
-          .where((n) => n.startsWith('packages/$slug/') && n.toLowerCase().endsWith('.md'))
+      final xmlFiles = files.keys
+          .where((n) => n.startsWith('packages/$slug/') && n.toLowerCase().endsWith('.xml'))
           .toList()
         ..sort();
-      for (final md in mdFiles) {
-        questions.addAll(_parseMarkdown(md, title));
+      for (final xml in xmlFiles) {
+        questions.addAll(_parseXml(xml, title));
       }
       _packages.add(PackPackage(title: title, sessionTitle: sessionTitle, questions: questions));
     }
   }
 
-  // -------------------------------------------------------------- markdown
+  // ------------------------------------------------------------------- xml
 
-  List<PackQuestion> _parseMarkdown(String fileName, String packageTitle) {
-    final text = _decode(files[fileName]!).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-    final lines = text.split('\n');
-
-    // 1) Blocos separados por linhas '---' (fora de cercas ```).
-    final chunks = <_Chunk>[];
-    var current = <String>[];
-    var start = 1;
-    var fence = false;
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      if (line.trim().startsWith('```')) fence = !fence;
-      if (!fence && line.trim() == '---') {
-        chunks.add(_Chunk(start, current));
-        current = <String>[];
-        start = i + 2;
-      } else {
-        current.add(line);
-      }
+  List<PackQuestion> _parseXml(String fileName, String packageTitle) {
+    final XmlDocument doc;
+    try {
+      doc = XmlDocument.parse(_decode(files[fileName]!));
+    } on XmlException catch (e) {
+      _err(fileName, 'XML inválido ($e)');
+      return const [];
     }
-    chunks.add(_Chunk(start, current));
 
-    // 2) Cada bloco é um padrão (só cabeçalho) ou uma questão (tem '## campo').
-    final defaults = <String, String>{};
+    final root = doc.rootElement;
+    if (root.name.local != 'questions') {
+      _err(fileName, 'o elemento raiz deve ser <questions>');
+      return const [];
+    }
+
     final out = <PackQuestion>[];
-
-    for (final chunk in chunks) {
-      final header = <String, String>{};
-      final sections = <_Section>[];
-      _Section? sec;
-      var inFence = false;
-
-      var firstLine = chunk.start;
-      for (var k = 0; k < chunk.lines.length; k++) {
-        if (chunk.lines[k].trim().isNotEmpty) {
-          firstLine = chunk.start + k;
-          break;
-        }
-      }
-
-      for (var k = 0; k < chunk.lines.length; k++) {
-        final line = chunk.lines[k];
-        final ln = chunk.start + k;
-        if (line.trim().startsWith('```')) inFence = !inFence;
-
-        final heading = inFence ? null : _headingRe.firstMatch(line);
-        if (heading != null) {
-          sec = _Section(heading.group(1)!, ln);
-          sections.add(sec);
-          continue;
-        }
-
-        if (sec == null) {
-          if (line.trim().isEmpty) continue;
-          final hm = _headerRe.firstMatch(line);
-          if (hm == null) {
-            _err('$fileName:$ln',
-                "linha não reconhecida antes do primeiro '## campo': '${_cut(line.trim())}'");
-            continue;
-          }
-          final key = hm.group(1)!.toLowerCase();
-          if (key != 'template' && key != 'tag') {
-            _err('$fileName:$ln', "chave '$key' desconhecida (use template ou tag)");
-            continue;
-          }
-          header[key] = hm.group(2)!.trim();
-        } else {
-          sec.lines.add(line);
-        }
-      }
-
-      if (sections.isEmpty) {
-        if (header.isNotEmpty) {
-          final changed = header.entries.any((e) => defaults.containsKey(e.key) && defaults[e.key] != e.value);
-          if (changed || _filesWithQuestions.contains(fileName)) {
-            _warn('$fileName:$firstLine',
-                "bloco só com cabeçalho: ele REDEFINE o padrão (template/tag) das questões seguintes. "
-                "Se queria configurar só a próxima questão, tire o '---' entre o cabeçalho e o primeiro '## campo'");
-          }
-          defaults.addAll(header);
-        }
+    var index = 0;
+    for (final node in root.childElements) {
+      index++;
+      if (node.name.local != 'question') {
+        _err('$fileName: item $index', 'elemento <${node.name.local}> inesperado (use <question>)');
         continue;
       }
-
       final question = _buildQuestion(
         fileName: fileName,
-        firstLine: firstLine,
+        index: index,
         packageTitle: packageTitle,
-        effective: {...defaults, ...header},
-        sections: sections,
+        element: node,
       );
-      if (question != null) {
-        out.add(question);
-        _filesWithQuestions.add(fileName);
-      }
+      if (question != null) out.add(question);
     }
     return out;
   }
 
-  String _cut(String s) => s.length <= 40 ? s : s.substring(0, 40);
-
   PackQuestion? _buildQuestion({
     required String fileName,
-    required int firstLine,
+    required int index,
     required String packageTitle,
-    required Map<String, String> effective,
-    required List<_Section> sections,
+    required XmlElement element,
   }) {
-    final where = '$fileName:$firstLine';
-    final templateName = effective['template'] ?? '';
+    final where = '$fileName: questão $index';
+    var ok = true;
+
+    for (final a in element.attributes) {
+      final n = a.name.local;
+      if (n != 'template' && n != 'tag') {
+        _err(where, "atributo '$n' desconhecido (use template ou tag)");
+        ok = false;
+      }
+    }
+
+    final templateName = (element.getAttribute('template') ?? '').trim();
     if (templateName.isEmpty) {
-      _err(where, "questão sem template (use 'template: Nome' na questão ou no topo do arquivo)");
+      _err(where, 'questão sem template (use template="Nome" em <question>)');
       return null;
     }
     final template = _templates[normalizeText(templateName)];
@@ -478,37 +419,53 @@ class _PackParser {
 
     final values = <String, Object>{};
     final seenLabels = <String>{};
-    var ok = true;
 
-    for (final section in sections) {
-      final key = normalizeText(section.label);
-      final w = '$fileName:${section.line}';
+    for (final fieldEl in element.childElements) {
+      if (fieldEl.name.local != 'field') {
+        _err(where, 'elemento <${fieldEl.name.local}> inesperado dentro de <question> (use <field>)');
+        ok = false;
+        continue;
+      }
+
+      final rawLabel = (fieldEl.getAttribute('label') ?? '').trim();
+      if (rawLabel.isEmpty) {
+        _err(where, '<field> sem o atributo label');
+        ok = false;
+        continue;
+      }
+      final key = normalizeText(rawLabel);
+      final w = "$where, campo '$rawLabel'";
 
       final field = byLabel[key];
       if (field == null) {
         final hint = _closest(key, byLabel.keys);
         final suggestion = hint == null ? '' : " (quis dizer '${byLabel[hint]!.label}'?)";
-        _err(w, "campo '${section.label}' não existe no template '${template.name}'$suggestion");
+        _err(w, "campo não existe no template '${template.name}'$suggestion");
         ok = false;
         continue;
       }
       if (!seenLabels.add(key)) {
-        _err(w, "campo '${section.label}' repetido na mesma questão");
+        _err(w, 'campo repetido na mesma questão');
         ok = false;
         continue;
       }
 
       if (field.type == 'text') {
-        values[key] = section.lines.map(packUnescapeLine).join('\n').trim();
+        if (fieldEl.childElements.isNotEmpty) {
+          _err(w, 'campo de texto não aceita elementos dentro dele');
+          ok = false;
+        } else {
+          values[key] = fieldEl.innerText.trim();
+        }
       } else if (field.isMedia) {
-        final path = _readMediaPath(section, field, w);
+        final path = _readMediaPath(fieldEl, field, w);
         if (path == null) {
           ok = false;
         } else {
           values[key] = path;
         }
       } else {
-        final options = _readOptions(section, field, template.name, w);
+        final options = _readOptions(fieldEl, field, template.name, w);
         if (options == null) {
           ok = false;
         } else {
@@ -527,7 +484,7 @@ class _PackParser {
     final stmtValue = values['enunciado'];
     final statement = stmtValue is String ? stmtValue : '';
     if (!seenLabels.contains('enunciado') || statement.isEmpty) {
-      _err(where, "falta o '## Enunciado' (ou ele está vazio)");
+      _err(where, 'falta o campo "Enunciado" (ou ele está vazio)');
       ok = false;
     }
     if (!ok) return null;
@@ -540,11 +497,11 @@ class _PackParser {
     return PackQuestion(
       packageTitle: packageTitle,
       templateName: template.name,
-      tag: _readTag(effective['tag'] ?? '', where),
+      tag: _readTag(element.getAttribute('tag') ?? '', where),
       statement: statement,
       values: values,
       sourceFile: fileName,
-      line: firstLine,
+      line: index, // número da questão no arquivo (o XML não tem linha por nó)
     );
   }
 
@@ -563,15 +520,23 @@ class _PackParser {
     return tokens.first;
   }
 
-  String? _readMediaPath(_Section section, PackField field, String where) {
-    final body = section.lines.join('\n').trim();
-    if (body.isEmpty) return '';
+  /// Campo de mídia: vazio, ou exatamente um `<media src="..."/>`.
+  String? _readMediaPath(XmlElement fieldEl, PackField field, String where) {
+    final children = fieldEl.childElements.toList();
+    if (children.isEmpty) {
+      if (fieldEl.innerText.trim().isEmpty) return '';
+      _err(where, 'esperado <media src="media/foto.png"/>');
+      return null;
+    }
+    if (children.length > 1 || children.first.name.local != 'media') {
+      _err(where, 'campo de mídia aceita um único <media src="..."/>');
+      return null;
+    }
 
-    final link = _linkRe.firstMatch(body);
-    var path = link != null ? link.group(1)!.trim() : (_bareRe.hasMatch(body) ? body : '');
+    var path = (children.first.getAttribute('src') ?? '').trim();
     if (path.startsWith('./')) path = path.substring(2);
     if (path.isEmpty) {
-      _err(where, 'esperado um caminho de arquivo (ex.: ![](media/foto.png))');
+      _err(where, '<media> sem o atributo src (ex.: <media src="media/foto.png"/>)');
       return null;
     }
 
@@ -588,18 +553,36 @@ class _PackParser {
     return path;
   }
 
-  List<PackOption>? _readOptions(_Section section, PackField field, String templateName, String where) {
+  /// Campo de alternativas: vários `<option correct="true|false">texto</option>`.
+  List<PackOption>? _readOptions(XmlElement fieldEl, PackField field, String templateName, String where) {
     final options = <PackOption>[];
     var valid = true;
-    for (final line in section.lines) {
-      if (line.trim().isEmpty) continue;
-      final m = _optionRe.firstMatch(line);
-      if (m == null) {
-        _err(where, "alternativa inválida: '${_cut(line.trim())}' (use '- [ ] texto' ou '- [x] texto')");
+
+    final strayText = fieldEl.children.whereType<XmlText>().any((t) => t.value.trim().isNotEmpty);
+    if (strayText) {
+      _err(where, 'texto solto dentro das alternativas (use <option>texto</option>)');
+      valid = false;
+    }
+
+    for (final child in fieldEl.childElements) {
+      if (child.name.local != 'option') {
+        _err(where, 'elemento <${child.name.local}> inesperado nas alternativas (use <option>)');
         valid = false;
         continue;
       }
-      options.add(PackOption(m.group(2)!, m.group(1)!.toLowerCase() == 'x'));
+      final c = (child.getAttribute('correct') ?? 'false').trim().toLowerCase();
+      if (c != 'true' && c != 'false') {
+        _err(where, "atributo correct deve ser 'true' ou 'false'");
+        valid = false;
+        continue;
+      }
+      final text = child.innerText.replaceAll(RegExp(r'\s*\n\s*'), ' ').trim();
+      if (text.isEmpty) {
+        _err(where, 'alternativa vazia');
+        valid = false;
+        continue;
+      }
+      options.add(PackOption(text, c == 'true'));
     }
     if (!valid) return null;
     if (options.length != field.optionCount) {

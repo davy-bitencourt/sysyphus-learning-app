@@ -14,12 +14,8 @@ import 'package_edit_screen.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 
 class Home extends StatefulWidget {
-  // TODO: substituir por um profile real assim que a tela de seleção
-  // de perfil existir.
   final int profileId;
 
-  /// Aviso de que a lista de pacotes mudou (criado, renomeado, excluído).
-  /// Quem altera pacotes em outra tela faz `Home.packagesChanged.value++`.
   static final ValueNotifier<int> packagesChanged = ValueNotifier<int>(0);
 
   const Home({super.key, this.profileId = 1});
@@ -34,8 +30,6 @@ class _HomeState extends State<Home> {
 
   final RevlogSchema _revlogSchema = RevlogSchema();
 
-  /// Windows, Linux e macOS usam a interface de desktop; Android, iOS (e o
-  /// restante) usam a mobile. A plataforma não muda com o app aberto.
   late final bool _isDesktop = switch (defaultTargetPlatform) {
     TargetPlatform.windows || TargetPlatform.linux || TargetPlatform.macOS => true,
     TargetPlatform.android || TargetPlatform.iOS || TargetPlatform.fuchsia => false,
@@ -54,16 +48,11 @@ class _HomeState extends State<Home> {
     _loadData();
   }
 
-  // Outra tela (ex: Banco de questões) criou/renomeou/excluiu um pacote.
   void _onPackagesChanged() => _loadData();
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
 
-    /* usa todos os pacotes por enquanto: o schema atual só liga um
-     * profile a UM pacote (profile.package_id), o que não sustenta
-     * uma lista de "meus pacotes" -- listar tudo aqui até a
-     * modelagem de dono do pacote ser revista. */
     final packageRows = await PackageDao().getAll();
     final heatmap = await _revlogSchema.getHeatmapData();
     final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
@@ -123,9 +112,10 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+            _sectionLabel('Study Activity'),
             HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -134,7 +124,7 @@ class _HomeState extends State<Home> {
             ),
             const SizedBox(height: 12),
             _buildDeckList(),
-            const SizedBox(height: 80),
+            const SizedBox(height: 12),
           ],
         ),
       ),

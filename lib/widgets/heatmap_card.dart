@@ -1,12 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
 class HeatmapCard extends StatelessWidget {
-  final Map<DateTime, int> activityMap;  // recebe os dados de fora
-  final int newCount; // questões novas (nunca vistas)
-  final int dueCount; // questões para revisar (vencidas ou esquecidas)
+  final Map<DateTime, int> activityMap;
+  final int newCount;
+  final int dueCount;
 
   const HeatmapCard({
     super.key,
@@ -15,9 +17,6 @@ class HeatmapCard extends StatelessWidget {
     this.dueCount = 0,
   });
 
-  /// Converte a QUANTIDADE de revisões do dia em um nível de 0 a 4.
-  /// (Antes o número de revisões ia direto pro switch: a partir de 5
-  /// revisões no dia caía no `default` e a célula ficava cinza.)
   int _levelFor(int count) {
     if (count <= 0) return 0;
     if (count <= 4) return 1;
@@ -28,12 +27,8 @@ class HeatmapCard extends StatelessWidget {
 
   Color _heatColor(int count, AppColors c) => _colorForLevel(_levelFor(count), c);
 
-  /// Cor do nível 0..4 na paleta escolhida nas configurações.
   Color _colorForLevel(int level, AppColors c) => c.heat[level.clamp(0, 4)];
 
-  /// Dias seguidos com pelo menos uma revisão, terminando hoje. Se hoje ainda
-  /// não teve revisão, a sequência de ontem continua valendo (ela só quebra
-  /// quando um dia inteiro passa sem estudar).
   int _streak(Map<DateTime, int> map, DateTime todayNorm) {
     bool studied(DateTime d) => (map[d] ?? 0) > 0;
 
@@ -77,9 +72,6 @@ class HeatmapCard extends StatelessWidget {
         final int totalCols = lastMonday.difference(firstMonday).inDays ~/ 7 + 1;
         final int visibleCols = (availW / cellStep).floor().clamp(1, totalCols);
 
-        // Alinha a grade para sempre mostrar a semana atual (em vez de
-        // travar sempre no início do ano quando nem todas as colunas
-        // cabem na largura disponível).
         final int todayWeekIndex = todayNorm.difference(firstMonday).inDays ~/ 7;
         final int maxStartCol = (totalCols - visibleCols).clamp(0, totalCols - 1);
         final int startCol = (todayWeekIndex - visibleCols + 1).clamp(0, maxStartCol);
@@ -95,8 +87,10 @@ class HeatmapCard extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Study Activity', style: mediumText),
-                  const SizedBox(height: 2),
+                  if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
+                    const Text('Study Activity', style: mediumText),
+                    const SizedBox(height: 2),
+                  ],
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     Text('$todayCount reviewed today', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     Text('$streak day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),

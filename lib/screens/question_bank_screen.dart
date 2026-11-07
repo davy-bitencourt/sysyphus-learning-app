@@ -33,7 +33,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   List<Question> _packageQuestions = [];
   bool _loadingQuestions = false;
 
-  // Busca (ícone no canto superior direito): filtra a aba aberta.
   final TextEditingController _searchController = TextEditingController();
   bool _searching = false;
   String _query = '';
@@ -60,7 +59,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     });
   }
 
-  /// Minúsculas e sem acentos, para "historia" achar "História".
   String _norm(String s) {
     const from = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
     const to = 'aaaaaeeeeiiiiooooouuuucn';
@@ -77,7 +75,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
       );
 
-  // --- MENU DE AÇÕES (3 pontinhos, popup) ---
   Widget _itemMenu({
     VoidCallback? onEdit,
     VoidCallback? onExport,
@@ -147,7 +144,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // Placeholder: a exportação de um único pacote ainda não existe.
   void _exportPackagePlaceholder() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Exportação de pacote em breve.')),
@@ -316,7 +312,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 1: QUESTÕES ---
   Widget _buildQuestionsTab() {
     if (_packages.isEmpty) {
       return Center(
@@ -487,7 +482,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // --- ABA 2: PACOTES (REORDENÁVEL) ---
   Widget _buildPackagesTab() {
     return Column(
       children: [
@@ -563,8 +557,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // Resultado da busca em Pacotes: sem alça de arrastar (reordenar com filtro
-  // ativo não faz sentido).
   Widget _buildPackageResults() {
     final results = _packages.where((p) => _matches(p['title'] as String)).toList();
     if (results.isEmpty) return _noResults();
@@ -729,7 +721,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  // --- ABA 5: TAGS (nome centralizado) ---
   Widget _buildTagsTab() {
     final visible = _tags.where((t) => _matches(t['title'] as String)).toList();
 
@@ -754,8 +745,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(
                         children: [
-                          // Mesma largura do botão de excluir: o nome fica no
-                          // centro da caixa.
                           const SizedBox(width: 48),
                           Expanded(
                             child: Text(
@@ -768,7 +757,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               ),
                             ),
                           ),
-                          // Tags não têm tela de edição: só "Excluir".
                           _itemMenu(
                                 onDelete: () => _deleteTag(tag),
                               ),
@@ -786,9 +774,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // O diálogo fica aberto entre uma tag e outra.
-                  await showNewTagDialog(context); // não informa quantas foram criadas
-                  if (mounted) _load(); // recarrega a lista ao fechar
+                  await showNewTagDialog(context); 
+                  if (mounted) _load(); 
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.colors.accent,
@@ -925,7 +912,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  /// Resumo em uma linha: tempo • total de questões • filtro por tag.
   String _sessionSummary(Map<String, dynamic> session) {
     final limitSeconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
     final total = (session['total_q'] as num?)?.toInt();
