@@ -35,7 +35,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   List<LoadedQuestion> _questions = [];
   bool _loading = true;
-  bool _doneToday = false; // repetição espaçada ligada e nada pendente hoje
+  bool _doneToday = false; 
 
   int _currentQuestion = 0;
   bool _answered = false;
@@ -123,7 +123,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
       loaded.add(LoadedQuestion(question: question, template: template));
     }
 
-    // sem pendentes: só é "tudo revisado" se o pacote tiver questões
     final doneToday = spaced && rows.isEmpty &&
         await QuestionDao().countByPackage(widget.packageId) > 0;
 
