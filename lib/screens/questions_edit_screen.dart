@@ -12,6 +12,7 @@ import '../data/models/question_model.dart';
 import '../data/services/media_storage_service.dart';
 import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
+import '../widgets/markdown_text.dart';
 
 class TagTextEditingController extends TextEditingController {
   TextStyle tagStyle;
@@ -63,6 +64,9 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Map<String, String?> _mediaPaths = {};
   Map<String, List<TextEditingController>> _optionControllers = {};
   Map<String, List<bool>> _optionCorrect = {};
+
+  /// Campos de texto que estão mostrando a prévia do Markdown (ids).
+  final Set<String> _previewing = {};
 
   final Map<String, dynamic> _buffer = {};
 
@@ -158,6 +162,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     _mediaPaths = {};
     _optionControllers = {};
     _optionCorrect = {};
+    _previewing.clear();
 
     for (final field in template.fields) {
       final raw = initialValues?[field.id];
@@ -256,6 +261,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   void _resetForm() {
     _buffer.clear();
+    _previewing.clear();
     for (final c in _textControllers.values) {
       c.clear();
     }
@@ -648,11 +654,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Widget _buildFieldInput(FieldDefinition field) {
     switch (field.type) {
       case FieldType.text:
-        return _buildTextField(
-          _textControllers[field.id]!,
-          field.isStatement ? '${field.label}*' : field.label,
-          minLines: 3, 
-        );
+        return _buildMarkdownField(field);
       case FieldType.image:
         return _buildMediaField(field, isImage: true);
       case FieldType.audio:
@@ -663,6 +665,123 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  // ---------------------------------------------------------------- markdown
+
+  Widget _buildMarkdownField(FieldDefinition field) {
+    final controller = _textControllers[field.id]!;
+    final label = field.isStatement ? '${field.label}*' : field.label;
+    final previewing = _previewing.contains(field.id);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMarkdownToolbar(field.id, controller, previewing),
+        const SizedBox(height: 6),
+        if (previewing)
+          _buildMarkdownPreview(controller.text, label, field.isStatement)
+        else
+          _buildTextField(controller, label, minLines: 3),
+      ],
+    );
+  }
+
+  Widget _buildMarkdownPreview(String text, String label, bool isStatement) {
+    final empty = text.trim().isEmpty;
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 96),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.colors.border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: empty
+          ? Text('Nada para visualizar em "$label".', style: TextStyle(fontSize: 13, color: context.colors.mutedText))
+          : MarkdownText(
+              text: text,
+              style: TextStyle(
+                fontSize: isStatement ? 16 : 14,
+                color: context.colors.text,
+              ),
+            ),
+    );
+  }
+
+  Widget _buildMarkdownToolbar(String fieldId, TextEditingController c, bool previewing) {
+    Widget btn(IconData icon, String tip, VoidCallback onTap) => IconButton(
+          icon: Icon(icon, size: context.icon(20)),
+          tooltip: tip,
+          visualDensity: VisualDensity.compact,
+          color: context.colors.mutedText,
+          onPressed: previewing ? null : onTap,
+        );
+
+    // ExcludeFocus: tocar num botão não tira o foco (nem fecha o teclado) do campo.
+    return ExcludeFocus(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            btn(Icons.format_bold, 'Negrito', () => _wrapSelection(c, '**')),
+            btn(Icons.format_italic, 'Itálico', () => _wrapSelection(c, '*')),
+            btn(Icons.code, 'Código', () => _wrapSelection(c, '`')),
+            btn(Icons.link, 'Link', () => _wrapSelection(c, '[', '](https://)')),
+            btn(Icons.format_list_bulleted, 'Lista', () => _prefixLines(c, '- ')),
+            btn(Icons.format_list_numbered, 'Lista numerada', () => _prefixLines(c, '1. ')),
+            btn(Icons.format_quote, 'Citação', () => _prefixLines(c, '> ')),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(previewing ? Icons.edit_outlined : Icons.visibility_outlined, size: context.icon(20)),
+              tooltip: previewing ? 'Voltar a editar' : 'Visualizar',
+              visualDensity: VisualDensity.compact,
+              color: context.colors.accent,
+              onPressed: () => setState(() {
+                if (!_previewing.remove(fieldId)) _previewing.add(fieldId);
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Envolve a seleção com [left]/[right] (ex.: **texto**). Sem seleção,
+  /// insere o par e deixa o cursor no meio.
+  void _wrapSelection(TextEditingController c, String left, [String? right]) {
+    right ??= left;
+    final text = c.text;
+    final sel = c.selection;
+    final start = sel.isValid ? sel.start : text.length;
+    final end = sel.isValid ? sel.end : text.length;
+    final selected = text.substring(start, end);
+
+    c.value = TextEditingValue(
+      text: text.replaceRange(start, end, '$left$selected$right'),
+      selection: TextSelection(
+        baseOffset: start + left.length,
+        extentOffset: start + left.length + selected.length,
+      ),
+    );
+  }
+
+  /// Coloca [prefix] no começo de cada linha tocada pela seleção.
+  void _prefixLines(TextEditingController c, String prefix) {
+    final text = c.text;
+    final sel = c.selection;
+    final start = sel.isValid ? sel.start : text.length;
+    final end = sel.isValid ? sel.end : text.length;
+
+    final lineStart = start == 0 ? 0 : text.lastIndexOf('\n', start - 1) + 1;
+    final nl = text.indexOf('\n', end);
+    final lineEnd = nl == -1 ? text.length : nl;
+
+    final prefixed = text.substring(lineStart, lineEnd).split('\n').map((l) => '$prefix$l').join('\n');
+    c.value = TextEditingValue(
+      text: text.replaceRange(lineStart, lineEnd, prefixed),
+      selection: TextSelection(baseOffset: lineStart, extentOffset: lineStart + prefixed.length),
+    );
   }
 
   Widget _buildMediaField(FieldDefinition field, {required bool isImage}) {

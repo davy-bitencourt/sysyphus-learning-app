@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../styles/app_theme.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../data/schema/question_schema.dart';
@@ -13,6 +11,7 @@ import '../data/DAO/session_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
 import 'questions_edit_screen.dart';
+import '../widgets/markdown_text.dart';
 
 class QuestionScreen extends StatefulWidget {
   final int packageId;
@@ -21,7 +20,7 @@ class QuestionScreen extends StatefulWidget {
   const QuestionScreen({
     super.key,
     required this.packageId,
-    this.limit = 999,
+    this.limit = 20,
   });
 
   @override
@@ -511,8 +510,10 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      child: Text(_current.question.statement,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.colors.text)),
+      child: MarkdownText(
+        text: _current.question.statement,
+        style: TextStyle(fontSize: 16, color: context.colors.text),
+      ),
     );
   }
 
@@ -557,10 +558,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
       case FieldType.text:
         final value = _current.question.textFor(field.id);
         if (value == null || value.isEmpty) return const SizedBox.shrink();
-        return _LinkText(
+        return MarkdownText(
           text: value,
           style: TextStyle(fontSize: 14, color: context.colors.text),
-          linkColor: context.colors.accent,
         );
       case FieldType.image:
         final path = _current.question.textFor(field.id);
@@ -779,114 +779,5 @@ class _QuestionScreenState extends State<QuestionScreen> {
         child: Text(label, style: const TextStyle(fontSize: 15)),
       ),
     );
-  }
-}
-
-/// Texto que detecta URLs (http(s)://... ou www....) e as torna clicáveis.
-class _LinkText extends StatefulWidget {
-  final String text;
-  final TextStyle style;
-  final Color linkColor;
-
-  const _LinkText({
-    required this.text,
-    required this.style,
-    required this.linkColor,
-  });
-
-  @override
-  State<_LinkText> createState() => _LinkTextState();
-}
-
-class _LinkTextState extends State<_LinkText> {
-  static final RegExp _urlRegex = RegExp(r'((?:https?:\/\/|www\.)[^\s]+)');
-
-  final List<TapGestureRecognizer> _recognizers = [];
-  List<InlineSpan> _spans = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _buildSpans();
-  }
-
-  @override
-  void didUpdateWidget(covariant _LinkText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text ||
-        oldWidget.linkColor != widget.linkColor ||
-        oldWidget.style != widget.style) {
-      _buildSpans();
-    }
-  }
-
-  @override
-  void dispose() {
-    _disposeRecognizers();
-    super.dispose();
-  }
-
-  void _disposeRecognizers() {
-    for (final r in _recognizers) {
-      r.dispose();
-    }
-    _recognizers.clear();
-  }
-
-  void _buildSpans() {
-    _disposeRecognizers();
-    final spans = <InlineSpan>[];
-    int last = 0;
-
-    for (final match in _urlRegex.allMatches(widget.text)) {
-      if (match.start > last) {
-        spans.add(TextSpan(text: widget.text.substring(last, match.start)));
-      }
-
-      var url = match.group(0)!;
-      var trailing = '';
-      while (url.isNotEmpty && '.,;:!?)'.contains(url[url.length - 1])) {
-        trailing = url[url.length - 1] + trailing;
-        url = url.substring(0, url.length - 1);
-      }
-
-      final recognizer = TapGestureRecognizer()..onTap = () => _openLink(url);
-      _recognizers.add(recognizer);
-      spans.add(TextSpan(
-        text: url,
-        style: TextStyle(
-          color: widget.linkColor,
-          decoration: TextDecoration.underline,
-          decorationColor: widget.linkColor,
-        ),
-        recognizer: recognizer,
-      ));
-      if (trailing.isNotEmpty) spans.add(TextSpan(text: trailing));
-
-      last = match.end;
-    }
-
-    if (last < widget.text.length) {
-      spans.add(TextSpan(text: widget.text.substring(last)));
-    }
-    _spans = spans;
-  }
-
-  Future<void> _openLink(String raw) async {
-    final url = raw.startsWith('http') ? raw : 'https://$raw';
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível abrir o link.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(TextSpan(style: widget.style, children: _spans));
   }
 }
