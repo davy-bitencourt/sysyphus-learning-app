@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 
@@ -87,7 +87,9 @@ class HeatmapCard extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
+                  if(defaultTargetPlatform == TargetPlatform.linux ||
+                     defaultTargetPlatform == TargetPlatform.windows ||
+                     defaultTargetPlatform == TargetPlatform.macOS) ...[
                     const Text('Study Activity', style: mediumText),
                     const SizedBox(height: 2),
                   ],
