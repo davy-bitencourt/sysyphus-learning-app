@@ -10,6 +10,7 @@ import '../data/DAO/revlog_dao.dart';
 import '../data/DAO/session_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
+import '../data/services/sm2.dart';
 import 'questions_edit_screen.dart';
 import '../widgets/markdown_text.dart';
 
@@ -34,6 +35,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   List<LoadedQuestion> _questions = [];
   bool _loading = true;
+  bool _doneToday = false; // repetição espaçada ligada e nada pendente hoje
 
   int _currentQuestion = 0;
   bool _answered = false;
@@ -86,8 +88,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
     final totalQ = (session?['total_q'] as num?)?.toInt();
     final limitSeconds = SessionDao.parseTimeLimitSeconds(session?['time_limit'] as String?);
 
+    final spaced = (session?['spaced_repetition'] as num?)?.toInt() == 1;
+
     final List<Map<String, dynamic>> rows;
-    if (session != null && totalQ != null && totalQ > 0) {
+    if (session != null && spaced) {
+      rows = await QuestionDao().getForSession(
+        widget.packageId,
+        (totalQ != null && totalQ > 0) ? totalQ : widget.limit,
+        SessionDao.parseTagFilters(session['tag_filters'] as String?),
+        dueToday: _formatDate(DateTime.now()),
+      );
+    } else if (session != null && totalQ != null && totalQ > 0) {
       rows = await QuestionDao().getForSession(
         widget.packageId,
         totalQ,
@@ -112,9 +123,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
       loaded.add(LoadedQuestion(question: question, template: template));
     }
 
+    // sem pendentes: só é "tudo revisado" se o pacote tiver questões
+    final doneToday = spaced && rows.isEmpty &&
+        await QuestionDao().countByPackage(widget.packageId) > 0;
+
     if (!mounted) return;
     setState(() {
       _questions = loaded;
+      _doneToday = doneToday;
       _currentQuestion = 0;
       _shuffledOptionsCache.clear();
       _resetAnswerState();
@@ -296,12 +312,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
       await revlogDao.insert(question.id!, today, now.toIso8601String());
 
       if (correct) {
-        final prevInterval = question.intervalDays ?? 0;
-        final prevEase = question.easeFactor ?? 2.4;
-        final newInterval = prevInterval <= 0 ? 1 : (prevInterval * prevEase).round();
-        final newEase = (prevEase + 0.1).clamp(1.3, 3.0);
-        final dueDate = _formatDate(now.add(Duration(days: newInterval)));
-        await dao.updateStateReview(question.id!, newInterval, newEase, dueDate);
+        final r = Sm2.onCorrect(
+          previousInterval: question.intervalDays ?? 0,
+          previousEase: question.easeFactor ?? Sm2.defaultEase,
+        );
+        final dueDate = _formatDate(now.add(Duration(days: r.intervalDays)));
+        await dao.updateStateReview(question.id!, r.intervalDays, r.easeFactor, dueDate);
       } else {
         await dao.updateStateNeutral(question.id!);
       }
@@ -389,9 +405,16 @@ class _QuestionScreenState extends State<QuestionScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.quiz_outlined, size: context.icon(64), color: Colors.grey[300]),
+                Icon(_doneToday ? Icons.check_circle_outline : Icons.quiz_outlined,
+                    size: context.icon(64), color: Colors.grey[300]),
                 const SizedBox(height: 12),
-                Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[600])),
+                Text(
+                  _doneToday
+                      ? 'Tudo revisado por hoje. Volte amanhã!'
+                      : 'Nenhuma questão neste pacote ainda.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _openNewQuestion,

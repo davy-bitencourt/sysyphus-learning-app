@@ -37,7 +37,7 @@ class DatabaseHelper{
 
     return await openDatabase(
       dir, 
-      version: 4, 
+      version: 5, 
       onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, 
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
@@ -66,6 +66,11 @@ class DatabaseHelper{
     }
     if (oldVersion < 4) {
       await applySyncSchema(db);
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE session ADD COLUMN spaced_repetition INTEGER NOT NULL DEFAULT 0',
+      );
     }
   }
 
@@ -102,7 +107,8 @@ class DatabaseHelper{
           title TEXT,
           time_limit TEXT,
           total_q INTEGER,
-          tag_filters TEXT
+          tag_filters TEXT,
+          spaced_repetition INTEGER NOT NULL DEFAULT 0
         )
       """
     );

@@ -7,6 +7,8 @@ class SessionDto {
   final int? total_q;
   /// Filtro por tag, em JSON: [{"tag_id": 1, "quantity": 10}]. null = sem filtro.
   final String? tagFilters;
+  /// true = a sessão oferta só as questões pendentes pelo algoritmo (SM-2).
+  final bool spacedRepetition;
 
   SessionDto({
     this.id,
@@ -14,6 +16,7 @@ class SessionDto {
     this.time_limit,
     this.total_q,
     this.tagFilters,
+    this.spacedRepetition = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -21,5 +24,6 @@ class SessionDto {
     'time_limit': time_limit,
     'total_q': total_q,
     'tag_filters': tagFilters,
+    'spaced_repetition': spacedRepetition ? 1 : 0,
   };
 }

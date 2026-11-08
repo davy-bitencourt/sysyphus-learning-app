@@ -42,6 +42,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   bool get _isEditing => widget.session != null;
 
   bool _unlimitedTime = true;
+  bool _spacedRepetition = false;
   bool _loading = true;
   bool _saving = false;
   bool _createdAny = false; 
@@ -85,6 +86,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
     final total = (s['total_q'] as num?)?.toInt();
     _totalController.text = total == null ? '' : total.toString();
+    _spacedRepetition = (s['spaced_repetition'] as num?)?.toInt() == 1;
 
     final filters = SessionDao.parseTagFilters(s['tag_filters'] as String?);
     _quotas
@@ -136,6 +138,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _timeUnit = 'min';
     _totalController.clear();
     _unlimitedTime = true;
+    _spacedRepetition = false;
     _quotas.clear();
     _tagInputController.clear();
     _tagQuery = '';
@@ -316,6 +319,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         time_limit: SessionDao.formatTimeLimit(limitSeconds), 
         total_q: total,
         tagFilters: filters == null ? null : jsonEncode(filters),
+        spacedRepetition: _spacedRepetition,
       );
       if (_isEditing) {
         await SessionDao().update(dto);
@@ -414,6 +418,20 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                   'Total de questões',
                   hint: 'Ilimitado',
                   onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Repetição espaçada',
+                      style: TextStyle(color: context.colors.text)),
+                  subtitle: Text(
+                    _spacedRepetition
+                        ? 'Oferta só as questões pendentes de hoje'
+                        : 'Oferta questões aleatórias',
+                    style: TextStyle(fontSize: 12, color: context.colors.mutedText),
+                  ),
+                  value: _spacedRepetition,
+                  onChanged: (v) => setState(() => _spacedRepetition = v),
                 ),
                 const SizedBox(height: 16),
 

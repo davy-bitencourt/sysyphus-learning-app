@@ -63,21 +63,48 @@ class QuestionDao {
     };
   }
 
+  /* "Pendente" na repetição espaçada: nova, esquecida (neutral) ou 'review'
+   * vencida. É a mesma regra do getStudyCounts (+ as novas). O '?' é a data de hoje. */
+  static const _pendingSql =
+      "(s.state IS NULL OR s.state = 'new' OR s.state = 'neutral' "
+      "OR (s.state = 'review' AND s.due_date <= ?))";
+
+  /* nas pendentes, as já vistas (vencidas) têm prioridade sobre as novas */
+  static const _dueFirstSql =
+      "CASE WHEN s.state IS NULL OR s.state = 'new' THEN 1 ELSE 0 END";
+
+  /* total de questões do pacote (para distinguir "pacote vazio" de "tudo revisado hoje") */
+  Future<int> countByPackage(int packageId) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.rawQuery(
+      'SELECT COUNT(*) AS total FROM question WHERE package_id = ?', [packageId],
+    );
+    return (rows.first['total'] as num?)?.toInt() ?? 0;
+  }
+
   /* Questões de uma rodada de estudo com SESSÃO:
    *  - cada filtro de tag traz exatamente `quantity` questões daquela tag (ou
    *    todas as que existirem, se houver menos);
    *  - o que sobrar até `totalQ` é completado com questões das demais tags
    *    (e sem tag), para as quantidades por tag não passarem do combinado;
    *  - sem filtro, sorteia `totalQ` questões do pacote.
-   * Diferente do getByPackage, aqui não há o teto de 60: o total é o da sessão. */
+   * Diferente do getByPackage, aqui não há o teto de 60: o total é o da sessão.
+   *  - [dueToday] (yyyy-MM-dd) != null liga a repetição espaçada: só entram as
+   *    questões pendentes (_pendingSql), as vencidas antes das novas. Se não
+   *    sobrar nenhuma, a lista volta vazia = nada mais a oferecer hoje. */
   Future<List<Map<String, dynamic>>> getForSession(
     int packageId,
     int totalQ,
-    List<Map<String, int>> tagFilters,
-  ) async {
+    List<Map<String, int>> tagFilters, {
+    String? dueToday,
+  }) async {
     final db = await DatabaseHelper.instance.database;
     const cols = 'q.id, q.template_id, q.tag_id, q.questions, s.state, s.interval_days, s.ease_factor, s.due_date';
     const base = 'FROM question q LEFT JOIN state s ON s.question_id = q.id WHERE q.package_id = ?';
+
+    final pending = dueToday == null ? '' : 'AND $_pendingSql';
+    final pendingArgs = dueToday == null ? const <Object>[] : <Object>[dueToday];
+    final order = dueToday == null ? 'RANDOM()' : '$_dueFirstSql, RANDOM()';
 
     final picked = <Map<String, dynamic>>[];
     final usedTags = <int>[];
@@ -86,8 +113,8 @@ class QuestionDao {
       final tagId = f['tag_id']!;
       usedTags.add(tagId);
       picked.addAll(await db.rawQuery(
-        'SELECT $cols $base AND q.tag_id = ? ORDER BY RANDOM() LIMIT ?',
-        [packageId, tagId, f['quantity']!],
+        'SELECT $cols $base AND q.tag_id = ? $pending ORDER BY $order LIMIT ?',
+        [packageId, tagId, ...pendingArgs, f['quantity']!],
       ));
     }
 
@@ -97,8 +124,8 @@ class QuestionDao {
           ? ''
           : 'AND (q.tag_id IS NULL OR q.tag_id NOT IN (${usedTags.map((_) => '?').join(',')}))';
       picked.addAll(await db.rawQuery(
-        'SELECT $cols $base $notIn ORDER BY RANDOM() LIMIT ?',
-        [packageId, ...usedTags, remaining],
+        'SELECT $cols $base $notIn $pending ORDER BY $order LIMIT ?',
+        [packageId, ...usedTags, ...pendingArgs, remaining],
       ));
     }
 

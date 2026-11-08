@@ -9,7 +9,7 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery(
       '''
-        SELECT id, title, time_limit, total_q, tag_filters
+        SELECT id, title, time_limit, total_q, tag_filters, spaced_repetition
         FROM session
       '''
     );
@@ -20,7 +20,7 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     final rows = await db.rawQuery(
       '''
-        SELECT s.id, s.title, s.time_limit, s.total_q, s.tag_filters
+        SELECT s.id, s.title, s.time_limit, s.total_q, s.tag_filters, s.spaced_repetition
         FROM package p
         JOIN session s ON s.id = p.session_id
         WHERE p.id = ?
@@ -88,9 +88,9 @@ class SessionDao {
     final db = await DatabaseHelper.instance.database;
     await db.rawInsert(
       '''
-        INSERT INTO session (title, time_limit, total_q, tag_filters)
-        VALUES (?, ?, ?, ?)
-      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters]
+        INSERT INTO session (title, time_limit, total_q, tag_filters, spaced_repetition)
+        VALUES (?, ?, ?, ?, ?)
+      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters, dto.spacedRepetition ? 1 : 0]
     );
   }
 
@@ -100,9 +100,9 @@ class SessionDao {
     await db.rawUpdate(
       '''
         UPDATE session
-        SET title = ?, time_limit = ?, total_q = ?, tag_filters = ?
+        SET title = ?, time_limit = ?, total_q = ?, tag_filters = ?, spaced_repetition = ?
         WHERE id = ?
-      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters, dto.id]
+      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters, dto.spacedRepetition ? 1 : 0, dto.id]
     );
   }
 
