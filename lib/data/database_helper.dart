@@ -1,40 +1,29 @@
 import 'package:sqflite/sqflite.dart';
-import 'dart:io';
+
+import 'platform/database_setup.dart';
 
 import 'sync/sync_schema.dart';
 
 class DatabaseHelper{
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static Future<Database>? _opening;
 
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    print('DB GETTER 1');
-
-    if (_database != null) {
-      print('DB GETTER 2 - database existe');
+    if (_database != null) return _database!;
+    try {
+      _database = await (_opening ??= _initDB('sysy_app.db'));
       return _database!;
+    } catch (_) {
+      _opening = null;
+      rethrow;
     }
-
-    print('DB GETTER 3 - chamando _initDB');
-    _database = await _initDB('sysy_app.db');
-
-    print('DB GETTER 4 - _initDB terminou');
-    return _database!;
   }
 
-  Future<Database> _initDB(String fileNane) async {
-    final dirDb = await getDatabasesPath();
-    print('DB: $dirDb');    
-
-    final String dir;
-    if(Platform.isWindows){
-      dir = '$dirDb\\$fileNane';
-    } else {
-      dir = '$dirDb/$fileNane';
-    }
-
+  Future<Database> _initDB(String fileName) async {
+    final dir = await databasePath(fileName);
     return await openDatabase(
       dir, 
       version: 5, 

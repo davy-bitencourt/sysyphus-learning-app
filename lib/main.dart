@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'dart:io';
+
+import 'data/platform/database_setup.dart';
 
 import 'data/services/sync_service.dart';
 import 'screens/home.dart';
@@ -9,10 +9,7 @@ import 'styles/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  initializeDatabase();
 
   await AppSettings.instance.load();
   await SyncService.instance.init();
@@ -39,7 +36,9 @@ class StudyApp extends StatelessWidget {
             final mq = MediaQuery.of(context);
             return MediaQuery(
               data: mq.copyWith(
-                textScaler: TextScaler.linear(mq.textScaler.scale(1.0) * settings.fontScale),
+                textScaler: TextScaler.linear(
+                  mq.textScaler.scale(1.0) * settings.fontScale,
+                ),
               ),
               child: child ?? const SizedBox.shrink(),
             );

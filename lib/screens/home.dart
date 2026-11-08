@@ -40,6 +40,7 @@ class _HomeState extends State<Home> {
   int _newCount = 0; // questões novas (nunca vistas)
   int _dueCount = 0; // questões para revisar
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -50,23 +51,33 @@ class _HomeState extends State<Home> {
 
   void _onPackagesChanged() => _loadData();
 
+  void _showPage(int index) {
+    if (_pageController.hasClients) _pageController.jumpToPage(index);
+  }
+
   Future<void> _loadData() async {
-    setState(() => _loading = true);
-
-    final packageRows = await PackageDao().getAll();
-    final heatmap = await _revlogSchema.getHeatmapData();
-    final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
-
-    if (!mounted) return;
     setState(() {
-      _packages = {
-        for (final row in packageRows) row['id'] as int: row['title'] as String
-      };
-      _activityMap = heatmap;
-      _newCount = counts['new'] ?? 0;
-      _dueCount = counts['due'] ?? 0;
-      _loading = false;
+      _loading = true;
+      _loadError = null;
     });
+    try {
+      final packageRows = await PackageDao().getAll();
+      final heatmap = await _revlogSchema.getHeatmapData();
+      final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
+      if (!mounted) return;
+      setState(() {
+        _packages = {
+          for (final row in packageRows) row['id'] as int: row['title'] as String
+        };
+        _activityMap = heatmap;
+        _newCount = counts['new'] ?? 0;
+        _dueCount = counts['due'] ?? 0;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _loadError = 'Não foi possível carregar os dados: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   String _formatDate(DateTime d) =>
@@ -84,18 +95,35 @@ class _HomeState extends State<Home> {
     return MainScaffold(
       title: 'Home',
       currentIndex: _currentIndex,
-      onTap: (i) => _pageController.jumpToPage(i),
-      onStatisticsTap: () => _pageController.jumpToPage(1),
+      onTap: _showPage,
+      onStatisticsTap: () => _showPage(1),
       onItemCreated: _loadData,
 
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (i) => setState(() => _currentIndex = i),
-        children: [
-          _isDesktop ? _buildDesktopBody() : _buildMobileBody(),
-          const StatisticsScreen(),
-        ],
-      ),
+      body: _loadError != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_loadError!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _loadData,
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : PageView(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentIndex = i),
+              children: [
+                _isDesktop ? _buildDesktopBody() : _buildMobileBody(),
+                const StatisticsScreen(),
+              ],
+            ),
     );
   }
 
