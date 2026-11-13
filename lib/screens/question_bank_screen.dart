@@ -605,7 +605,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // --- ABA 3: TEMPLATES (REORDENÁVEL) ---
   Widget _buildTemplatesTab() {
     return Column(
       children: [
@@ -824,7 +823,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // --- ABA 5: SESSÕES ---
   Widget _buildSessionsTab() {
     final visible = _sessions.where((s) => _matches((s['title'] as String?) ?? '')).toList();
     return Column(

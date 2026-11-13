@@ -66,7 +66,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Map<String, List<TextEditingController>> _optionControllers = {};
   Map<String, List<bool>> _optionCorrect = {};
 
-  /// Campos de texto que estão mostrando a prévia do Markdown (ids).
   final Set<String> _previewing = {};
 
   final Map<String, dynamic> _buffer = {};
@@ -668,8 +667,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
   }
 
-  // ---------------------------------------------------------------- markdown
-
   Widget _buildMarkdownField(FieldDefinition field) {
     final controller = _textControllers[field.id]!;
     final label = field.isStatement ? '${field.label}*' : field.label;
@@ -719,7 +716,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           onPressed: previewing ? null : onTap,
         );
 
-    // ExcludeFocus: tocar num botão não tira o foco (nem fecha o teclado) do campo.
     return ExcludeFocus(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -748,8 +744,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
   }
 
-  /// Envolve a seleção com [left]/[right] (ex.: **texto**). Sem seleção,
-  /// insere o par e deixa o cursor no meio.
   void _wrapSelection(TextEditingController c, String left, [String? right]) {
     right ??= left;
     final text = c.text;
@@ -767,7 +761,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
   }
 
-  /// Coloca [prefix] no começo de cada linha tocada pela seleção.
   void _prefixLines(TextEditingController c, String prefix) {
     final text = c.text;
     final sel = c.selection;

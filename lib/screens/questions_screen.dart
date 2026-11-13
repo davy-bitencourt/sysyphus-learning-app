@@ -204,7 +204,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       valueListenable: _timeLeft,
       builder: (context, left, _) {
         final d = left ?? Duration.zero;
-        final urgent = d.inSeconds <= 60; // último minuto em vermelho
+        final urgent = d.inSeconds <= 60; 
         final color = urgent ? const Color(0xFFC62828) : context.colors.mutedText;
         return SizedBox(
           height: 32,

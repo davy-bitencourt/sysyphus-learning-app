@@ -30,7 +30,7 @@ String _outcomeText(Tr t, ImportOutcome o) {
 }
 
 Future<bool> startPackImport(BuildContext context) async {
-  final t = context.tr; // resolvido antes dos awaits (o context pode sumir depois)
+  final t = context.tr;   
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
 
@@ -72,7 +72,7 @@ Future<bool> startPackImport(BuildContext context) async {
   );
   if (outcome == null) return false;
 
-  Home.packagesChanged.value++; // a Home recarrega pacotes e contagens
+  Home.packagesChanged.value++; 
   messenger.showSnackBar(SnackBar(content: Text(_outcomeText(t, outcome))));
   return true;
 }
@@ -344,7 +344,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
 }
 
 Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async {
-  final t = context.tr; // resolvido antes dos awaits
+  final t = context.tr; 
   final messenger = ScaffoldMessenger.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
 
@@ -361,7 +361,7 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
   } catch (e) {
     buildError = '$e';
   }
-  rootNavigator.pop(); // fecha o indicador de progresso
+  rootNavigator.pop(); 
 
   if (export == null) {
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.exportFailed', {'error': buildError ?? ''}))));

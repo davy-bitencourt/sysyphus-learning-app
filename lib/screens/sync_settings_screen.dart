@@ -9,10 +9,6 @@ import '../data/services/sync_service.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
-/// Settings > Sync: sincronização entre os seus aparelhos pela rede local.
-///
-/// A conta é só um ID secreto, sem e-mail. Um aparelho (normalmente o PC) vira
-/// o "host" e guarda a cópia central; os outros entram com o ID.
 class SyncSettingsScreen extends StatefulWidget {
   const SyncSettingsScreen({super.key});
 
@@ -101,7 +97,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   Future<void> _join() async {
     final joined = await showDialog<bool>(context: context, builder: (_) => const _JoinDialog());
     await _refresh();
-    if (joined == true) await _syncNow(); // primeira sincronização logo em seguida
+    if (joined == true) await _syncNow();
   }
 
   Future<void> _syncNow() async {
@@ -224,8 +220,6 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       ),
     ];
   }
-
-  // ------------------------------------------------------------- com conta
 
   List<Widget> _buildAccount(BuildContext context) {
     final c = context.colors;
@@ -451,10 +445,6 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Entrar numa conta
-// ---------------------------------------------------------------------------
 
 class _JoinDialog extends StatefulWidget {
   const _JoinDialog();

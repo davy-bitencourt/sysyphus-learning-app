@@ -8,7 +8,6 @@ import 'sync_settings_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  // 'title'/'sub' são chaves de tradução; 'id' é estável (usado na navegação).
   final List<Map<String, dynamic>> _settings = const [
     {'id': 'general',       'icon': Icons.settings,      'title': 'settings.general',       'sub': 'settings.general.sub'},
     {'id': 'reviewing',     'icon': Icons.rate_review,   'title': 'settings.reviewing',     'sub': 'settings.reviewing.sub'},
@@ -48,7 +47,6 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
 
-          // Lista de itens
           Column(
             children: List.generate(_settings.length, (i) {
               final item = _settings[i];
@@ -115,7 +113,6 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Settings > General: idioma do app.
 class GeneralSettingsScreen extends StatelessWidget {
   const GeneralSettingsScreen({super.key});
 
@@ -138,7 +135,7 @@ class GeneralSettingsScreen extends StatelessWidget {
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
@@ -213,7 +210,6 @@ class GeneralSettingsScreen extends StatelessWidget {
   }
 }
 
-/// Settings > Appearance: tema claro/escuro, cor de destaque e paleta do heatmap.
 class AppearanceSettingsScreen extends StatelessWidget {
   const AppearanceSettingsScreen({super.key});
 
@@ -236,7 +232,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
@@ -357,8 +353,6 @@ class AppearanceSettingsScreen extends StatelessWidget {
   }
 }
 
-
-/// Settings > Accessibility: tamanho da fonte e dos ícones do aplicativo.
 class AccessibilitySettingsScreen extends StatelessWidget {
   const AccessibilitySettingsScreen({super.key});
 
@@ -381,7 +375,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [

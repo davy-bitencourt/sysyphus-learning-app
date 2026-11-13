@@ -37,7 +37,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   final _tagInputController = TextEditingController();
   String _tagQuery = '';
   final _tagFocus = FocusNode();
-  _TagQuota? _editingQuota; // tag que está sendo editada (saiu da lista temporariamente)
+  _TagQuota? _editingQuota;   
   static final _quotaPattern = RegExp(r'^#?([^\s=#]+)=(\d+)$');
 
   bool get _isEditing => widget.session != null;
@@ -164,7 +164,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       s.trim().replaceAll(RegExp(r',+$'), '').trim();
 
   void _onTagInputChanged(String text) {
-    // espaço ou vírgula no final = fecha o token "tag=num" e vira tag
     final closed = text.endsWith(' ') || text.endsWith(',');
     if (closed && _quotaPattern.hasMatch(_clean(text))) {
       _commitTagInput();
@@ -183,7 +182,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _tagFocus.requestFocus();
   }
 
-  /// Transforma o texto do campo em tag. Retorna false se não conseguiu.
   bool _commitTagInput({bool warnFormat = true}) {
     final raw = _clean(_tagInputController.text);
     if (raw.isEmpty) return true;
