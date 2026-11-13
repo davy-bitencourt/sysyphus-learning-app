@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
@@ -166,11 +167,11 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _menuItem(Icons.folder_outlined, 'Novo pacote', 'package'),
-                      _menuItem(Icons.quiz_outlined, 'Nova questão', 'question'),
-                      _menuItem(Icons.dashboard_customize_outlined, 'Novo template', 'template'),
-                      _menuItem(Icons.label_outline, 'Nova tag', 'tag'),
-                      _menuItem(Icons.timer_outlined, 'Nova sessão', 'session'),
+                      _menuItem(Icons.folder_outlined, context.tr('menu.newPackage'), 'package'),
+                      _menuItem(Icons.quiz_outlined, context.tr('menu.newQuestion'), 'question'),
+                      _menuItem(Icons.dashboard_customize_outlined, context.tr('menu.newTemplate'), 'template'),
+                      _menuItem(Icons.label_outline, context.tr('menu.newTag'), 'tag'),
+                      _menuItem(Icons.timer_outlined, context.tr('menu.newSession'), 'session'),
                     ],
                   ),
                 ),
@@ -307,9 +308,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home_outlined, 'Home', 0),
+              _buildNavItem(Icons.home_outlined, context.tr('nav.home'), 0),
               const SizedBox(width: 48),
-              _buildNavItem(Icons.bar_chart_outlined, 'Statistics', 1),
+              _buildNavItem(Icons.bar_chart_outlined, context.tr('nav.statistics'), 1),
             ],
           ),
         ),
@@ -346,7 +347,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               const Text('Sysyphus', style: bigText),
             ]),
             IconButton(
-              tooltip: 'Sincronizar',
+              tooltip: context.tr('sync.tooltip'),
               icon: _syncing
                   ? SizedBox(
                       width: context.icon(20),
@@ -366,28 +367,28 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
         child: SafeArea(
           child: Column(
             children: [
-              _drawerItem(context, Icons.list, 'Home', active: true, onTap: () {
+              _drawerItem(context, Icons.list, context.tr('nav.home'), active: true, onTap: () {
                 Navigator.pop(context); // fecha o drawer
                 // Volta para a Home que já existe (primeira rota) em vez de
                 // empilhar outra, e garante que a aba aberta seja a Home.
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 widget.onTap?.call(0);
               }),
-              _drawerItem(context, Icons.chrome_reader_mode, 'Database', onTap: () {
+              _drawerItem(context, Icons.chrome_reader_mode, context.tr('nav.database'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
-              _drawerItem(context, Icons.bar_chart_outlined, 'Statistics', onTap: () {
+              _drawerItem(context, Icons.bar_chart_outlined, context.tr('nav.statistics'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const DetailedStatisticsScreen()));
               }),
               Divider(color: context.colors.border, thickness: 1, indent: 16, endIndent: 16),
-              _drawerItem(context, Icons.settings, 'Settings', onTap: () {
+              _drawerItem(context, Icons.settings, context.tr('nav.settings'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }),
-              _drawerItem(context, Icons.help_outline, 'Help', onTap: () {}),
-              _drawerItem(context, Icons.sports_soccer, 'Support', onTap: () {}),
+              _drawerItem(context, Icons.help_outline, context.tr('nav.help'), onTap: () {}),
+              _drawerItem(context, Icons.sports_soccer, context.tr('nav.support'), onTap: () {}),
             ],
           ),
         ),
@@ -481,10 +482,10 @@ class _SyncProgressDialogState extends State<_SyncProgressDialog> {
                     child: CircularProgressIndicator(strokeWidth: 3, color: context.colors.accent),
                   ),
                   const SizedBox(width: 20),
-                  const Expanded(child: Text('Atualizando…')),
+                  Expanded(child: Text(context.tr('sync.updating'))),
                 ],
               )
-            : Text('Não foi possível sincronizar: ${failed.error}'),
+            : Text(context.tr('sync.failedDialog', {'error': failed.error ?? ''})),
         actions: failed == null
             ? null
             : [TextButton(onPressed: () => Navigator.pop(context, failed), child: const Text('OK'))],

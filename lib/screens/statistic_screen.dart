@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/stats/review_stats.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
@@ -52,7 +53,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       return Center(
         child: _error == null
             ? const CircularProgressIndicator()
-            : _message(context, Icons.error_outline, 'Could not load statistics', _error!),
+            : _message(context, Icons.error_outline, context.tr('stats.loadFailed'), _error!),
       );
     }
 
@@ -69,8 +70,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(
-            child: _message(context, Icons.bar_chart_outlined, 'No data yet',
-              'Start studying to see your statistics here.'),
+            child: _message(context, Icons.bar_chart_outlined, context.tr('stats.noData'),
+              context.tr('stats.noDataHint')),
           ),
         ),
       ),
@@ -108,17 +109,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         maxColumns: 2,
         children: [
           StatGrid(children: [
-            StatTile(label: 'Today', value: formatCount(stats.reviewsToday), caption: 'reviews'),
+            StatTile(label: context.tr('stats.today'), value: formatCount(stats.reviewsToday), caption: context.tr('stats.reviews')),
             StatTile(
-              label: 'Current streak',
+              label: context.tr('stats.currentStreak'),
               value: formatDays(streak.length),
-              caption: 'Longest: ${formatDays(longest.length)}',
+              caption: context.tr('stats.longestCaption', {'days': formatDays(longest.length)}),
             ),
-            StatTile(label: 'Last 7 days', value: formatCount(stats.last7), caption: 'reviews'),
+            StatTile(label: context.tr('stats.last7'), value: formatCount(stats.last7), caption: context.tr('stats.reviews')),
             StatTile(
-              label: 'Total',
+              label: context.tr('stats.total'),
               value: formatCount(stats.total),
-              caption: 'in ${formatDays(stats.daysStudied)} studied',
+              caption: context.tr('stats.inStudied', {'days': formatDays(stats.daysStudied)}),
             ),
           ]),
           PeriodChartCard(stats: stats),

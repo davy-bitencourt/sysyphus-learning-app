@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../data/schema/question_schema.dart';
@@ -175,15 +176,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Tempo esgotado'),
+        title: Text(context.tr('qs.timeUpTitle')),
         content: Text(
-          'O tempo limite da sessão acabou. Você respondeu '
-          '$_answeredCount de ${_questions.length} questões.',
+          context.tr('qs.timeUpBody', {'answered': _answeredCount, 'total': _questions.length}),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Encerrar'),
+            child: Text(context.tr('qs.end')),
           ),
         ],
       ),
@@ -408,9 +408,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     size: context.icon(64), color: Colors.grey[300]),
                 const SizedBox(height: 12),
                 Text(
-                  _doneToday
-                      ? 'Tudo revisado por hoje. Volte amanhã!'
-                      : 'Nenhuma questão neste pacote ainda.',
+                  context.tr(_doneToday ? 'qs.allDone' : 'qs.noQuestions'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
@@ -421,7 +419,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     backgroundColor: context.colors.accent,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Adicionar questão'),
+                  child: Text(context.tr('qs.addQuestion')),
                 ),
               ],
             ),
@@ -479,7 +477,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             : null,
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'Opções',
+            tooltip: context.tr('common.options'),
             color: context.colors.surface,
             icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
             onSelected: (value) {
@@ -487,8 +485,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
               if (value == 'add') _openNewQuestion();
             },
             itemBuilder: (_) => [
-              item('edit', Icons.edit_outlined, 'Editar'),
-              item('add', Icons.add, 'Adicionar'),
+              item('edit', Icons.edit_outlined, context.tr('common.edit')),
+              item('add', Icons.add, context.tr('common.add')),
             ],
           ),
         ],
@@ -739,9 +737,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
         color: context.colors.bg,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: _centered(!_answered
-          ? _fullWidthButton('Mostrar Resposta', _showAnswer)
+          ? _fullWidthButton(context.tr('qs.showAnswer'), _showAnswer)
           : _hasGradableField(_current)
-              ? _fullWidthButton('Continuar', () => _registerAndNext(_isCurrentAnswerCorrect(_current)))
+              ? _fullWidthButton(context.tr('qs.continue'), () => _registerAndNext(_isCurrentAnswerCorrect(_current)))
               : Row(children: [
                   Expanded(
                     child: OutlinedButton(
@@ -752,7 +750,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('FALHA'),
+                      child: Text(context.tr('qs.fail')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -765,7 +763,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('CORRETO'),
+                      child: Text(context.tr('qs.correct')),
                     ),
                   ),
                 ]),

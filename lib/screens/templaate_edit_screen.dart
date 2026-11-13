@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:Sysyphus/l10n/strings.dart';
 import 'package:Sysyphus/styles/app_theme.dart';
 import 'package:Sysyphus/data/DAO/template_dao.dart';
 import 'package:Sysyphus/data/models/field_model.dart';
@@ -84,11 +85,11 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
 
   String _imageLimitText(FieldDefinition f) {
     if (f.maxWidth != null && f.maxHeight != null) {
-      return 'máx. ${_fmtLimit(f.maxWidth)} × ${_fmtLimit(f.maxHeight)} px';
+      return context.tr('tpl.limitBoth', {'w': _fmtLimit(f.maxWidth), 'h': _fmtLimit(f.maxHeight)});
     }
-    if (f.maxWidth != null) return 'largura máx. ${_fmtLimit(f.maxWidth)} px';
-    if (f.maxHeight != null) return 'altura máx. ${_fmtLimit(f.maxHeight)} px';
-    return 'tamanho original';
+    if (f.maxWidth != null) return context.tr('tpl.limitWidth', {'w': _fmtLimit(f.maxWidth)});
+    if (f.maxHeight != null) return context.tr('tpl.limitHeight', {'h': _fmtLimit(f.maxHeight)});
+    return context.tr('tpl.originalSize');
   }
 
   void _removeField(FieldDefinition field) {
@@ -139,12 +140,12 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
 
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) {
-      _showError('Dê um nome ao template.');
+      _showError(context.tr('tpl.nameRequired'));
       return;
     }
     final fields = _computeFields();
     if (fields.length < 2) {
-      _showError('Adicione pelo menos um campo além do enunciado.');
+      _showError(context.tr('tpl.needField'));
       return;
     }
 
@@ -165,7 +166,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
           _nameController.clear();
           _items = _buildItems(const <FieldDefinition>[]);
         });
-        _showMessage('Template "${model.name}" salvo.');
+        _showMessage(context.tr('tpl.saved', {'name': model.name}));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -215,7 +216,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
           icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => _leave(),
         ),
-        title: Text(_isEditing ? 'Editar template' : 'Novo template',
+        title: Text(context.tr(_isEditing ? 'tpl.edit' : 'tpl.new'),
           style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
@@ -233,8 +234,8 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
             child: TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: 'Nome do template',
-                hintText: 'Ex: Questão com imagem e múltipla escolha',
+                labelText: context.tr('tpl.name'),
+                hintText: context.tr('tpl.nameHint'),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
@@ -247,7 +248,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
               child: TextButton.icon(
                 onPressed: _addField,
                 icon: Icon(Icons.add, color: context.colors.accent),
-                label: Text('Adicionar campo', style: TextStyle(color: context.colors.accent)),
+                label: Text(context.tr('tpl.addField'), style: TextStyle(color: context.colors.accent)),
               ),
             ),
           ),
@@ -282,7 +283,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(_saving ? 'Salvando...' : 'Salvar template', style: const TextStyle(fontSize: 15)),
+              child: Text(context.tr(_saving ? 'common.saving' : 'tpl.save'), style: const TextStyle(fontSize: 15)),
             ),
           ),
         ),
@@ -330,9 +331,9 @@ Widget _buildDividerRow({required Key key}) {
                 Text(field.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 Text(
                   field.isStatement
-                      ? 'Texto • obrigatório'
+                      ? context.tr('tpl.textRequired')
                       : FieldType.needsOptionCount(field.type)
-                          ? '${FieldType.label(field.type)} • ${field.optionCount} opções'
+                          ? '${FieldType.label(field.type)} • ${context.tr('tpl.nOptions', {'n': field.optionCount})}'
                           : field.type == FieldType.image
                               ? '${FieldType.label(field.type)} • ${_imageLimitText(field)}'
                               : FieldType.label(field.type),
@@ -343,7 +344,7 @@ Widget _buildDividerRow({required Key key}) {
           ),
           if (field.type == FieldType.image)
             IconButton(
-              tooltip: 'Tamanho da imagem',
+              tooltip: context.tr('tpl.imageSize'),
               icon: Icon(Icons.aspect_ratio_outlined, size: context.icon(18), color: Colors.grey[500]),
               onPressed: () => _editImageSize(field),
             ),
@@ -415,13 +416,13 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Novo campo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(context.tr('tpl.newField'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           TextField(
             controller: _labelController,
             decoration: InputDecoration(
-              labelText: 'Rótulo do campo',
-              hintText: 'Ex: Imagem do enunciado',
+              labelText: context.tr('tpl.fieldLabel'),
+              hintText: context.tr('tpl.fieldLabelHint'),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
@@ -433,20 +434,20 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
                 .toList(),
             onChanged: (v) => setState(() => _type = v ?? FieldType.text),
             decoration: InputDecoration(
-              labelText: 'Tipo de campo',
+              labelText: context.tr('tpl.fieldType'),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
           if (_type == FieldType.image) ...[
             const SizedBox(height: 12),
-            Text('Tamanho máximo da imagem (opcional)',
+            Text(context.tr('tpl.maxImageSizeOptional'),
               style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _limitField(_maxWidthController, 'Largura (px)')),
+                Expanded(child: _limitField(_maxWidthController, context.tr('tpl.widthPx'))),
                 const SizedBox(width: 12),
-                Expanded(child: _limitField(_maxHeightController, 'Altura (px)')),
+                Expanded(child: _limitField(_maxHeightController, context.tr('tpl.heightPx'))),
               ],
             ),
           ],
@@ -454,7 +455,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text('Quantidade de opções:'),
+                Text(context.tr('tpl.optionCount')),
                 IconButton(
                   onPressed: _optionCount > 2 ? () => setState(() => _optionCount--) : null,
                   icon: const Icon(Icons.remove_circle_outline),
@@ -476,7 +477,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
                 backgroundColor: context.colors.accent,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Adicionar'),
+              child: Text(context.tr('common.add')),
             ),
           ),
         ],
@@ -540,33 +541,32 @@ class _ImageSizeDialogState extends State<_ImageSizeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Tamanho da imagem'),
+      title: Text(context.tr('tpl.imageSize')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tamanho máximo de exibição, em pixels. A imagem é reduzida para '
-            'caber, sem distorcer. Deixe em branco para não limitar.',
+            context.tr('tpl.imageSizeBody'),
             style: TextStyle(fontSize: 12, color: Colors.grey[500]),
           ),
           const SizedBox(height: 16),
-          _limitField(_width, 'Largura máxima (px)'),
+          _limitField(_width, context.tr('tpl.maxWidthPx')),
           const SizedBox(height: 12),
-          _limitField(_height, 'Altura máxima (px)'),
+          _limitField(_height, context.tr('tpl.maxHeightPx')),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(context.tr('common.cancel')),
         ),
         TextButton(
           onPressed: () => Navigator.pop(
             context,
             _ImageLimits(_parseLimit(_width.text), _parseLimit(_height.text)),
           ),
-          child: const Text('Salvar'),
+          child: Text(context.tr('common.save')),
         ),
       ],
     );

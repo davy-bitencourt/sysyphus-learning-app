@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
-const List<String> kMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const List<String> kWeekdayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const List<String> kWeekdayLong = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// Antes eram const; agora seguem o idioma escolhido (ver l10n/strings.dart).
+List<String> get kMonthNames => monthAbbr();
+List<String> get kWeekdayShort => weekdayAbbr();
+List<String> get kWeekdayLong => weekdayFull();
 
 const Color _kDown = Color(0xFFC62828);
 
@@ -17,17 +19,22 @@ String formatMonth(DateTime d) => '${kMonthNames[d.month - 1]} ${d.year}';
 /// 1234567 -> 1,234,567
 String formatCount(num n) {
   final digits = n.round().toString();
+  final sep = currentLang() == 'pt' ? '.' : ',';
   final buffer = StringBuffer();
   for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0 && digits[i - 1] != '-') buffer.write(',');
+    if (i > 0 && (digits.length - i) % 3 == 0 && digits[i - 1] != '-') buffer.write(sep);
     buffer.write(digits[i]);
   }
   return buffer.toString();
 }
 
-String formatAverage(double v) => v >= 10 ? formatCount(v) : v.toStringAsFixed(1);
+String formatAverage(double v) {
+  if (v >= 10) return formatCount(v);
+  final text = v.toStringAsFixed(1);
+  return currentLang() == 'pt' ? text.replaceAll('.', ',') : text;
+}
 
-String formatDays(int n) => '${formatCount(n)} ${n == 1 ? 'day' : 'days'}';
+String formatDays(int n) => '${formatCount(n)} ${trg(n == 1 ? 'stats.day' : 'stats.days')}';
 
 /// Cartão com título e ícone que agrupa uma seção.
 class StatCard extends StatelessWidget {
@@ -179,7 +186,7 @@ class PeriodRow extends StatelessWidget {
       delta = '${pct > 0 ? '▲' : (pct < 0 ? '▼' : '•')} ${pct.abs()}%';
       color = pct > 0 ? c.accent : (pct < 0 ? _kDown : c.mutedText);
     } else if (value > 0) {
-      delta = 'new';
+      delta = context.tr('stats.new');
       color = c.accent;
     }
     return Padding(

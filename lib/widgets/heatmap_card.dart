@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 
@@ -56,7 +57,8 @@ class HeatmapCard extends StatelessWidget {
     final c           = context.colors;
     final todayCount  = activityMap[todayNorm] ?? 0;
     final streak      = _streak(activityMap, todayNorm);
-    final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final monthNames  = monthAbbr();
+    final weekdays    = weekdayAbbr(); // Seg..Dom
 
     return Center(
     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 800),
@@ -88,12 +90,12 @@ class HeatmapCard extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
-                    const Text('Study Activity', style: mediumText),
+                    Text(context.tr('home.studyActivity'), style: mediumText),
                     const SizedBox(height: 2),
                   ],
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('$todayCount reviewed today', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    Text('$streak day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
+                    Text(context.tr('heatmap.reviewedToday', {'n': todayCount}), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(context.tr('heatmap.dayStreak', {'n': streak}), style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
               ),
@@ -106,7 +108,7 @@ class HeatmapCard extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   const SizedBox(height: 14),
                   ...List.generate(7, (i) {
-                    final label = i == 0 ? 'Sun' : i == 2 ? 'Tue' : i == 4 ? 'Thu' : i == 6 ? 'Sat' : '';
+                    final label = i == 0 ? weekdays[6] : i == 2 ? weekdays[1] : i == 4 ? weekdays[3] : i == 6 ? weekdays[5] : '';
                     return SizedBox(
                       height: cellStep,
                       child: Text(label,
@@ -181,14 +183,14 @@ class HeatmapCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(children: [
-                  Text('Less', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
+                  Text(context.tr('heatmap.less'), style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                   const SizedBox(width: 4),
                   ...[0, 1, 2, 3, 4].map((v) => Container(
                     width: 9, height: 9,
                     margin: const EdgeInsets.only(right: 2),
                     decoration: BoxDecoration(color: _colorForLevel(v, c), borderRadius: BorderRadius.circular(2)),
                   )),
-                  Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
+                  Text(context.tr('heatmap.more'), style: TextStyle(fontSize: 9, color: Colors.grey[400])),
                 ]),
                 Row(children: [
                   Text('+$newCount', style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),

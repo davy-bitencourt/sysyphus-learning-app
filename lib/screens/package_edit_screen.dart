@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 class PackageEditScreen extends StatefulWidget {
@@ -69,7 +70,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dê um nome ao pacote antes de salvar.')));
+        SnackBar(content: Text(context.tr('pkg.nameRequired'))));
       return;
     }
 
@@ -85,7 +86,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
         if (!mounted) return;
         _titleController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pacote "$title" salvo.')),
+          SnackBar(content: Text(context.tr('pkg.saved', {'title': title}))),
         );
       }
     } finally {
@@ -102,20 +103,16 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir pacote'),
-        content: Text(
-          'Tem certeza que deseja excluir o pacote "$title"?\n\n'
-          'Isso apagará também todas as questões dele. O histórico de '
-          'revisões (heatmap) é mantido. Essa ação não pode ser desfeita.',
-        ),
+        title: Text(context.tr('pkg.deleteTitle')),
+        content: Text(context.tr('pkg.deleteBody', {'title': title})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir tudo', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('pkg.deleteAll'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -131,7 +128,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir o pacote: $e')),
+        SnackBar(content: Text(context.tr('pkg.deleteFailed', {'error': e}))),
       );
     }
   }
@@ -162,7 +159,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
           icon: Icon(Icons.arrow_back, color: context.colors.text),
           onPressed: () => _leave(),
         ),
-        title: Text(_isEditing ? 'Editar pacote' : 'Novo pacote',
+        title: Text(context.tr(_isEditing ? 'pkg.edit' : 'pkg.new'),
           style: TextStyle(color: context.colors.text,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
@@ -181,7 +178,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                 TextField(
                   controller: _titleController,
                   decoration: InputDecoration(
-                    labelText: 'Nome do pacote',
+                    labelText: context.tr('pkg.name'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -190,15 +187,15 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                 DropdownButtonFormField<int?>(
                   initialValue: _selectedSessionId,
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('Sem sessão vinculada')),
+                    DropdownMenuItem(value: null, child: Text(context.tr('pkg.noSession'))),
                     ..._sessions.map((s) => DropdownMenuItem(
                       value: s['id'] as int,
-                      child: Text((s['title'] as String?) ?? 'Sessão ${s['id']}'),
+                      child: Text((s['title'] as String?) ?? context.tr('pkg.sessionFallback', {'id': s['id'] as Object})),
                     )),
                   ],
                   onChanged: (v) => setState(() => _selectedSessionId = v),
                   decoration: InputDecoration(
-                    labelText: 'Sessão (opcional)',
+                    labelText: context.tr('pkg.sessionOptional'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -219,7 +216,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(_saving ? 'Salvando...' : 'Salvar pacote', style: const TextStyle(fontSize: 15)),
+              child: Text(context.tr(_saving ? 'common.saving' : 'pkg.save'), style: const TextStyle(fontSize: 15)),
             ),
           ),
         ),

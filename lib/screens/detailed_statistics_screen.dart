@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/DAO/revlog_dao.dart';
 import '../data/stats/review_stats.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../widgets/period_chart_card.dart';
 import '../widgets/stats_widgets.dart';
@@ -54,7 +55,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Detailed statistics',
+          context.tr('stats.detailedTitle'),
           style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
@@ -83,7 +84,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
           child: Center(
             child: _error == null
                 ? const CircularProgressIndicator()
-                : Text('Could not load statistics: $_error',
+                : Text(context.tr('stats.loadFailedWith', {'error': _error!}),
                     textAlign: TextAlign.center, style: TextStyle(color: c.mutedText)),
           ),
         ),
@@ -93,10 +94,10 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     if (stats.isEmpty) {
       return [
         StatCard(
-          title: 'No reviews yet',
+          title: context.tr('stats.noReviews'),
           icon: Icons.insights_outlined,
           child: Text(
-            'Your detailed statistics appear here after you study your first questions.',
+            context.tr('stats.noReviewsHint'),
             style: TextStyle(fontSize: 13, color: c.mutedText),
           ),
         ),
@@ -116,25 +117,25 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
 
   Widget _overview(ReviewStats s) {
     return StatCard(
-      title: 'Overview',
+      title: context.tr('stats.overview'),
       child: StatGrid(children: [
-        StatTile(label: 'Total reviews', value: formatCount(s.total), outlined: true),
+        StatTile(label: context.tr('stats.totalReviews'), value: formatCount(s.total), outlined: true),
         StatTile(
-          label: 'Days studied',
+          label: context.tr('stats.daysStudied'),
           value: formatCount(s.daysStudied),
-          caption: s.firstDay == null ? null : 'since ${formatDay(s.firstDay!)}',
+          caption: s.firstDay == null ? null : context.tr('stats.since', {'date': formatDay(s.firstDay!)}),
           outlined: true,
         ),
         StatTile(
-          label: 'Avg per study day',
+          label: context.tr('stats.avgStudyDay'),
           value: formatAverage(s.avgPerStudiedDay),
-          caption: 'reviews',
+          caption: context.tr('stats.reviews'),
           outlined: true,
         ),
         StatTile(
-          label: 'Avg per day',
+          label: context.tr('stats.avgDay'),
           value: formatAverage(s.avgPerDay),
-          caption: 'counting days off',
+          caption: context.tr('stats.countingDaysOff'),
           outlined: true,
         ),
       ]),
@@ -144,18 +145,18 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
   Widget _recentActivity(BuildContext context, ReviewStats s) {
     final c = context.colors;
     return StatCard(
-      title: 'Recent activity',
+      title: context.tr('stats.recent'),
       child: Column(
         children: [
-          PeriodRow(label: 'Today', value: s.reviewsToday, previous: s.reviewsYesterday),
-          PeriodRow(label: 'Last 7 days', value: s.last7, previous: s.previous7),
-          PeriodRow(label: 'Last 30 days', value: s.last30, previous: s.previous30),
-          PeriodRow(label: 'Last 365 days', value: s.last365, previous: s.previous365),
+          PeriodRow(label: context.tr('stats.today'), value: s.reviewsToday, previous: s.reviewsYesterday),
+          PeriodRow(label: context.tr('stats.last7'), value: s.last7, previous: s.previous7),
+          PeriodRow(label: context.tr('stats.last30'), value: s.last30, previous: s.previous30),
+          PeriodRow(label: context.tr('stats.last365'), value: s.last365, previous: s.previous365),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Arrows compare with the period right before (yesterday, the 7, 30 or 365 days before).',
+              context.tr('stats.arrowsHint'),
               style: TextStyle(fontSize: 11, color: c.mutedText),
             ),
           ),
@@ -167,22 +168,22 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
   Widget _streaks(ReviewStats s) {
     final current = s.currentStreak;
     final longest = s.longestStreak;
-    String pct(int n, int of) => '$n of $of days (${(n / of * 100).round()}%)';
+    String pct(int n, int of) => context.tr('stats.nOfDays', {'n': n, 'of': of, 'pct': (n / of * 100).round()});
     return StatCard(
-      title: 'Streaks and consistency',
+      title: context.tr('stats.streaks'),
       child: Column(
         children: [
-          StatRow('Current streak', formatDays(current.length)),
+          StatRow(context.tr('stats.currentStreak'), formatDays(current.length)),
           if (current.start != null)
-            StatRow('Current streak since', formatDay(current.start!)),
-          StatRow('Longest streak', formatDays(longest.length)),
+            StatRow(context.tr('stats.currentSince'), formatDay(current.start!)),
+          StatRow(context.tr('stats.longestStreak'), formatDays(longest.length)),
           if (longest.start != null && longest.end != null)
-            StatRow('Longest streak period',
+            StatRow(context.tr('stats.longestPeriod'),
               longest.length == 1
                   ? formatDay(longest.start!)
                   : '${formatDayShort(longest.start!)} – ${formatDay(longest.end!)}'),
-          StatRow('Studied in the last 30 days', pct(s.daysStudiedIn(30), 30)),
-          StatRow('Studied in the last 90 days', pct(s.daysStudiedIn(90), 90)),
+          StatRow(context.tr('stats.studied30'), pct(s.daysStudiedIn(30), 30)),
+          StatRow(context.tr('stats.studied90'), pct(s.daysStudiedIn(90), 90)),
         ],
       ),
     );
@@ -193,14 +194,14 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     final week = s.bestWeek;
     final month = s.bestMonth;
     return StatCard(
-      title: 'Records',
+      title: context.tr('stats.records'),
       child: Column(
         children: [
-          if (day != null) StatRow('Best day', '${formatCount(day.count)} · ${formatDay(day.start)}'),
+          if (day != null) StatRow(context.tr('stats.bestDay'), '${formatCount(day.count)} · ${formatDay(day.start)}'),
           if (week != null)
-            StatRow('Best week', '${formatCount(week.count)} · week of ${formatDayShort(week.start)}'),
+            StatRow(context.tr('stats.bestWeek'), '${formatCount(week.count)} · ${context.tr('stats.weekOf', {'date': formatDayShort(week.start)})}'),
           if (month != null)
-            StatRow('Best month', '${formatCount(month.count)} · ${formatMonth(month.start)}'),
+            StatRow(context.tr('stats.bestMonth'), '${formatCount(month.count)} · ${formatMonth(month.start)}'),
         ],
       ),
     );
@@ -221,7 +222,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               icon: Icon(Icons.delete_outline, size: context.icon(20)),
-              label: const Text('Delete review history'),
+              label: Text(context.tr('stats.deleteHistory')),
             ),
           ),
         ],
@@ -232,21 +233,16 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete review history'),
-        content: const Text(
-          'This permanently deletes every recorded review, which clears the '
-          'heatmap and the statistics based on it.\n\n'
-          'Your questions and their review schedule are kept. '
-          'This cannot be undone.',
-        ),
+        title: Text(context.tr('stats.deleteHistory')),
+        content: Text(context.tr('stats.deleteHistoryBody')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: _danger)),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: _danger)),
           ),
         ],
       ),
@@ -254,14 +250,15 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
     if (confirmed != true || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    final t = context.tr;
     try {
       await RevlogDao().deleteAll();
       Home.packagesChanged.value++;
       await _load();
-      messenger.showSnackBar(const SnackBar(content: Text('Review history deleted.')));
+      messenger.showSnackBar(SnackBar(content: Text(t('stats.historyDeleted'))));
     } catch (e) {
       debugPrint('Erro ao apagar o histórico de revisões: $e');
-      messenger.showSnackBar(SnackBar(content: Text('Could not delete the history: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(t('stats.historyDeleteFailed', {'error': e}))));
     }
   }
 }

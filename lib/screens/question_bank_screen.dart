@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../widgets/new_tag_dialog.dart';
 import 'pack_transfer.dart';
@@ -72,7 +73,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   bool _matches(String text) => _query.isEmpty || _norm(text).contains(_norm(_query));
 
   Widget _noResults() => Center(
-        child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noResults'), style: TextStyle(color: Colors.grey[500])),
       );
 
   Widget _itemMenu({
@@ -97,7 +98,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
 
     return PopupMenuButton<String>(
-      tooltip: 'Opções',
+      tooltip: context.tr('common.options'),
       color: context.colors.surface,
       icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
       onSelected: (value) {
@@ -111,9 +112,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         }
       },
       itemBuilder: (_) => [
-        if (onEdit != null) item('edit', Icons.edit_outlined, 'Editar'),
-        if (onExport != null) item('export', Icons.file_upload_outlined, 'Exportar'),
-        item('delete', Icons.delete_outline, 'Excluir', color: danger),
+        if (onEdit != null) item('edit', Icons.edit_outlined, context.tr('common.edit')),
+        if (onExport != null) item('export', Icons.file_upload_outlined, context.tr('common.export')),
+        item('delete', Icons.delete_outline, context.tr('common.delete'), color: danger),
       ],
     );
   }
@@ -230,23 +231,23 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   onChanged: (v) => setState(() => _query = v.trim()),
                   style: TextStyle(color: context.colors.text, fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'Buscar na aba atual...',
+                    hintText: context.tr('qb.searchHint'),
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     border: InputBorder.none,
                   ),
                 )
               : Text(
-                  'Banco de questões',
+                  context.tr('qb.title'),
                   style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
                 ),
           actions: [
             IconButton(
-              tooltip: _searching ? 'Fechar busca' : 'Buscar',
+              tooltip: context.tr(_searching ? 'qb.closeSearch' : 'qb.search'),
               icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.text),
               onPressed: _toggleSearch,
             ),
             PopupMenuButton<String>(
-              tooltip: 'Importar / Exportar',
+              tooltip: context.tr('qb.importExport'),
               icon: Icon(Icons.more_vert, color: context.colors.text),
               color: context.colors.surface,
               onSelected: (value) async {
@@ -264,7 +265,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_download_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text('Importar pacote (.zip)', style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.importZip'), style: TextStyle(color: context.colors.text)),
                     ],
                   ),
                 ),
@@ -274,7 +275,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_upload_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text('Exportar tudo (.zip)', style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.exportZip'), style: TextStyle(color: context.colors.text)),
                     ],
                   ),
                 ),
@@ -286,12 +287,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             labelColor: context.colors.accent,
             unselectedLabelColor: const Color(0xFF9E9E9E),
             indicatorColor: context.colors.accent,
-            tabs: const [
-              Tab(text: 'Questões'),
-              Tab(text: 'Pacotes'),
-              Tab(text: 'Templates'),
-              Tab(text: 'Sessões'),
-              Tab(text: 'Tags'),
+            tabs: [
+              Tab(text: context.tr('qb.tabQuestions')),
+              Tab(text: context.tr('qb.tabPackages')),
+              Tab(text: context.tr('qb.tabTemplates')),
+              Tab(text: context.tr('qb.tabSessions')),
+              Tab(text: context.tr('qb.tabTags')),
             ],
           ),
         ),
@@ -313,7 +314,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildQuestionsTab() {
     if (_packages.isEmpty) {
       return Center(
-        child: Text('Nenhum pacote cadastrado ainda.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noPackages'), style: TextStyle(color: Colors.grey[500])),
       );
     }
 
@@ -344,7 +345,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           _loadQuestionsForSelectedPackage();
                         },
                         decoration: InputDecoration(
-                          labelText: 'Pacote',
+                          labelText: context.tr('qb.package'),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
@@ -399,7 +400,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova questão'),
+                label: Text(context.tr('menu.newQuestion')),
               ),
             ),
           ),
@@ -414,7 +415,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
     if (_packageQuestions.isEmpty) {
       return Center(
-        child: Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qs.noQuestions'), style: TextStyle(color: Colors.grey[500])),
       );
     }
     final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
@@ -424,7 +425,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
         final question = visible[i];
-        final title = question.statement.isEmpty ? '(sem enunciado)' : question.statement;
+        final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
         return Container(
           decoration: BoxDecoration(
             color: context.colors.surfaceAlt,
@@ -456,16 +457,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir questão'),
-        content: Text('Tem certeza que deseja excluir "${question.statement.isEmpty ? '(sem enunciado)' : question.statement}"?'),
+        title: Text(context.tr('qb.deleteQuestion')),
+        content: Text(context.tr('qb.deleteQuestionBody', {'name': question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -546,7 +547,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Novo pacote'),
+                label: Text(context.tr('menu.newPackage')),
               ),
             ),
           ),
@@ -586,13 +587,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Excluir Pacote'),
-        content: Text('Deseja excluir o pacote "${pkg['title']}"?'),
+        title: Text(context.tr('qb.deletePackage')),
+        content: Text(context.tr('qb.deletePackageBody', {'name': '${pkg['title']}'})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('common.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -610,7 +611,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       children: [
         Expanded(
           child: _templates.isEmpty
-              ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
+              ? Center(child: Text(context.tr('qb.noTemplates'), style: TextStyle(color: Colors.grey[500])))
               : _query.isNotEmpty
                   ? _buildTemplateResults()
                   : ReorderableListView.builder(
@@ -646,7 +647,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           Expanded(
                             child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
                           ),
-                          Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                          Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           _itemMenu(
                                 onEdit: () => _editTemplate(template),
                                 onDelete: () => _deleteTemplate(template),
@@ -678,7 +679,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Novo template'),
+                label: Text(context.tr('menu.newTemplate')),
               ),
             ),
           ),
@@ -707,7 +708,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               Expanded(
                 child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
               ),
-              Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               _itemMenu(
                     onEdit: () => _editTemplate(template),
                     onDelete: () => _deleteTemplate(template),
@@ -727,7 +728,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_tags.isEmpty
-                  ? Center(child: Text('Nenhuma tag cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noTags'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
@@ -782,7 +783,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova tag'),
+                label: Text(context.tr('menu.newTag')),
               ),
             ),
           ),
@@ -795,19 +796,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir tag'),
-        content: Text(
-          'Tem certeza que deseja excluir a tag "#${tag['title']}"? '
-          'As questões que a usam ficarão sem tag.',
-        ),
+        title: Text(context.tr('qb.deleteTag')),
+        content: Text(context.tr('qb.deleteTagBody', {'name': '${tag['title']}'})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -821,7 +819,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       debugPrint('Erro ao excluir tag ${tag['id']}: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir a tag: $e')),
+        SnackBar(content: Text(context.tr('qb.deleteTagFailed', {'error': e}))),
       );
     }
   }
@@ -834,7 +832,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_sessions.isEmpty
-                  ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noSessions'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
@@ -901,7 +899,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova sessão'),
+                label: Text(context.tr('menu.newSession')),
               ),
             ),
           ),
@@ -914,8 +912,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final limitSeconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
     final total = (session['total_q'] as num?)?.toInt();
     final parts = <String>[
-      limitSeconds == null ? 'Sem limite de tempo' : SessionDao.describeTimeLimit(limitSeconds),
-      if (total != null) '$total questões',
+      limitSeconds == null ? context.tr('qb.noTimeLimit') : SessionDao.describeTimeLimit(limitSeconds),
+      if (total != null) context.tr('qb.nQuestions', {'n': total}),
     ];
 
     final filters = SessionDao.parseTagFilters(session['tag_filters'] as String?);
@@ -938,19 +936,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir sessão'),
-        content: Text(
-          'Tem certeza que deseja excluir a sessão "${session['title'] ?? ''}"? '
-          'Os pacotes ligados a ela ficarão sem sessão.',
-        ),
+        title: Text(context.tr('qb.deleteSession')),
+        content: Text(context.tr('qb.deleteSessionBody', {'name': '${session['title'] ?? ''}'})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -964,7 +959,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       debugPrint('Erro ao excluir sessão ${session['id']}: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir a sessão: $e')),
+        SnackBar(content: Text(context.tr('qb.deleteSessionFailed', {'error': e}))),
       );
     }
   }

@@ -25,6 +25,8 @@ dependencies:
   xml: ^6.6.1
   markdown: ^7.3.1
   flutter_markdown_plus: ^1.0.12
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +45,4 @@ flutter:
 
   assets:
     - assets/icon.png
+    - lib/l10n/

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 import '../widgets/heatmap_card.dart';
@@ -82,7 +83,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      title: 'Home',
+      title: context.tr('nav.home'),
       currentIndex: _currentIndex,
       onTap: (i) => _pageController.jumpToPage(i),
       onStatisticsTap: () => _pageController.jumpToPage(1),
@@ -113,13 +114,13 @@ class _HomeState extends State<Home> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
-            _sectionLabel('Study Activity'),
+            _sectionLabel(context.tr('home.studyActivity')),
             HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _sectionLabel('My Packages'),
+                _sectionLabel(context.tr('home.myPackages')),
               ],
             ),
             const SizedBox(height: 12),
@@ -155,7 +156,7 @@ class _HomeState extends State<Home> {
                 HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
                 const SizedBox(height: 24),
                 if (_packages.isEmpty)
-                  _noPackagesMessage('Clique no + para criar o primeiro.')
+                  _noPackagesMessage(context.tr('home.createFirstDesktop'))
                 else
                   _buildDeckTable(),
                 const SizedBox(height: 80),
@@ -169,7 +170,7 @@ class _HomeState extends State<Home> {
 
   Widget _noPackagesMessage(String hint) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('Nenhum pacote ainda. $hint', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('home.noPackages', {'hint': hint}), style: TextStyle(color: Colors.grey[500])),
       );
 
   Widget _sectionLabel(String text) => Text(text,
@@ -177,7 +178,7 @@ class _HomeState extends State<Home> {
       color: context.colors.text));
 
   Widget _buildDeckList() {
-    if (_packages.isEmpty) return _noPackagesMessage('Toque no + para criar o primeiro.');
+    if (_packages.isEmpty) return _noPackagesMessage(context.tr('home.createFirstMobile'));
     return Column(
       children: _packages.entries.map(_buildDeckCard).toList(),
     );
@@ -192,7 +193,6 @@ class _HomeState extends State<Home> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          // Área inteira do card é clicável agora, não só o texto do título.
           onTap: () async {
             await Navigator.push(
               context,
@@ -210,8 +210,6 @@ class _HomeState extends State<Home> {
                 Expanded(
                   child: Text(deck.value, style: mediumText),
                 ),
-                // Botão de configurações continua com sua própria área de
-                // toque, sobrepondo a área clicável do card.
                 IconButton(
                   onPressed: () async {
                     final result = await Navigator.push(
@@ -261,7 +259,7 @@ class _HomeState extends State<Home> {
                 decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: context.colors.border))),
                 children: [
-                  _tableCell('Packages', Colors.grey[400]!, isHeader: true),
+                  _tableCell(context.tr('home.packagesHeader'), Colors.grey[400]!, isHeader: true),
                   const SizedBox(),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../styles/text_styles.dart';
 import 'sync_settings_screen.dart';
@@ -7,16 +8,17 @@ import 'sync_settings_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  // 'title'/'sub' são chaves de tradução; 'id' é estável (usado na navegação).
   final List<Map<String, dynamic>> _settings = const [
-    {'icon': Icons.settings,        'title': 'General',       'sub': 'Language • Studying • System-wide'},
-    {'icon': Icons.rate_review,     'title': 'Reviewing',     'sub': 'Scheduling • Keep screen on'},
-    {'icon': Icons.sync,            'title': 'Sync',          'sub': 'Account • Synchronization'},
-    {'icon': Icons.notifications,   'title': 'Notifications', 'sub': 'Notify when • Vibrate • Blink light'},
-    {'icon': Icons.palette,         'title': 'Appearance',    'sub': 'Themes • Accent • Heatmap'},
-    {'icon': Icons.tune,            'title': 'Controls',      'sub': 'Gestures • Keyboard • Bluetooth'},
-    {'icon': Icons.accessibility,   'title': 'Accessibility', 'sub': 'Font size • Icon size'},
-    {'icon': Icons.tune,            'title': 'Advanced',      'sub': 'Workrounds • Plugins'},
-    {'icon': Icons.info_outline,    'title': 'About',         'sub': ' '},
+    {'id': 'general',       'icon': Icons.settings,      'title': 'settings.general',       'sub': 'settings.general.sub'},
+    {'id': 'reviewing',     'icon': Icons.rate_review,   'title': 'settings.reviewing',     'sub': 'settings.reviewing.sub'},
+    {'id': 'sync',          'icon': Icons.sync,          'title': 'settings.sync',          'sub': 'settings.sync.sub'},
+    {'id': 'notifications', 'icon': Icons.notifications, 'title': 'settings.notifications', 'sub': 'settings.notifications.sub'},
+    {'id': 'appearance',    'icon': Icons.palette,       'title': 'settings.appearance',    'sub': 'settings.appearance.sub'},
+    {'id': 'controls',      'icon': Icons.tune,          'title': 'settings.controls',      'sub': 'settings.controls.sub'},
+    {'id': 'accessibility', 'icon': Icons.accessibility, 'title': 'settings.accessibility', 'sub': 'settings.accessibility.sub'},
+    {'id': 'advanced',      'icon': Icons.tune,          'title': 'settings.advanced',      'sub': 'settings.advanced.sub'},
+    {'id': 'about',         'icon': Icons.info_outline,  'title': 'settings.about',         'sub': 'settings.about.sub'},
   ];
 
   @override
@@ -31,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Settings',
+          context.tr('settings.title'),
           style: TextStyle(
             color: context.colors.text,
             fontWeight: FontWeight.bold,
@@ -64,7 +66,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                     title: Text(
-                      item['title'] as String,
+                      context.tr(item['title'] as String),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -72,27 +74,27 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                     subtitle: Text(
-                      item['sub'] as String,
+                      context.tr(item['sub'] as String),
                       style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                     trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                     onTap: () {
-                      if (item['title'] == 'General') {
+                      if (item['id'] == 'general') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const GeneralSettingsScreen()),
                         );
-                      } else if (item['title'] == 'Appearance') {
+                      } else if (item['id'] == 'appearance') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
                         );
-                      } else if (item['title'] == 'Accessibility') {
+                      } else if (item['id'] == 'accessibility') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
                         );
-                      } else if (item['title'] == 'Sync') {
+                      } else if (item['id'] == 'sync') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
@@ -113,7 +115,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Settings > General: idioma (placeholder).
+/// Settings > General: idioma do app.
 class GeneralSettingsScreen extends StatelessWidget {
   const GeneralSettingsScreen({super.key});
 
@@ -131,7 +133,7 @@ class GeneralSettingsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'General',
+              context.tr('settings.general'),
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
@@ -140,7 +142,7 @@ class GeneralSettingsScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Language'),
+              _sectionTitle(context, context.tr('general.language')),
               const SizedBox(height: 8),
               _languageTile(context, s),
             ],
@@ -168,7 +170,7 @@ class GeneralSettingsScreen extends StatelessWidget {
       child: ListTile(
         leading: Icon(Icons.language, color: c.text),
         title: Text(
-          'App language',
+          context.tr('general.appLanguage'),
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.text),
         ),
         subtitle: Text(s.language.name, style: TextStyle(fontSize: 12, color: c.mutedText)),
@@ -191,16 +193,8 @@ class GeneralSettingsScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: Text(
-                  'App language',
+                  sheetContext.tr('general.appLanguage'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.text),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  'Placeholder: translations are not available yet. '
-                  'Your choice is saved for when they are.',
-                  style: TextStyle(fontSize: 12, color: c.mutedText),
                 ),
               ),
               ...AppOptions.languages.map((l) => ListTile(
@@ -237,7 +231,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Appearance',
+              context.tr('settings.appearance'),
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
@@ -246,25 +240,25 @@ class AppearanceSettingsScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Theme'),
+              _sectionTitle(context, context.tr('appearance.theme')),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<ThemeMode>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: ThemeMode.system,
-                      label: Text('System'),
+                      label: Text(context.tr('appearance.system')),
                       icon: Icon(Icons.brightness_auto),
                     ),
                     ButtonSegment(
                       value: ThemeMode.light,
-                      label: Text('Light'),
+                      label: Text(context.tr('appearance.light')),
                       icon: Icon(Icons.light_mode_outlined),
                     ),
                     ButtonSegment(
                       value: ThemeMode.dark,
-                      label: Text('Dark'),
+                      label: Text(context.tr('appearance.dark')),
                       icon: Icon(Icons.dark_mode_outlined),
                     ),
                   ],
@@ -274,9 +268,9 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Accent color'),
+              _sectionTitle(context, context.tr('appearance.accent')),
               Text(
-                'Buttons, tabs and highlights',
+                context.tr('appearance.accentHint'),
                 style: TextStyle(fontSize: 12, color: c.mutedText),
               ),
               const SizedBox(height: 12),
@@ -287,7 +281,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Heatmap colors'),
+              _sectionTitle(context, context.tr('appearance.heatmap')),
               const SizedBox(height: 8),
               ...AppOptions.heatmaps.map((p) => _heatmapOption(context, s, p)),
             ],
@@ -382,7 +376,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Accessibility',
+              context.tr('settings.accessibility'),
               style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
@@ -391,9 +385,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Font size'),
+              _sectionTitle(context, context.tr('a11y.fontSize')),
               Text(
-                'Changes the text size across the whole app',
+                context.tr('a11y.fontSizeHint'),
                 style: TextStyle(fontSize: 12, color: c.mutedText),
               ),
               const SizedBox(height: 8),
@@ -408,9 +402,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               _fontPreview(context, s),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Icon size'),
+              _sectionTitle(context, context.tr('a11y.iconSize')),
               Text(
-                'Changes the size of icons across the whole app',
+                context.tr('a11y.iconSizeHint'),
                 style: TextStyle(fontSize: 12, color: c.mutedText),
               ),
               const SizedBox(height: 8),
@@ -428,7 +422,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: s.resetAccessibility,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Reset to default'),
+                label: Text(context.tr('a11y.reset')),
               ),
             ],
           ),
@@ -484,7 +478,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            Expanded(child: Text('$label text', style: base.copyWith(color: c.text))),
+            Expanded(child: Text(context.tr('a11y.sampleText', {'label': label}), style: base.copyWith(color: c.text))),
             Text('$pt pt', style: TextStyle(fontSize: 12, color: c.mutedText)),
           ],
         ),
@@ -497,9 +491,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          row('Large', bigText),
-          row('Medium', mediumText),
-          row('Small', smallText),
+          row(context.tr('a11y.large'), bigText),
+          row(context.tr('a11y.medium'), mediumText),
+          row(context.tr('a11y.small'), smallText),
         ],
       ),
     );

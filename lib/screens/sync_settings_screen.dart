@@ -6,6 +6,7 @@ import '../data/sync/sync_discovery.dart';
 import '../data/sync/sync_http_transport.dart';
 import '../data/sync/sync_models.dart';
 import '../data/services/sync_service.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 /// Settings > Sync: sincronização entre os seus aparelhos pela rede local.
@@ -53,7 +54,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     try {
       id = await _svc.createAccount();
     } catch (e) {
-      if (mounted) _toast('Could not start this device as host: $e');
+      if (mounted) _toast(context.tr('sync.hostStartFailed', {'error': e}));
     }
     if (mounted) setState(() => _busy = false);
     await _refresh();
@@ -65,7 +66,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Your sync account ID'),
+        title: Text(dialogContext.tr('sync.yourId')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,14 +77,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Type this ID on your other devices (Settings > Sync > Join). '
-              'Anyone with it can read and change your synced data on this network, '
-              'so keep it private.',
+              dialogContext.tr('sync.idDialogBody'),
               style: TextStyle(fontSize: 12, color: c.mutedText),
             ),
             if (_addresses.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('This device on the network: ${_addresses.join(', ')}',
+              Text(dialogContext.tr('sync.deviceOnNetwork', {'addresses': _addresses.join(', ')}),
                 style: TextStyle(fontSize: 12, color: c.mutedText)),
             ],
           ],
@@ -91,9 +90,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Clipboard.setData(ClipboardData(text: formatAccountId(id))),
-            child: const Text('Copy'),
+            child: Text(dialogContext.tr('sync.copy')),
           ),
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(dialogContext.tr('sync.done'))),
         ],
       ),
     );
@@ -106,13 +105,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 
   Future<void> _syncNow() async {
+    final t = context.tr;
     setState(() => _busy = true);
     String message;
     try {
       final report = await _svc.syncNow();
-      message = 'Sync finished: $report';
+      message = t('sync.finished', {'report': report});
     } catch (e) {
-      message = 'Sync failed: $e';
+      message = t('sync.failed', {'error': e});
     }
     if (!mounted) return;
     setState(() => _busy = false);
@@ -125,7 +125,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     try {
       await _svc.restartHosting();
     } catch (e) {
-      if (mounted) _toast('Still could not start the host: $e');
+      if (mounted) _toast(context.tr('sync.hostStillFailed', {'error': e}));
     }
     if (mounted) setState(() => _busy = false);
     await _refresh();
@@ -136,19 +136,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Leave this account?'),
+        title: Text(dialogContext.tr('sync.leaveTitle')),
         content: Text(
-          isHost
-              ? 'This device stops hosting and erases the central copy it was keeping. '
-                  'Your own data stays on this device, but your other devices will have '
-                  'nowhere to sync until you set up a host again.'
-              : 'This device stops syncing. Your data stays here and the host keeps its copy.',
+          dialogContext.tr(isHost ? 'sync.leaveBodyHost' : 'sync.leaveBodyClient'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(dialogContext.tr('common.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Leave', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(dialogContext.tr('sync.leave'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -177,7 +173,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Sync',
+        title: Text(context.tr('settings.sync'),
           style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
       body: ListView(
@@ -201,9 +197,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                'Keep your devices in sync over your home Wi-Fi. No e-mail and no '
-                'external server: one device keeps the central copy and the others '
-                'sync with it. Your account is just a secret ID.',
+                context.tr('sync.intro'),
                 style: TextStyle(fontSize: 12, color: c.mutedText),
               ),
             ),
@@ -214,20 +208,18 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _actionCard(
         context,
         icon: Icons.computer_outlined,
-        title: 'Create an account on this device',
-        text: 'Choose this on the device that stays on your home network, usually the '
-            'PC. It keeps the central copy. Keep the app open so the others can sync.',
-        button: 'Create account',
+        title: context.tr('sync.createTitle'),
+        text: context.tr('sync.createText'),
+        button: context.tr('sync.createButton'),
         onPressed: _busy ? null : _create,
       ),
       const SizedBox(height: 12),
       _actionCard(
         context,
         icon: Icons.link,
-        title: 'Join an existing account',
-        text: 'Use this on your other devices. You will need the account ID and to be '
-            'on the same Wi-Fi as the host.',
-        button: 'Join with an ID',
+        title: context.tr('sync.joinTitle'),
+        text: context.tr('sync.joinText'),
+        button: context.tr('sync.joinButton'),
         onPressed: _busy ? null : _join,
       ),
     ];
@@ -262,26 +254,26 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 children: [
                   Text(
                     failed
-                        ? 'Not running'
-                        : (isHost ? 'Hosting on this device' : 'Connected to ${_svc.hostAddress}'),
+                        ? context.tr('sync.notRunning')
+                        : (isHost
+                            ? context.tr('sync.hosting')
+                            : context.tr('sync.connectedTo', {'host': '${_svc.hostAddress}'})),
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     failed
-                        ? 'The host could not start: ${_svc.hostError ?? 'unknown error'}. '
-                            'If a firewall asked for permission, allow it and try again.'
+                        ? context.tr('sync.hostFailedBody', {'error': _svc.hostError ?? context.tr('sync.unknownError')})
                         : isHost
-                            ? 'Your other devices sync with this one while the app is open'
-                                '${_addresses.isEmpty ? '.' : ' (${_addresses.join(', ')}).'}'
-                            : 'Syncing over your Wi-Fi. If the host changes address, it is found again automatically.',
+                            ? context.tr('sync.hostBody') +
+                                (_addresses.isEmpty ? '.' : ' (${_addresses.join(', ')}).')
+                            : context.tr('sync.clientBody'),
                     style: TextStyle(fontSize: 12, color: c.mutedText),
                   ),
                   if (isHost && _svc.discoveryError != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Automatic discovery is off on this device, so other devices must '
-                      'type the address above.',
+                      context.tr('sync.discoveryOff'),
                       style: TextStyle(fontSize: 11, color: c.mutedText),
                     ),
                   ],
@@ -298,7 +290,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           child: OutlinedButton.icon(
             onPressed: _busy ? null : _retryHost,
             icon: const Icon(Icons.refresh),
-            label: const Text('Try again'),
+            label: Text(context.tr('sync.tryAgain')),
           ),
         ),
       ],
@@ -308,7 +300,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Account ID',
+            Text(context.tr('sync.accountId'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
             const SizedBox(height: 8),
             Row(
@@ -320,22 +312,22 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   ),
                 ),
                 IconButton(
-                  tooltip: _showId ? 'Hide' : 'Show',
+                  tooltip: context.tr(_showId ? 'sync.hide' : 'sync.show'),
                   icon: Icon(_showId ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                     size: context.icon(20), color: c.mutedText),
                   onPressed: () => setState(() => _showId = !_showId),
                 ),
                 IconButton(
-                  tooltip: 'Copy',
+                  tooltip: context.tr('sync.copy'),
                   icon: Icon(Icons.copy_outlined, size: context.icon(20), color: c.mutedText),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: _svc.accountIdFormatted));
-                    _toast('ID copied');
+                    _toast(context.tr('sync.idCopied'));
                   },
                 ),
               ],
             ),
-            Text('Anyone with this ID can access your synced data on the network.',
+            Text(context.tr('sync.idWarning'),
               style: TextStyle(fontSize: 11, color: c.mutedText)),
           ],
         ),
@@ -346,13 +338,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('This device',
+            Text(context.tr('sync.thisDevice'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
             const SizedBox(height: 10),
-            _row(context, 'Device ID', status?.deviceId ?? '...'),
-            _row(context, 'Pending changes', '${status?.pendingChanges ?? 0}'),
-            _row(context, 'Last sync',
-              status?.lastSync == null ? 'Never' : _formatDate(status!.lastSync!)),
+            _row(context, context.tr('sync.deviceId'), status?.deviceId ?? '...'),
+            _row(context, context.tr('sync.pending'), '${status?.pendingChanges ?? 0}'),
+            _row(context, context.tr('sync.lastSync'),
+              status?.lastSync == null ? context.tr('sync.never') : _formatDate(status!.lastSync!)),
           ],
         ),
       ),
@@ -368,7 +360,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: Icon(Icons.sync, size: context.icon(20)),
-          label: Text(_busy ? 'Working...' : 'Sync now'),
+          label: Text(context.tr(_busy ? 'sync.working' : 'sync.syncNow')),
         ),
       ),
       const SizedBox(height: 8),
@@ -376,7 +368,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         width: double.infinity,
         child: TextButton(
           onPressed: _busy ? null : _leave,
-          child: const Text('Leave this account', style: TextStyle(color: Color(0xFFC62828))),
+          child: Text(context.tr('sync.leaveAccount'), style: const TextStyle(color: Color(0xFFC62828))),
         ),
       ),
     ];
@@ -507,7 +499,7 @@ class _JoinDialogState extends State<_JoinDialog> {
   Future<void> _connect() async {
     final text = _hostController.text.trim();
     if (text.isEmpty) {
-      setState(() => _error = 'Pick a host or type its address.');
+      setState(() => _error = context.tr('sync.pickHost'));
       return;
     }
     final parts = text.split(':');
@@ -524,7 +516,7 @@ class _JoinDialogState extends State<_JoinDialog> {
     } on SyncAuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not connect to $host: $e');
+      if (mounted) setState(() => _error = context.tr('sync.connectFailed', {'host': host, 'error': e}));
     } finally {
       if (mounted) setState(() => _connecting = false);
     }
@@ -534,7 +526,7 @@ class _JoinDialogState extends State<_JoinDialog> {
   Widget build(BuildContext context) {
     final c = context.colors;
     return AlertDialog(
-      title: const Text('Join an account'),
+      title: Text(context.tr('sync.joinDialogTitle')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -544,7 +536,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               controller: _idController,
               textCapitalization: TextCapitalization.characters,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(labelText: 'Account ID', hintText: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX'),
+              decoration: InputDecoration(labelText: context.tr('sync.accountId'), hintText: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -552,7 +544,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               icon: _searching
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.wifi_find),
-              label: Text(_searching ? 'Searching...' : 'Find on Wi-Fi'),
+              label: Text(context.tr(_searching ? 'sync.searching' : 'sync.findWifi')),
             ),
             if (_found.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -570,8 +562,7 @@ class _JoinDialogState extends State<_JoinDialog> {
             ] else if (_searched && !_searching) ...[
               const SizedBox(height: 8),
               Text(
-                'No host found. Make sure the host app is open on the same Wi-Fi, '
-                'or type its address below.',
+                context.tr('sync.noHost'),
                 style: TextStyle(fontSize: 12, color: c.mutedText),
               ),
             ],
@@ -580,7 +571,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               controller: _hostController,
               keyboardType: TextInputType.url,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(labelText: 'Host address', hintText: '192.168.0.12'),
+              decoration: InputDecoration(labelText: context.tr('sync.hostAddress'), hintText: '192.168.0.12'),
             ),
             if (_error != null) ...[
               const SizedBox(height: 10),
@@ -592,11 +583,11 @@ class _JoinDialogState extends State<_JoinDialog> {
       actions: [
         TextButton(
           onPressed: _connecting ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(context.tr('common.cancel')),
         ),
         TextButton(
           onPressed: (_idValid && !_connecting) ? _connect : null,
-          child: Text(_connecting ? 'Connecting...' : 'Connect'),
+          child: Text(context.tr(_connecting ? 'sync.connecting' : 'sync.connect')),
         ),
       ],
     );
