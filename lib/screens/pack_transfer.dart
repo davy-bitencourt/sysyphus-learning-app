@@ -134,11 +134,11 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
           backgroundColor: c.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.textMain),
+            icon: Icon(Icons.arrow_back, color: context.colors.textMain),
             onPressed: _importing ? null : () => Navigator.pop(context),
           ),
           title: Text(context.tr('transfer.importTitle'),
-            style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20)),
+            style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -184,7 +184,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(buttonLabel, style: const TextStyle(fontSize: 15)),
+                child: Text(buttonLabel, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
               ),
             ),
           ),
@@ -225,7 +225,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(context.tr('transfer.willImport'),
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
+            style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
           const SizedBox(height: 10),
           _summaryRow(context, Icons.folder_outlined, context.tr('transfer.packages'), packages),
           _summaryRow(context, Icons.quiz_outlined, context.tr('transfer.questions'), questions),
@@ -249,10 +249,10 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
           const SizedBox(width: 10),
           SizedBox(
             width: 92,
-            child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond)),
+            child: Text(label, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
           ),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain)),
+            child: Text(value, style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain)),
           ),
         ],
       ),
@@ -260,11 +260,10 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
   }
 
   Widget _buildNotes(BuildContext context) {
-    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(color: c.bgSecond),
+        border: Border.all(color: context.colors.bgSecond),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -276,9 +275,9 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: context.icon(16), color: c.textSecond),
+                  Icon(Icons.info_outline, size: context.icon(16), color: context.colors.textSecond),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: c.textMain))),
+                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: context.colors.textMain))),
                 ],
               ),
             ),
@@ -418,7 +417,7 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
               for (final w in warnings.take(30))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Text(w, style: const TextStyle(fontSize: 12)),
+                  child: Text(w, style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                 ),
               if (warnings.length > 30) Text(t('transfer.andMore', {'n': warnings.length - 30})),
             ],

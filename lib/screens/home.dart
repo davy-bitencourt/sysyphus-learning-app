@@ -4,7 +4,6 @@ import '../styles/app_theme.dart';
 
 import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
-import '../styles/text_styles.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/schema/revlog_schema.dart';
@@ -169,7 +168,7 @@ class _HomeState extends State<Home> {
         child: Text(context.tr('home.noPackages', {'hint': hint}), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
       );
 
-  Widget _sectionLabel(String text) => Text(text, style: bigText(fontWeight: FontWeight.normal, color: context.colors.textMain));
+  Widget _sectionLabel(String text) => Text(text, style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain));
 
   Widget _buildDeckList() {
     if (_packages.isEmpty) return _noPackagesMessage(context.tr('home.createFirstMobile'));
@@ -311,7 +310,7 @@ class _HomeState extends State<Home> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Text(text,
         textAlign: center ? TextAlign.center : TextAlign.start,
-        style: TextStyle(color: color, fontSize: isHeader ? 12 : 13, fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal,)),
+        style: smallText(color: color, fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal)),
     );
   }
 }

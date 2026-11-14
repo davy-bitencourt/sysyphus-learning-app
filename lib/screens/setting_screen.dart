@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
-import '../styles/text_styles.dart';
 import 'sync_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {

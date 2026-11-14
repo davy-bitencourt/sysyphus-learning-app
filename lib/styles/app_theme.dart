@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/database_helper.dart';
 
+
 class AccentOption {
   final String id;
   final String name;
@@ -151,8 +152,6 @@ class AppSettings extends ChangeNotifier {
     await _save('language', id);
   }
 
-  /// `save: false` enquanto o slider está sendo arrastado (evita gravar no
-  /// banco a cada passo); a gravação acontece no onChangeEnd.
   Future<void> setFontScale(double value, {bool save = true}) async {
     _fontScale = _clampScale(value);
     notifyListeners();
@@ -392,3 +391,29 @@ extension AppMetricsContext on BuildContext {
   double icon(double base) =>
       base * (Theme.of(this).extension<AppMetrics>()?.iconScale ?? 1.0);
 }
+
+// fontes
+TextStyle bigText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 22,
+  fontWeight: fontWeight,
+  color: color
+);
+
+TextStyle mediumText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 17,
+  fontWeight: fontWeight,
+  color: color
+);
+
+TextStyle smallText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 14,
+  fontWeight: fontWeight,
+  color: color
+);
+
+
+TextStyle verySmallText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 11,
+  fontWeight: fontWeight,
+  color: color
+);

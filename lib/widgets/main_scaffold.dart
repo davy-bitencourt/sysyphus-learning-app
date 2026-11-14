@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
-import '../styles/text_styles.dart';
 
 import '../screens/setting_screen.dart';
 import '../screens/package_edit_screen.dart';
@@ -94,8 +93,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     }
   }
 
-  /// Sincronização automática: silenciosa, no máximo uma por minuto (a menos
-  /// que [force]) e só se este aparelho já tiver uma conta funcionando.
   Future<void> _autoSync({bool force = false}) async {
     final service = SyncService.instance;
     if (!mounted || _syncing || !service.isConfigured) return;
@@ -193,11 +190,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             const SizedBox(width: 12),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.colors.textMain,
-                fontWeight: FontWeight.w500,
-              ),
+              style: smallText(fontWeight: FontWeight.w500, color: context.colors.textMain),
             ),
           ],
         ),
@@ -245,11 +238,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
         break;
     }
 
-    // O que acabou de ser criado sobe para o servidor (se a sincronização estiver ligada).
     unawaited(_autoSync(force: true));
   }
 
-  // Só o ícone (o rótulo vira tooltip, para acessibilidade).
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isActive = widget.currentIndex == index;
     return Tooltip(
@@ -274,11 +265,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
       leading: Icon(icon,
         color: active ? context.colors.accent : context.colors.textMain, size: context.icon(21)),
       title: Text(label,
-        style: TextStyle(
-          color: active ? context.colors.accent : context.colors.textMain,
-          fontSize: 14,
-          fontWeight: active ? FontWeight.bold : FontWeight.normal,
-        )),
+        style: smallText(fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? context.colors.accent : context.colors.textMain)),
       tileColor: active ? context.colors.accent.withValues(alpha: 0.10) : Colors.transparent,
       onTap: onTap ?? () => Navigator.pop(context),
     );
@@ -374,8 +361,8 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }),
-              _drawerItem(context, Icons.help_outline, context.tr('nav.help'), onTap: () {}),
-              _drawerItem(context, Icons.sports_soccer, context.tr('nav.support'), onTap: () {}),
+              // _drawerItem(context, Icons.help_outline, context.tr('nav.help'), onTap: () {}),
+              // _drawerItem(context, Icons.sports_soccer, context.tr('nav.support'), onTap: () {}),
             ],
           ),
         ),
