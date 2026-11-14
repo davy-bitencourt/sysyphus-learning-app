@@ -10,6 +10,7 @@ import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
+import '../data/services/order_service.dart';
 import 'home.dart';
 import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
@@ -164,11 +165,135 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
 
+  static const double _handleW = 40;
+  static const double _idW = 44;
+
+  Future<void> _persistPackageOrder() async {
+    await OrderService.save(
+      OrderService.packagesKey,
+      _packages.map((p) => p['id'] as int).toList(),
+    );
+    Home.packagesChanged.value++; // a Home recarrega na nova ordem
+  }
+
+  Future<void> _persistTemplateOrder() => OrderService.save(
+        OrderService.templatesKey,
+        _templates.map((t) => t.id).whereType<int>().toList(),
+      );
+
+  // ---- helpers de tabela -------------------------------------------------
+  // Cada coluna é (rótulo/texto, flex). flex 0 = largura fixa (coluna de ID).
+
+  Widget _cell(int flex, Widget child) =>
+      flex <= 0 ? SizedBox(width: _idW, child: child) : Expanded(flex: flex, child: child);
+
+  Widget _tableHeader(List<(String, int)> cols, {bool handle = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.bgSecond, width: 2)),
+      ),
+      child: Row(
+        children: [
+          if (handle) const SizedBox(width: _handleW),
+          for (final c in cols)
+            _cell(
+              c.$2,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  c.$1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                ),
+              ),
+            ),
+          const SizedBox(width: 48), // espaço do menu ⋮
+        ],
+      ),
+    );
+  }
+
+  Widget _tableRow({
+    required Key key,
+    required List<(String, int)> cells,
+    required Widget menu,
+    Widget? handle,
+  }) {
+    return Container(
+      key: key,
+      constraints: const BoxConstraints(minHeight: 52),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.bgSecond)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            if (handle != null) SizedBox(width: _handleW, child: handle),
+            for (final c in cells)
+              _cell(
+                c.$2,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    c.$1,
+                    maxLines: c.$2 <= 0 ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: c.$2 <= 0 ? Colors.grey[500] : context.colors.textMain,
+                    ),
+                  ),
+                ),
+              ),
+            menu,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dragHandle(int index) => ReorderableDragStartListener(
+        index: index,
+        child: Icon(Icons.drag_handle, color: Colors.grey[500]),
+      );
+
+  Widget _tableShell({required Widget header, required Widget list}) => Column(
+        children: [
+          Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: header),
+          Expanded(
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: list),
+          ),
+        ],
+      );
+
+  Widget _tagsTable(List<Map<String, dynamic>> rows) {
+    const cols = [('ID', 0), ('Tag', 6)];
+    return _tableShell(
+      header: _tableHeader(cols),
+      list: ListView.builder(
+        itemCount: rows.length,
+        itemBuilder: (context, i) {
+          final tag = rows[i];
+          return _tableRow(
+            key: ValueKey(tag['id']),
+            cells: [('${tag['id']}', 0), ('#${tag['title']}', 6)],
+            menu: _itemMenu(onDelete: () => _deleteTag(tag)),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
 
-    final packageRows = await PackageDao().getAll();
-    final templateRows = await TemplateDao().getAll();
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
+    final templateRows = await OrderService.apply(
+        OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
     final tagRows = await TagDao().getAll();
     final sessionRows = await SessionDao().getAll();
 
@@ -420,36 +545,40 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
     final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
     if (visible.isEmpty) return _noResults();
-    return ListView.separated(
-      itemCount: visible.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final question = visible[i];
-        final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.bgSecond,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.only(left: 14, right: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: context.colors.textMain),
+
+    final tagNames = {for (final t in _tags) t['id'] as int: t['title'] as String};
+    final templateNames = {
+      for (final t in _templates)
+        if (t.id != null) t.id!: t.name,
+    };
+    const cols = [('ID', 0), ('Enunciado', 6), ('Template', 2), ('Tag', 2)];
+
+    return Column(
+      children: [
+        _tableHeader(cols),
+        Expanded(
+          child: ListView.builder(
+            itemCount: visible.length,
+            itemBuilder: (context, i) {
+              final question = visible[i];
+              final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
+              return _tableRow(
+                key: ValueKey(question.id ?? i),
+                cells: [
+                  ('${question.id ?? '-'}', 0),
+                  (title, 6),
+                  (templateNames[question.templateId] ?? '-', 2),
+                  (question.tagId == null ? '-' : '#${tagNames[question.tagId] ?? '?'}', 2),
+                ],
+                menu: _itemMenu(
+                  onEdit: () => _editQuestion(question),
+                  onDelete: () => _deleteQuestion(question),
                 ),
-              ),
-              _itemMenu(
-                    onEdit: () => _editQuestion(question),
-                    onDelete: () => _deleteQuestion(question),
-                  ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -487,41 +616,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: _query.isNotEmpty
               ? _buildPackageResults()
-              : ReorderableListView.builder(
-            padding: const EdgeInsets.all(16),
-            buildDefaultDragHandles: false,
-            itemCount: _packages.length,
-            onReorder: (oldIndex, newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final item = _packages.removeAt(oldIndex);
-                _packages.insert(newIndex, item);
-              });
-            },
-            itemBuilder: (context, index) {
-              final pkg = _packages[index];
-              return Container(
-                key: ValueKey(pkg['id']),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: context.colors.bgSecond,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ListTile(
-                  leading: ReorderableDragStartListener(
-                    index: index,
-                    child: Icon(Icons.drag_handle, color: Colors.grey[500]),
-                  ),
-                  title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.textMain)),
-                  trailing: _itemMenu(
-                        onEdit: () => _editPackage(pkg),
-                        onExport: () => _exportPackage(pkg),
-                        onDelete: () => _deletePackage(pkg),
-                      ),
-                ),
-              );
-            },
-          ),
+              : _packagesTable(_packages, reorderable: true),
         ),
         SafeArea(
           top: false,
@@ -559,27 +654,43 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildPackageResults() {
     final results = _packages.where((p) => _matches(p['title'] as String)).toList();
     if (results.isEmpty) return _noResults();
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final pkg = results[i];
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.bgSecond,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ListTile(
-            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.textMain)),
-            trailing: _itemMenu(
-                  onEdit: () => _editPackage(pkg),
-                  onExport: () => _exportPackage(pkg),
-                  onDelete: () => _deletePackage(pkg),
-                ),
+    return _packagesTable(results, reorderable: false);
+  }
+
+  Widget _packagesTable(List<Map<String, dynamic>> rows, {required bool reorderable}) {
+    const cols = [('ID', 0), ('Título', 6)];
+
+    Widget row(Map<String, dynamic> pkg, int i) => _tableRow(
+          key: ValueKey(pkg['id']),
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [('${pkg['id']}', 0), (pkg['title'] as String, 6)],
+          menu: _itemMenu(
+            onEdit: () => _editPackage(pkg),
+            onExport: () => _exportPackage(pkg),
+            onDelete: () => _deletePackage(pkg),
           ),
         );
-      },
+
+    return _tableShell(
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _packages.removeAt(oldIndex);
+                  _packages.insert(newIndex, item);
+                });
+                _persistPackageOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
+            ),
     );
   }
 
@@ -613,49 +724,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? Center(child: Text(context.tr('qb.noTemplates'), style: TextStyle(color: Colors.grey[500])))
               : _query.isNotEmpty
                   ? _buildTemplateResults()
-                  : ReorderableListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  buildDefaultDragHandles: false,
-                  itemCount: _templates.length,
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final item = _templates.removeAt(oldIndex);
-                      _templates.insert(newIndex, item);
-                    });
-                  },
-                  itemBuilder: (context, i) {
-                    final template = _templates[i];
-                    return Container(
-                      key: ValueKey(template.id ?? i),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: context.colors.bgSecond,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      child: Row(
-                        children: [
-                          ReorderableDragStartListener(
-                            index: i,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: Icon(Icons.drag_handle, color: Colors.grey[500]),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
-                          ),
-                          Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                          _itemMenu(
-                                onEdit: () => _editTemplate(template),
-                                onDelete: () => _deleteTemplate(template),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                  : _templatesTable(_templates, reorderable: true),
         ),
         SafeArea(
           top: false,
@@ -690,32 +759,42 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildTemplateResults() {
     final results = _templates.where((t) => _matches(t.name)).toList();
     if (results.isEmpty) return _noResults();
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final template = results[i];
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.bgSecond,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
-              ),
-              Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              _itemMenu(
-                    onEdit: () => _editTemplate(template),
-                    onDelete: () => _deleteTemplate(template),
-                  ),
-            ],
+    return _templatesTable(results, reorderable: false);
+  }
+
+  Widget _templatesTable(List<TemplateModel> rows, {required bool reorderable}) {
+    const cols = [('ID', 0), ('Nome', 5), ('Campos', 2)];
+
+    Widget row(TemplateModel t, int i) => _tableRow(
+          key: ValueKey(t.id ?? t.name),
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [('${t.id ?? '-'}', 0), (t.name, 5), ('${t.fields.length}', 2)],
+          menu: _itemMenu(
+            onEdit: () => _editTemplate(t),
+            onDelete: () => _deleteTemplate(t),
           ),
         );
-      },
+
+    return _tableShell(
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _templates.removeAt(oldIndex);
+                  _templates.insert(newIndex, item);
+                });
+                _persistTemplateOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
+            ),
     );
   }
 
@@ -729,40 +808,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? (_tags.isEmpty
                   ? Center(child: Text(context.tr('qb.noTags'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final tag = visible[i];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.bgSecond,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 48),
-                          Expanded(
-                            child: Text(
-                              '#${tag['title']}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: context.colors.textMain,
-                              ),
-                            ),
-                          ),
-                          _itemMenu(
-                                onDelete: () => _deleteTag(tag),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              : _tagsTable(visible),
         ),
         SafeArea(
           top: false,
@@ -832,49 +878,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? (_sessions.isEmpty
                   ? Center(child: Text(context.tr('qb.noSessions'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final session = visible[i];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.bgSecond,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.timer_outlined, color: context.colors.accent, size: context.icon(20)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  (session['title'] as String?) ?? 'Sessão ${session['id']}',
-                                  style: TextStyle(fontSize: 14, color: context.colors.textMain),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _sessionSummary(session),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _itemMenu(
-                                onEdit: () => _editSession(session),
-                                onDelete: () => _deleteSession(session),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              : _sessionsTable(visible),
         ),
         SafeArea(
           top: false,
@@ -906,20 +910,43 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  String _sessionSummary(Map<String, dynamic> session) {
-    final limitSeconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
-    final total = (session['total_q'] as num?)?.toInt();
-    final parts = <String>[
-      limitSeconds == null ? context.tr('qb.noTimeLimit') : SessionDao.describeTimeLimit(limitSeconds),
-      if (total != null) context.tr('qb.nQuestions', {'n': total}),
-    ];
+  String _sessionLimit(Map<String, dynamic> session) {
+    final seconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
+    return seconds == null ? context.tr('qb.noTimeLimit') : SessionDao.describeTimeLimit(seconds);
+  }
 
+  String _sessionFilters(Map<String, dynamic> session) {
     final filters = SessionDao.parseTagFilters(session['tag_filters'] as String?);
-    if (filters.isNotEmpty) {
-      final names = {for (final t in _tags) t['id'] as int: t['title'] as String};
-      parts.add(filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · '));
-    }
-    return parts.join(' • ');
+    if (filters.isEmpty) return '-';
+    final names = {for (final t in _tags) t['id'] as int: t['title'] as String};
+    return filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · ');
+  }
+
+  Widget _sessionsTable(List<Map<String, dynamic>> rows) {
+    const cols = [('ID', 0), ('Título', 4), ('Limite', 3), ('Questões', 2), ('Tags', 4)];
+    return _tableShell(
+      header: _tableHeader(cols),
+      list: ListView.builder(
+        itemCount: rows.length,
+        itemBuilder: (context, i) {
+          final session = rows[i];
+          return _tableRow(
+            key: ValueKey(session['id']),
+            cells: [
+              ('${session['id']}', 0),
+              ((session['title'] as String?) ?? 'Sessão ${session['id']}', 4),
+              (_sessionLimit(session), 3),
+              ('${(session['total_q'] as num?)?.toInt() ?? '-'}', 2),
+              (_sessionFilters(session), 4),
+            ],
+            menu: _itemMenu(
+              onEdit: () => _editSession(session),
+              onDelete: () => _deleteSession(session),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _editSession(Map<String, dynamic> session) async {

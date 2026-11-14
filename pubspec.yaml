@@ -27,6 +27,8 @@ dependencies:
   flutter_markdown_plus: ^1.0.12
   flutter_localizations:
     sdk: flutter
+  reorderable_grid_view: ^2.2.8
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

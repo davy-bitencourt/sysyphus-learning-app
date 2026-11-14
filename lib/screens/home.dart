@@ -6,6 +6,7 @@ import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/question_state_dao.dart';
+import '../data/services/order_service.dart';
 import '../data/schema/revlog_schema.dart';
 import 'statistic_screen.dart';
 import 'questions_screen.dart';
@@ -53,7 +54,8 @@ class _HomeState extends State<Home> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
 
-    final packageRows = await PackageDao().getAll();
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
     final heatmap = await _revlogSchema.getHeatmapData();
     final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
 

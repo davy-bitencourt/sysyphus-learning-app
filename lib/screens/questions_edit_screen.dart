@@ -10,6 +10,7 @@ import '../data/DAO/package_dao.dart';
 import '../data/DTO/question_dto.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
+import '../data/services/order_service.dart';
 import '../data/services/media_storage_service.dart';
 import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
@@ -99,9 +100,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   }
 
   Future<void> _loadOptions() async {
-    final templateRows = await TemplateDao().getAll();
+    final templateRows = await OrderService.apply(
+        OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
     final tagRows = await TagDao().getAll();
-    final packageRows = await PackageDao().getAll();
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
 
     _templates = templateRows
         .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
@@ -211,7 +214,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
     if (result != true || !mounted) return;
 
-    final rows = await PackageDao().getAll();
+    final rows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
     if (!mounted) return;
     final created = rows.where((p) => !previousIds.contains(p['id'])).toList();
     setState(() {
