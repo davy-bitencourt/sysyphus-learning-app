@@ -84,7 +84,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     const danger = Color(0xFFC62828);
 
     PopupMenuItem<String> item(String value, IconData icon, String label, {Color? color}) {
-      final c = color ?? context.colors.text;
+      final c = color ?? context.colors.textMain;
       return PopupMenuItem<String>(
         value: value,
         child: Row(
@@ -99,7 +99,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
     return PopupMenuButton<String>(
       tooltip: context.tr('common.options'),
-      color: context.colors.surface,
+      color: context.colors.bgSecond,
       icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
       onSelected: (value) {
         switch (value) {
@@ -216,12 +216,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return DefaultTabController(
       length: 5,
       child: Scaffold(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         appBar: AppBar(
-          backgroundColor: context.colors.bg,
+          backgroundColor: context.colors.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.colors.text),
+            icon: Icon(Icons.arrow_back, color: context.colors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: _searching
@@ -229,7 +229,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   controller: _searchController,
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v.trim()),
-                  style: TextStyle(color: context.colors.text, fontSize: 16),
+                  style: TextStyle(color: context.colors.textMain, fontSize: 16),
                   decoration: InputDecoration(
                     hintText: context.tr('qb.searchHint'),
                     hintStyle: TextStyle(color: Colors.grey[500]),
@@ -238,18 +238,18 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 )
               : Text(
                   context.tr('qb.title'),
-                  style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+                  style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
                 ),
           actions: [
             IconButton(
               tooltip: context.tr(_searching ? 'qb.closeSearch' : 'qb.search'),
-              icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.text),
+              icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.textMain),
               onPressed: _toggleSearch,
             ),
             PopupMenuButton<String>(
               tooltip: context.tr('qb.importExport'),
-              icon: Icon(Icons.more_vert, color: context.colors.text),
-              color: context.colors.surface,
+              icon: Icon(Icons.more_vert, color: context.colors.textMain),
+              color: context.colors.bgSecond,
               onSelected: (value) async {
                 if (value == 'import') {
                   final changed = await startPackImport(context);
@@ -265,7 +265,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_download_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text(context.tr('qb.importZip'), style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.importZip'), style: TextStyle(color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -275,7 +275,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_upload_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text(context.tr('qb.exportZip'), style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.exportZip'), style: TextStyle(color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -428,7 +428,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
         return Container(
           decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
+            color: context.colors.bgSecond,
             borderRadius: BorderRadius.circular(10),
           ),
           padding: const EdgeInsets.only(left: 14, right: 4),
@@ -439,7 +439,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: context.colors.text),
+                  style: TextStyle(fontSize: 14, color: context.colors.textMain),
                 ),
               ),
               _itemMenu(
@@ -504,7 +504,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 key: ValueKey(pkg['id']),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: context.colors.surfaceAlt,
+                  color: context.colors.bgSecond,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: ListTile(
@@ -512,7 +512,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     index: index,
                     child: Icon(Icons.drag_handle, color: Colors.grey[500]),
                   ),
-                  title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
+                  title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.textMain)),
                   trailing: _itemMenu(
                         onEdit: () => _editPackage(pkg),
                         onExport: () => _exportPackage(pkg),
@@ -567,11 +567,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         final pkg = results[i];
         return Container(
           decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
+            color: context.colors.bgSecond,
             borderRadius: BorderRadius.circular(10),
           ),
           child: ListTile(
-            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
+            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.textMain)),
             trailing: _itemMenu(
                   onEdit: () => _editPackage(pkg),
                   onExport: () => _exportPackage(pkg),
@@ -630,7 +630,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       key: ValueKey(template.id ?? i),
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
+                        color: context.colors.bgSecond,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -644,7 +644,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                             ),
                           ),
                           Expanded(
-                            child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
+                            child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
                           ),
                           Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           _itemMenu(
@@ -698,14 +698,14 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         final template = results[i];
         return Container(
           decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
+            color: context.colors.bgSecond,
             borderRadius: BorderRadius.circular(10),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           child: Row(
             children: [
               Expanded(
-                child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
+                child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
               ),
               Text(context.tr('qb.nFields', {'n': template.fields.length}), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               _itemMenu(
@@ -737,7 +737,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     final tag = visible[i];
                     return Container(
                       decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
+                        color: context.colors.bgSecond,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -751,7 +751,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: context.colors.text,
+                                color: context.colors.textMain,
                               ),
                             ),
                           ),
@@ -840,7 +840,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     final session = visible[i];
                     return Container(
                       decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
+                        color: context.colors.bgSecond,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
@@ -854,7 +854,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               children: [
                                 Text(
                                   (session['title'] as String?) ?? 'Sessão ${session['id']}',
-                                  style: TextStyle(fontSize: 14, color: context.colors.text),
+                                  style: TextStyle(fontSize: 14, color: context.colors.textMain),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(

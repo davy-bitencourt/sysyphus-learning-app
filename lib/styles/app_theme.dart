@@ -28,11 +28,9 @@ class AppOptions {
   static const List<AccentOption> accents = [
     AccentOption('satin_gold', 'Satin Gold', Color(0xFFCBB080)),
     AccentOption('orange', 'Orange', Color(0xFFE65100)),
-    AccentOption('blue', 'Blue', Color(0xFF1565C0)),
     AccentOption('green', 'Green', Color(0xFF2E7D32)),
+    AccentOption('blue', 'Blue', Color(0xFF1565C0)),
     AccentOption('purple', 'Purple', Color(0xFF6A1B9A)),
-    AccentOption('teal', 'Teal', Color(0xFF00695C)),
-    AccentOption('pink', 'Pink', Color(0xFFC2185B)),
   ];
 
   static const List<HeatmapPalette> heatmaps = [
@@ -68,7 +66,6 @@ class AppOptions {
     ]),
   ];
 
-  /// PLACEHOLDER
   static const List<LanguageOption> languages = [
     LanguageOption('pt_BR', 'Português (Brasil)'),
     LanguageOption('en', 'English'),
@@ -86,7 +83,6 @@ class AppSettings extends ChangeNotifier {
   double _fontScale = 1.0;
   double _iconScale = 1.0;
 
-  /// Limites das escalas de acessibilidade (80% a 150%).
   static const double minScale = 0.8;
   static const double maxScale = 1.5;
 
@@ -109,7 +105,6 @@ class AppSettings extends ChangeNotifier {
         orElse: () => AppOptions.languages.first,
       );
 
-  /// Chame no main(), depois de inicializar o banco e antes do runApp.
   Future<void> load() async {
     try {
       final db = await DatabaseHelper.instance.database;
@@ -214,27 +209,19 @@ class AppSettings extends ChangeNotifier {
 
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  final Color bg;         // fundo de telas e barras
-  final Color surface;    // cartões e caixas sobre o fundo
-  final Color surfaceAlt; // itens de lista, campos de busca
-  final Color border;
-  final Color text;
-  final Color mutedText;
-  final Color note;       // caixa de comentário extra
-  final Color accent;     // botões, abas, ícones de destaque
-  final Color onAccent;   // texto/ícone sobre o accent
-  final List<Color> heat; // 5 níveis do heatmap (0 = sem atividade)
+  final Color bgMain;
+  final Color bgSecond;
+  final Color textMain;
+  final Color textSecond;
+  final Color accent;
+  final List<Color> heat;
 
   const AppColors({
-    required this.bg,
-    required this.surface,
-    required this.surfaceAlt,
-    required this.border,
-    required this.text,
-    required this.mutedText,
-    required this.note,
+    required this.bgMain,
+    required this.bgSecond,
+    required this.textMain,
+    required this.textSecond,
     required this.accent,
-    required this.onAccent,
     required this.heat,
   });
 
@@ -244,18 +231,12 @@ class AppColors extends ThemeExtension<AppColors> {
     required HeatmapPalette heatmap,
   }) {
     final dark = brightness == Brightness.dark;
-    final accentColor =
-        dark ? Color.lerp(accent.color, Colors.white, 0.18)! : accent.color;
     return AppColors(
-      bg: dark ? const Color(0xFF121212) : Colors.white,
-      surface: dark ? const Color(0xFF1E1E1E) : Colors.white,
-      surfaceAlt: dark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5),
-      border: dark ? const Color(0xFF3A3A3A) : const Color(0xFFE0E0E0),
-      text: dark ? const Color(0xFFECECF1) : const Color(0xFF1A1A2E),
-      mutedText: dark ? const Color(0xFFB0B0B8) : const Color(0xFF555555),
-      note: dark ? const Color(0xFF3B3320) : const Color(0xFFFFF8E1),
-      accent: accentColor,
-      onAccent: Colors.white,
+      bgMain: dark ? const Color(0xFF121212) : Colors.white,
+      bgSecond: dark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+      textMain: dark ? const Color(0xFFECECF1) : const Color(0xFF1A1A2E),
+      textSecond: dark ? const Color(0xFFB0B0B8) : const Color(0xFF555555),
+      accent: dark ? Color.lerp(accent.color, Colors.white, 0.18)! : accent.color,
       heat: [
         dark ? const Color(0xFF2D333B) : const Color(0xFFEBEDF0),
         ...heatmap.levels,
@@ -263,8 +244,6 @@ class AppColors extends ThemeExtension<AppColors> {
     );
   }
 
-  /// Usado quando o tema do app ainda não foi ligado ao AppSettings:
-  /// o visual fica igual ao padrão (Satin Gold).
   static final AppColors fallback = AppColors.of(
     brightness: Brightness.light,
     accent: AppOptions.accents.first,
@@ -273,27 +252,19 @@ class AppColors extends ThemeExtension<AppColors> {
 
   @override
   AppColors copyWith({
-    Color? bg,
-    Color? surface,
-    Color? surfaceAlt,
-    Color? border,
-    Color? text,
-    Color? mutedText,
-    Color? note,
+    Color? bgMain,
+    Color? bgSecond,
+    Color? textMain,
+    Color? textSecond,
     Color? accent,
-    Color? onAccent,
     List<Color>? heat,
   }) {
     return AppColors(
-      bg: bg ?? this.bg,
-      surface: surface ?? this.surface,
-      surfaceAlt: surfaceAlt ?? this.surfaceAlt,
-      border: border ?? this.border,
-      text: text ?? this.text,
-      mutedText: mutedText ?? this.mutedText,
-      note: note ?? this.note,
+      bgMain: bgMain ?? this.bgMain,
+      bgSecond: bgSecond ?? this.bgSecond,
+      textMain: textMain ?? this.textMain,
+      textSecond: textSecond ?? this.textSecond,
       accent: accent ?? this.accent,
-      onAccent: onAccent ?? this.onAccent,
       heat: heat ?? this.heat,
     );
   }
@@ -339,32 +310,34 @@ class AppTheme {
       brightness: brightness,
     ).copyWith(
       primary: c.accent,
-      onPrimary: c.onAccent,
-      surface: c.surface,
-      onSurface: c.text,
+      onPrimary: Colors.white,
+      surface: c.bgSecond,
+      onSurface: c.textMain,
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: c.bg,
+      scaffoldBackgroundColor: c.bgMain,
       appBarTheme: AppBarTheme(
-        backgroundColor: c.bg,
-        foregroundColor: c.text,
+        backgroundColor: c.bgMain,
+        foregroundColor: c.textMain,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      dividerTheme: DividerThemeData(color: c.border),
+      dividerTheme: DividerThemeData(
+        color: c.textSecond.withValues(alpha: 0.25),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: c.surface,
+        backgroundColor: c.bgSecond,
         surfaceTintColor: Colors.transparent,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: c.accent,
-          foregroundColor: c.onAccent,
+          foregroundColor: Colors.white,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -381,7 +354,6 @@ class AppTheme {
           TargetPlatform.fuchsia: NoTransitionsBuilder(),
         },
       ),
-      // Ícones sem tamanho explícito seguem a escala de ícones.
       iconTheme: IconThemeData(size: 24 * settings.iconScale),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(iconSize: 24 * settings.iconScale),
@@ -417,7 +389,6 @@ class AppMetrics extends ThemeExtension<AppMetrics> {
 }
 
 extension AppMetricsContext on BuildContext {
-  /// Tamanho de ícone já com a escala de acessibilidade: `context.icon(18)`.
   double icon(double base) =>
       base * (Theme.of(this).extension<AppMetrics>()?.iconScale ?? 1.0);
 }

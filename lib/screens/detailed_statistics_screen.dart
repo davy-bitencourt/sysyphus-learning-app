@@ -46,17 +46,17 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Scaffold(
-      backgroundColor: c.bg,
+      backgroundColor: c.bgMain,
       appBar: AppBar(
-        backgroundColor: c.bg,
+        backgroundColor: c.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
+          icon: Icon(Icons.arrow_back, color: c.textMain),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           context.tr('stats.detailedTitle'),
-          style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
       body: SafeArea(
@@ -85,7 +85,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             child: _error == null
                 ? const CircularProgressIndicator()
                 : Text(context.tr('stats.loadFailedWith', {'error': _error!}),
-                    textAlign: TextAlign.center, style: TextStyle(color: c.mutedText)),
+                    textAlign: TextAlign.center, style: TextStyle(color: c.textSecond)),
           ),
         ),
       ];
@@ -98,7 +98,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
           icon: Icons.insights_outlined,
           child: Text(
             context.tr('stats.noReviewsHint'),
-            style: TextStyle(fontSize: 13, color: c.mutedText),
+            style: TextStyle(fontSize: 13, color: c.textSecond),
           ),
         ),
       ];
@@ -157,7 +157,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               context.tr('stats.arrowsHint'),
-              style: TextStyle(fontSize: 11, color: c.mutedText),
+              style: TextStyle(fontSize: 11, color: c.textSecond),
             ),
           ),
         ],

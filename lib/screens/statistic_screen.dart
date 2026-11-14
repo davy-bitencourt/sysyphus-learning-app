@@ -85,9 +85,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: context.icon(64), color: c.border),
+          Icon(icon, size: context.icon(64), color: c.bgSecond),
           const SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.text)),
+          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.textMain)),
           const SizedBox(height: 4),
           Text(text,
             textAlign: TextAlign.center,

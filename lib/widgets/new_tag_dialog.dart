@@ -89,7 +89,7 @@ class _NewTagDialogState extends State<_NewTagDialog> {
               _message!,
               style: TextStyle(
                 fontSize: 12,
-                color: _messageIsError ? const Color(0xFFC62828) : context.colors.mutedText,
+                color: _messageIsError ? const Color(0xFFC62828) : context.colors.textSecond,
               ),
             ),
           ],

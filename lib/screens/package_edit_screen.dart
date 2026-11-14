@@ -151,16 +151,16 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'pkg.edit' : 'pkg.new'),
-          style: TextStyle(color: context.colors.text,
+          style: TextStyle(color: context.colors.textMain,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_isEditing)
@@ -204,7 +204,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
             ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: context.colors.bg,
+          color: context.colors.bgMain,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: SizedBox(
             width: double.infinity,

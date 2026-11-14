@@ -59,9 +59,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     if (state == AppLifecycleState.resumed) _autoSync();
   }
 
-  /// Botão de sincronizar da barra de cima.
-  ///  - sem conta neste aparelho: abre Settings > Sync para cadastrar;
-  ///  - com conta: só mostra um pop-up enquanto a atualização acontece.
   Future<void> _onSyncPressed() async {
     if (_syncing) return;
     final service = SyncService.instance;
@@ -119,7 +116,8 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
 
   void _toggleMenu() {
     if (_isMenuOpen) {
-      _closeMenu();
+      _overlayEntry?.remove();
+      _overlayEntry = null;
     } else {
       _openMenu();
     }
@@ -143,7 +141,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     return OverlayEntry(
       builder: (context) => Stack(
         children: [
-          // Fundo semi-transparente para fechar o menu ao clicar fora
           GestureDetector(
             onTap: _closeMenu,
             behavior: HitTestBehavior.translucent,
@@ -151,7 +148,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               color: Colors.black.withValues(alpha: 0.2),
             ),
           ),
-          // Menu Flutuante posicionado acima do BottomAppBar / FAB central
           Positioned(
             bottom: 80,
             left: 0,
@@ -160,7 +156,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(16),
-                color: context.colors.surface,
+                color: context.colors.bgSecond,
                 child: Container(
                   width: 220,
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -199,7 +195,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: context.colors.text,
+                color: context.colors.textMain,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -276,10 +272,10 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   }) {
     return ListTile(
       leading: Icon(icon,
-        color: active ? context.colors.accent : context.colors.text, size: context.icon(21)),
+        color: active ? context.colors.accent : context.colors.textMain, size: context.icon(21)),
       title: Text(label,
         style: TextStyle(
-          color: active ? context.colors.accent : context.colors.text,
+          color: active ? context.colors.accent : context.colors.textMain,
           fontSize: 14,
           fontWeight: active ? FontWeight.bold : FontWeight.normal,
         )),
@@ -288,17 +284,10 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     );
   }
 
-  /// Barra inferior com recorte para o FAB central.
-  ///
-  /// Não usa `BottomAppBar(shape: CircularNotchedRectangle())` de propósito:
-  /// o clipper dele lê `Scaffold.geometryOf()`, que só pode ser lido durante o
-  /// paint. Com a Home coberta por outra rota, o mouse (desktop) faz hit-test
-  /// nela fora do paint e estoura a asserção. Como o FAB é sempre
-  /// `centerDocked`, o recorte é fixo e dispensa a geometria do Scaffold.
   Widget _buildBottomBar() {
     return PhysicalShape(
       clipper: const _CenterNotchClipper(),
-      color: context.colors.surface,
+      color: context.colors.bgSecond,
       elevation: 8,
       shadowColor: Colors.black,
       child: SafeArea(
@@ -328,9 +317,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(
@@ -339,12 +328,12 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             Row(children: [
               Builder(
                 builder: (ctx) => IconButton(
-                  icon: Icon(Icons.menu, color: context.colors.mutedText),
+                  icon: Icon(Icons.menu, color: context.colors.textSecond),
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text('Sysyphus', style: bigText),
+              Text('Sysyphus', style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
             ]),
             IconButton(
               tooltip: context.tr('sync.tooltip'),
@@ -354,7 +343,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                       height: context.icon(20),
                       child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.accent),
                     )
-                  : Icon(Icons.sync, color: context.colors.mutedText),
+                  : Icon(Icons.sync, color: context.colors.textSecond),
               onPressed: _syncing ? null : _onSyncPressed,
             ),
           ],
@@ -362,15 +351,13 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
       ),
       drawer: Drawer(
         width: 240,
-        backgroundColor: context.colors.surface,
+        backgroundColor: context.colors.bgSecond,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: SafeArea(
           child: Column(
             children: [
               _drawerItem(context, Icons.list, context.tr('nav.home'), active: true, onTap: () {
-                Navigator.pop(context); // fecha o drawer
-                // Volta para a Home que já existe (primeira rota) em vez de
-                // empilhar outra, e garante que a aba aberta seja a Home.
+                Navigator.pop(context);
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 widget.onTap?.call(0);
               }),
@@ -382,7 +369,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const DetailedStatisticsScreen()));
               }),
-              Divider(color: context.colors.border, thickness: 1, indent: 16, endIndent: 16),
+              Divider(color: context.colors.bgSecond, thickness: 1, indent: 16, endIndent: 16),
               _drawerItem(context, Icons.settings, context.tr('nav.settings'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
@@ -415,8 +402,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   }
 }
 
-/// Recorte circular no topo-centro da barra, igual ao do FAB `centerDocked`
-/// (FAB de 56 px com margem de 8 px, centro na borda superior da barra).
 class _CenterNotchClipper extends CustomClipper<Path> {
   const _CenterNotchClipper();
 

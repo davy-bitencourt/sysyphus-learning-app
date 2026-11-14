@@ -354,16 +354,16 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'ses.edit' : 'ses.new'),
-          style: TextStyle(color: context.colors.text,
+          style: TextStyle(color: context.colors.textMain,
             fontWeight: FontWeight.bold, fontSize: 20)),
       ),
       body: _loading
@@ -417,10 +417,10 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(context.tr('ses.spaced'),
-                      style: TextStyle(color: context.colors.text)),
+                      style: TextStyle(color: context.colors.textMain)),
                   subtitle: Text(
                     context.tr(_spacedRepetition ? 'ses.spacedOn' : 'ses.spacedOff'),
-                    style: TextStyle(fontSize: 12, color: context.colors.mutedText),
+                    style: TextStyle(fontSize: 12, color: context.colors.textSecond),
                   ),
                   value: _spacedRepetition,
                   onChanged: (v) => setState(() => _spacedRepetition = v),
@@ -432,7 +432,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: context.colors.bg,
+          color: context.colors.bgMain,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: SizedBox(
             width: double.infinity,
@@ -495,7 +495,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               context.tr('ses.timer', {'value': SessionDao.describeTimeLimit(seconds)}),
-              style: TextStyle(fontSize: 12, color: c.mutedText),
+              style: TextStyle(fontSize: 12, color: c.textSecond),
             ),
           ),
       ],
@@ -637,7 +637,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: c.text,
+                color: c.textMain,
               ),
             ),
             const SizedBox(width: 2),
@@ -646,7 +646,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               onTap: () => setState(() => _quotas.remove(q)),
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: Icon(Icons.close, size: 16, color: c.mutedText),
+                child: Icon(Icons.close, size: 16, color: c.textSecond),
               ),
             ),
           ],
@@ -665,7 +665,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: context.colors.mutedText,
+            color: context.colors.textSecond,
           ),
         ),
       );
@@ -680,7 +680,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: over ? const Color(0xFFC62828) : context.colors.mutedText,
+          color: over ? const Color(0xFFC62828) : context.colors.textSecond,
         ),
       ),
     );

@@ -208,16 +208,16 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'tpl.edit' : 'tpl.new'),
-          style: TextStyle(color: context.colors.text,
+          style: TextStyle(color: context.colors.textMain,
             fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_isEditing)
@@ -271,7 +271,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: context.colors.bg,
+          color: context.colors.bgMain,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: SizedBox(
             width: double.infinity,
@@ -296,7 +296,7 @@ Widget _buildDividerRow({required Key key}) {
       key: key,
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Divider(
-        color: context.colors.border,
+        color: context.colors.bgSecond,
         thickness: 1.5,
         height: 1.5,
       ),
@@ -309,9 +309,9 @@ Widget _buildDividerRow({required Key key}) {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        color: context.colors.bgSecond,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.colors.border),
+        border: Border.all(color: context.colors.bgSecond),
       ),
       child: Row(
         children: [

@@ -205,7 +205,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       builder: (context, left, _) {
         final d = left ?? Duration.zero;
         final urgent = d.inSeconds <= 60; 
-        final color = urgent ? const Color(0xFFC62828) : context.colors.mutedText;
+        final color = urgent ? const Color(0xFFC62828) : context.colors.textSecond;
         return SizedBox(
           height: 32,
           child: Row(
@@ -391,10 +391,10 @@ class _QuestionScreenState extends State<QuestionScreen> {
     if (_questions.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: context.colors.bg,
+          backgroundColor: context.colors.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.colors.text),
+            icon: Icon(Icons.arrow_back, color: context.colors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -429,7 +429,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
 
     PopupMenuItem<String> item(String value, IconData icon, String label, {Color? color}) {
-      final c = color ?? context.colors.text;
+      final c = color ?? context.colors.textMain;
       return PopupMenuItem<String>(
         value: value,
         child: Row(
@@ -443,25 +443,25 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
 
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${_currentQuestion + 1} / ${_questions.length}',
-              style: TextStyle(fontSize: 14, color: context.colors.mutedText)),
+              style: TextStyle(fontSize: 14, color: context.colors.textSecond)),
             const SizedBox(width: 10),
             SizedBox(
               width: 70,
               child: LinearProgressIndicator(
                 value: (_currentQuestion + 1) / _questions.length,
-                backgroundColor: context.colors.border,
+                backgroundColor: context.colors.bgSecond,
                 color: context.colors.accent,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -478,7 +478,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         actions: [
           PopupMenuButton<String>(
             tooltip: context.tr('common.options'),
-            color: context.colors.surface,
+            color: context.colors.bgSecond,
             icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
             onSelected: (value) {
               if (value == 'edit') _openEditQuestion();
@@ -503,12 +503,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
             if (_answered) ...[
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: Divider(color: context.colors.border, thickness: 1.5)),
+                Expanded(child: Divider(color: context.colors.bgSecond, thickness: 1.5)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: _buildAnswerStatusIcon(),
                 ),
-                Expanded(child: Divider(color: context.colors.border, thickness: 1.5)),
+                Expanded(child: Divider(color: context.colors.bgSecond, thickness: 1.5)),
               ]),
               const SizedBox(height: 16),
               _buildScoreLabel(),
@@ -532,7 +532,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       padding: const EdgeInsets.all(16),
       child: MarkdownText(
         text: _current.question.statement,
-        style: TextStyle(fontSize: 16, color: context.colors.text),
+        style: TextStyle(fontSize: 16, color: context.colors.textMain),
       ),
     );
   }
@@ -580,7 +580,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         if (value == null || value.isEmpty) return const SizedBox.shrink();
         return MarkdownText(
           text: value,
-          style: TextStyle(fontSize: 14, color: context.colors.text),
+          style: TextStyle(fontSize: 14, color: context.colors.textMain),
         );
       case FieldType.image:
         final path = _current.question.textFor(field.id);
@@ -634,8 +634,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final option = options[i];
         final isSelected = selected == i;
 
-        Color borderColor = context.colors.border;
-        Color bgColor = context.colors.surface;
+        Color borderColor = context.colors.bgSecond;
+        Color bgColor = context.colors.bgSecond;
 
         if (_answered) {
           if (option.correct) {
@@ -661,7 +661,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.text)),
+            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
           ),
         );
       }),
@@ -677,8 +677,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
         final option = options[i];
         final isMarked = answers[i] == true;
 
-        Color borderColor = context.colors.border;
-        Color bgColor = context.colors.surface;
+        Color borderColor = context.colors.bgSecond;
+        Color bgColor = context.colors.bgSecond;
 
         if (_answered) {
           borderColor = option.correct ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
@@ -709,7 +709,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.text)),
+            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
           ),
         );
       }),
@@ -722,11 +722,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.colors.note,
+        color: context.colors.bgSecond,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.4)),
       ),
-      child: Text(_current.question.extraComments, style: TextStyle(fontSize: 13, color: context.colors.text)),
+      child: Text(_current.question.extraComments, style: TextStyle(fontSize: 13, color: context.colors.textMain)),
     );
   }
 
@@ -734,7 +734,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: context.colors.bg,
+        color: context.colors.bgMain,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: _centered(!_answered
           ? _fullWidthButton(context.tr('qs.showAnswer'), _showAnswer)

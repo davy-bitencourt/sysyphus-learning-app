@@ -69,17 +69,17 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           children: [
             SelectableText(
               formatAccountId(id),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1, color: c.text),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1, color: c.textMain),
             ),
             const SizedBox(height: 12),
             Text(
               dialogContext.tr('sync.idDialogBody'),
-              style: TextStyle(fontSize: 12, color: c.mutedText),
+              style: TextStyle(fontSize: 12, color: c.textSecond),
             ),
             if (_addresses.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(dialogContext.tr('sync.deviceOnNetwork', {'addresses': _addresses.join(', ')}),
-                style: TextStyle(fontSize: 12, color: c.mutedText)),
+                style: TextStyle(fontSize: 12, color: c.textSecond)),
             ],
           ],
         ),
@@ -161,16 +161,16 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Scaffold(
-      backgroundColor: c.bg,
+      backgroundColor: c.bgMain,
       appBar: AppBar(
-        backgroundColor: c.bg,
+        backgroundColor: c.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
+          icon: Icon(Icons.arrow_back, color: c.textMain),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(context.tr('settings.sync'),
-          style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20)),
+          style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -189,12 +189,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.wifi_tethering, size: context.icon(28), color: c.mutedText),
+            Icon(Icons.wifi_tethering, size: context.icon(28), color: c.textSecond),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
                 context.tr('sync.intro'),
-                style: TextStyle(fontSize: 12, color: c.mutedText),
+                style: TextStyle(fontSize: 12, color: c.textSecond),
               ),
             ),
           ],
@@ -252,7 +252,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                         : (isHost
                             ? context.tr('sync.hosting')
                             : context.tr('sync.connectedTo', {'host': '${_svc.hostAddress}'})),
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -262,13 +262,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                             ? context.tr('sync.hostBody') +
                                 (_addresses.isEmpty ? '.' : ' (${_addresses.join(', ')}).')
                             : context.tr('sync.clientBody'),
-                    style: TextStyle(fontSize: 12, color: c.mutedText),
+                    style: TextStyle(fontSize: 12, color: c.textSecond),
                   ),
                   if (isHost && _svc.discoveryError != null) ...[
                     const SizedBox(height: 6),
                     Text(
                       context.tr('sync.discoveryOff'),
-                      style: TextStyle(fontSize: 11, color: c.mutedText),
+                      style: TextStyle(fontSize: 11, color: c.textSecond),
                     ),
                   ],
                 ],
@@ -295,25 +295,25 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.tr('sync.accountId'),
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     accountText,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1, color: c.text),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1, color: c.textMain),
                   ),
                 ),
                 IconButton(
                   tooltip: context.tr(_showId ? 'sync.hide' : 'sync.show'),
                   icon: Icon(_showId ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    size: context.icon(20), color: c.mutedText),
+                    size: context.icon(20), color: c.textSecond),
                   onPressed: () => setState(() => _showId = !_showId),
                 ),
                 IconButton(
                   tooltip: context.tr('sync.copy'),
-                  icon: Icon(Icons.copy_outlined, size: context.icon(20), color: c.mutedText),
+                  icon: Icon(Icons.copy_outlined, size: context.icon(20), color: c.textSecond),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: _svc.accountIdFormatted));
                     _toast(context.tr('sync.idCopied'));
@@ -322,7 +322,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               ],
             ),
             Text(context.tr('sync.idWarning'),
-              style: TextStyle(fontSize: 11, color: c.mutedText)),
+              style: TextStyle(fontSize: 11, color: c.textSecond)),
           ],
         ),
       ),
@@ -333,7 +333,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.tr('sync.thisDevice'),
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
             const SizedBox(height: 10),
             _row(context, context.tr('sync.deviceId'), status?.deviceId ?? '...'),
             _row(context, context.tr('sync.pending'), '${status?.pendingChanges ?? 0}'),
@@ -368,13 +368,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     ];
   }
 
-  // ----------------------------------------------------------------- peças
-
   Widget _card(BuildContext context, {required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: context.colors.surfaceAlt,
+        color: context.colors.bgSecond,
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,
@@ -401,12 +399,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(title,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(text, style: TextStyle(fontSize: 12, color: c.mutedText)),
+          Text(text, style: TextStyle(fontSize: 12, color: c.textSecond)),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -434,11 +432,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label, style: TextStyle(fontSize: 13, color: c.mutedText)),
+            child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond)),
           ),
           Expanded(
             child: Text(value,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text)),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain)),
           ),
         ],
       ),
@@ -553,7 +551,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               const SizedBox(height: 8),
               Text(
                 context.tr('sync.noHost'),
-                style: TextStyle(fontSize: 12, color: c.mutedText),
+                style: TextStyle(fontSize: 12, color: c.textSecond),
               ),
             ],
             const SizedBox(height: 12),

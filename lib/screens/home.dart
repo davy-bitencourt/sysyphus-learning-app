@@ -38,8 +38,8 @@ class _HomeState extends State<Home> {
 
   Map<int, String> _packages = {};
   Map<DateTime, int> _activityMap = {};
-  int _newCount = 0; // questões novas (nunca vistas)
-  int _dueCount = 0; // questões para revisar
+  int _newCount = 0; 
+  int _dueCount = 0; 
   bool _loading = true;
 
   @override
@@ -132,10 +132,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // ---------------------------------------------------------------
-  // Desktop
-  // ---------------------------------------------------------------
-
   Widget _buildDesktopBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -170,12 +166,10 @@ class _HomeState extends State<Home> {
 
   Widget _noPackagesMessage(String hint) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text(context.tr('home.noPackages', {'hint': hint}), style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('home.noPackages', {'hint': hint}), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
       );
 
-  Widget _sectionLabel(String text) => Text(text,
-    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-      color: context.colors.text));
+  Widget _sectionLabel(String text) => Text(text, style: bigText(fontWeight: FontWeight.normal, color: context.colors.textMain));
 
   Widget _buildDeckList() {
     if (_packages.isEmpty) return _noPackagesMessage(context.tr('home.createFirstMobile'));
@@ -188,19 +182,14 @@ class _HomeState extends State<Home> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: context.colors.bgSecond),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => QuestionScreen(packageId: deck.key),
-              ),
-            );
-            if (mounted) _loadData(); // atualiza o heatmap com o que foi estudado
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => QuestionScreen(packageId: deck.key)));
+            if (mounted) _loadData();
           },
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -208,7 +197,7 @@ class _HomeState extends State<Home> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(deck.value, style: mediumText),
+                  child: Text(deck.value, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                 ),
                 IconButton(
                   onPressed: () async {
@@ -242,7 +231,7 @@ class _HomeState extends State<Home> {
         constraints: const BoxConstraints(maxWidth: 700),
         child: Container(
           decoration: BoxDecoration(
-            color: context.colors.surface,
+            color: context.colors.bgSecond,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.06),
@@ -257,7 +246,7 @@ class _HomeState extends State<Home> {
             children: [
               TableRow(
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: context.colors.border))),
+                  border: Border(bottom: BorderSide(color: context.colors.bgSecond))),
                 children: [
                   _tableCell(context.tr('home.packagesHeader'), Colors.grey[400]!, isHeader: true),
                   const SizedBox(),
@@ -268,12 +257,11 @@ class _HomeState extends State<Home> {
                 final isEven = i % 2 == 0;
                 return TableRow(
                   decoration: BoxDecoration(
-                    color: isEven ? context.colors.surface : context.colors.surfaceAlt,
+                    color: isEven ? context.colors.bgSecond : context.colors.bgSecond,
                   ),
                   children: [
                     TableCell(
                       verticalAlignment: TableCellVerticalAlignment.middle,
-                      // Toda a célula do título é clicável, não só o texto.
                       child: InkWell(
                         onTap: () async {
                           await Navigator.push(
@@ -284,7 +272,7 @@ class _HomeState extends State<Home> {
                           );
                           if (mounted) _loadData();
                         },
-                        child: _tableCell(deck.value, context.colors.text),
+                        child: _tableCell(deck.value, context.colors.textMain),
                       ),
                     ),
                     TableCell(
@@ -294,10 +282,7 @@ class _HomeState extends State<Home> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PackageEditScreen(
-                                packageId: deck.key,
-                                initialTitle: deck.value,
-                              ),
+                              builder: (_) => PackageEditScreen(packageId: deck.key,initialTitle: deck.value),
                             ),
                           );
                           if (result == true) _loadData();
@@ -326,11 +311,7 @@ class _HomeState extends State<Home> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Text(text,
         textAlign: center ? TextAlign.center : TextAlign.start,
-        style: TextStyle(
-          color: color,
-          fontSize: isHeader ? 12 : 13,
-          fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal,
-        )),
+        style: TextStyle(color: color, fontSize: isHeader ? 12 : 13, fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal,)),
     );
   }
 }

@@ -129,16 +129,16 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
     return PopScope(
       canPop: !_importing,
       child: Scaffold(
-        backgroundColor: c.bg,
+        backgroundColor: c.bgMain,
         appBar: AppBar(
-          backgroundColor: c.bg,
+          backgroundColor: c.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
+            icon: Icon(Icons.arrow_back, color: c.textMain),
             onPressed: _importing ? null : () => Navigator.pop(context),
           ),
           title: Text(context.tr('transfer.importTitle'),
-            style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20)),
+            style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20)),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -172,7 +172,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
         ),
         bottomNavigationBar: SafeArea(
           child: Container(
-            color: c.bg,
+            color: c.bgMain,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: SizedBox(
               width: double.infinity,
@@ -220,12 +220,12 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: c.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(context.tr('transfer.willImport'),
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
           const SizedBox(height: 10),
           _summaryRow(context, Icons.folder_outlined, context.tr('transfer.packages'), packages),
           _summaryRow(context, Icons.quiz_outlined, context.tr('transfer.questions'), questions),
@@ -249,10 +249,10 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
           const SizedBox(width: 10),
           SizedBox(
             width: 92,
-            child: Text(label, style: TextStyle(fontSize: 13, color: c.mutedText)),
+            child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond)),
           ),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text)),
+            child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain)),
           ),
         ],
       ),
@@ -264,7 +264,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(color: c.border),
+        border: Border.all(color: c.bgSecond),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -276,9 +276,9 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: context.icon(16), color: c.mutedText),
+                  Icon(Icons.info_outline, size: context.icon(16), color: c.textSecond),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: c.text))),
+                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: c.textMain))),
                 ],
               ),
             ),
@@ -324,9 +324,9 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
                   children: [
                     TextSpan(
                       text: '${issue.where}\n',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c.mutedText),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c.textSecond),
                     ),
-                    TextSpan(text: issue.message, style: TextStyle(fontSize: 12, color: c.text)),
+                    TextSpan(text: issue.message, style: TextStyle(fontSize: 12, color: c.textMain)),
                   ],
                 ),
               ),
@@ -335,7 +335,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(context.tr('transfer.andMore', {'n': issues.length - maxShown}),
-                style: TextStyle(fontSize: 12, color: c.mutedText)),
+                style: TextStyle(fontSize: 12, color: c.textSecond)),
             ),
         ],
       ),

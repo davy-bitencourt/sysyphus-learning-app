@@ -459,17 +459,17 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
         title: Text(
           context.tr(_isEditing ? 'qe.edit' : 'qe.new'),
-          style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
         ),
         actions: [
           if (_isEditing)
@@ -488,7 +488,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: context.colors.bg,
+        color: context.colors.bgMain,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: SizedBox(
           width: double.infinity,
@@ -595,7 +595,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               )),
           if (answerFields.isNotEmpty) ...[
             Divider(
-              color: context.colors.border,
+              color: context.colors.bgSecond,
               thickness: 1.5,
               height: 1.5,
             ),
@@ -692,16 +692,16 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       constraints: const BoxConstraints(minHeight: 96),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: context.colors.border),
+        border: Border.all(color: context.colors.bgSecond),
         borderRadius: BorderRadius.circular(10),
       ),
       child: empty
-          ? Text(context.tr('qe.nothingToPreview', {'label': label}), style: TextStyle(fontSize: 13, color: context.colors.mutedText))
+          ? Text(context.tr('qe.nothingToPreview', {'label': label}), style: TextStyle(fontSize: 13, color: context.colors.textSecond))
           : MarkdownText(
               text: text,
               style: TextStyle(
                 fontSize: isStatement ? 16 : 14,
-                color: context.colors.text,
+                color: context.colors.textMain,
               ),
             ),
     );
@@ -712,7 +712,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           icon: Icon(icon, size: context.icon(20)),
           tooltip: tip,
           visualDensity: VisualDensity.compact,
-          color: context.colors.mutedText,
+          color: context.colors.textSecond,
           onPressed: previewing ? null : onTap,
         );
 
@@ -783,7 +783,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
+        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain)),
         const SizedBox(height: 8),
         if (path != null) ...[
           if (isImage)
@@ -841,7 +841,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             field.type == FieldType.options ? 'qe.optionsHint' : 'qe.trueFalseHint',
             {'label': field.label},
           ),
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain),
         ),
         const SizedBox(height: 8),
         ...List.generate(

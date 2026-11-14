@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
-// Sem cor fixa de propósito: o texto herda a cor do tema (claro/escuro).
-const TextStyle bigText = TextStyle(
-  fontSize: 20,
-  fontWeight: FontWeight.bold,
+TextStyle bigText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 22,
+  fontWeight: fontWeight,
+  color: color
 );
 
-const TextStyle mediumText = TextStyle(
+TextStyle mediumText({required FontWeight fontWeight, required Color color}) => TextStyle(
   fontSize: 16,
-  fontWeight: FontWeight.bold,
+  fontWeight: fontWeight,
+  color: color
 );
 
-const TextStyle smallText = TextStyle(
-  fontSize: 14,
-  fontWeight: FontWeight.bold,
+TextStyle smallText({required FontWeight fontWeight, required Color color}) => TextStyle(
+  fontSize: 13,
+  fontWeight: fontWeight,
+  color: color
 );

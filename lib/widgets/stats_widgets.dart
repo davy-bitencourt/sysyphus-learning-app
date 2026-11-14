@@ -36,7 +36,6 @@ String formatAverage(double v) {
 
 String formatDays(int n) => '${formatCount(n)} ${trg(n == 1 ? 'stats.day' : 'stats.days')}';
 
-/// Cartão com título e ícone que agrupa uma seção.
 class StatCard extends StatelessWidget {
   final String title;
   final IconData? icon;
@@ -50,7 +49,7 @@ class StatCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: c.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -62,7 +61,7 @@ class StatCard extends StatelessWidget {
               ],
               Expanded(
                 child: Text(title,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
               ),
             ],
           ),
@@ -95,19 +94,19 @@ class StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: outlined ? null : c.surfaceAlt,
-        border: outlined ? Border.all(color: c.border) : null,
+        color: outlined ? null : c.bgSecond,
+        border: outlined ? Border.all(color: c.bgSecond) : null,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: c.mutedText)),
+          Text(label, style: TextStyle(fontSize: 12, color: c.textSecond)),
           const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.text)),
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.textMain)),
           if (caption != null) ...[
             const SizedBox(height: 2),
-            Text(caption!, style: TextStyle(fontSize: 11, color: c.mutedText)),
+            Text(caption!, style: TextStyle(fontSize: 11, color: c.textSecond)),
           ],
         ],
       ),
@@ -154,13 +153,13 @@ class StatRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: c.mutedText))),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond))),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain),
             ),
           ),
         ],
@@ -180,11 +179,11 @@ class PeriodRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     String delta = '';
-    Color color = c.mutedText;
+    Color color = c.textSecond;
     if (previous > 0) {
       final pct = ((value - previous) / previous * 100).round();
       delta = '${pct > 0 ? '▲' : (pct < 0 ? '▼' : '•')} ${pct.abs()}%';
-      color = pct > 0 ? c.accent : (pct < 0 ? _kDown : c.mutedText);
+      color = pct > 0 ? c.accent : (pct < 0 ? _kDown : c.textSecond);
     } else if (value > 0) {
       delta = context.tr('stats.new');
       color = c.accent;
@@ -193,9 +192,9 @@ class PeriodRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: c.mutedText))),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond))),
           Text(formatCount(value),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text)),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain)),
           SizedBox(
             width: 70,
             child: Text(delta,
@@ -244,7 +243,7 @@ class BarChart extends StatelessWidget {
         child: Container(
           height: barHeight,
           decoration: BoxDecoration(
-            color: v <= 0 ? c.border : (emphasized ? c.accent : c.accent.withValues(alpha: 0.5)),
+            color: v <= 0 ? c.bgSecond : (emphasized ? c.accent : c.accent.withValues(alpha: 0.5)),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
           ),
         ),
@@ -267,7 +266,7 @@ class BarChart extends StatelessWidget {
                     maxLines: 1,
                     softWrap: false,
                     overflow: TextOverflow.visible,
-                    style: TextStyle(fontSize: 10, color: c.mutedText)),
+                    style: TextStyle(fontSize: 10, color: c.textSecond)),
                 ),
             ],
           ),
@@ -277,8 +276,8 @@ class BarChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(footerStart ?? '', style: TextStyle(fontSize: 10, color: c.mutedText)),
-              Text(footerEnd ?? '', style: TextStyle(fontSize: 10, color: c.mutedText)),
+              Text(footerStart ?? '', style: TextStyle(fontSize: 10, color: c.textSecond)),
+              Text(footerEnd ?? '', style: TextStyle(fontSize: 10, color: c.textSecond)),
             ],
           ),
         ],

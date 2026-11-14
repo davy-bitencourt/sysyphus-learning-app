@@ -90,7 +90,7 @@ class HeatmapCard extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
-                    Text(context.tr('home.studyActivity'), style: mediumText),
+                    Text(context.tr('home.studyActivity'), style: mediumText(fontWeight: FontWeight.bold, color: c.textMain)),
                     const SizedBox(height: 2),
                   ],
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
