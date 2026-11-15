@@ -1,0 +1,24 @@
+SYSYPHUS LEARNING APP - TELA BRANCA NO CHROME
+
+CAUSA IDENTIFICADA NO LOG:
+O SQLite Web nao conseguiu iniciar porque o arquivo web/sqflite_sw.js nao foi encontrado.
+O ZIP tambem nao continha web/sqlite3.wasm.
+
+COMO RESOLVER:
+1. Extraia todo o ZIP no computador Windows.
+2. Abra a pasta sysyphus-learning-app-main.
+3. Dê dois cliques em INICIAR_WEB.bat.
+4. O script executara flutter pub get, gerara os binarios do SQLite e iniciara o Chrome.
+
+ALTERNATIVA (PowerShell, na pasta pubspec.yaml):
+  flutter pub get
+  dart run sqflite_common_ffi_web:setup
+  flutter run -d chrome --web-port=7357
+
+VERIFIQUE:
+  Test-Path .\web\sqflite_sw.js
+  Test-Path .\web\sqlite3.wasm
+
+Ambos devem retornar True.
+O ZIP nao inclui os binarios gerados e nao foi compilado nesta plataforma.
+Documentacao: INSTRUCOES_WEB_WINDOWS.md

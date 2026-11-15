@@ -4,14 +4,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'sync_auth.dart';
+import 'sync_errors.dart';
+export 'sync_errors.dart';
 import 'sync_models.dart';
-
-class SyncAuthException implements Exception {
-  final String message;
-  const SyncAuthException([this.message = 'ID incorreto ou relógios dos aparelhos muito diferentes.']);
-  @override
-  String toString() => message;
-}
 
 class _Resp {
   final int status;

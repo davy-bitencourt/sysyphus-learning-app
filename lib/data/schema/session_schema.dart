@@ -1,11 +1,11 @@
-import 'package:Sysyphus/data/DAO/session_dao.dart';
+import 'package:sysyphus/data/DAO/session_dao.dart';
 
 class  SessionSchema {
 
-  List<Map<String, dynamic>> session_schema = [];
+  List<Map<String, dynamic>> sessionSchema = [];
 
   Future<void> getSessionsData() async {
     SessionDao dao = SessionDao();
-    session_schema = await dao.getAll();
+    sessionSchema = await dao.getAll();
   }
 }

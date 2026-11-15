@@ -1,0 +1,22 @@
+SYSYPHUS LEARNING APP: CORRECOES DO FLUTTER ANALYZE
+
+Base: sysyphus-learning-app-main(1).zip, com melhorias de usabilidade reintegradas.
+
+O arquivo docs/usabilidade/RELATORIO_CORRECOES_POWERSHELL.md descreve as
+25 mensagens do PowerShell e as correcoes aplicadas nos respectivos arquivos.
+
+Abra a pasta sysyphus-learning-app-main no Visual Studio Code e execute:
+
+  flutter pub get
+  flutter analyze
+  flutter test
+
+Nao execute 'flutter create .' sem antes conferir suas alteracoes locais.
+Se houver arquivos antigos de .dart_tool, rode 'flutter pub get' novamente.
+O nome do pacote Dart no pubspec.yaml agora e sysyphus (minusculo).
+
+Nenhuma migracao do banco de dados e necessaria. As colunas time_limit e
+total_q e o nome sysy_app.db permanecem inalterados.
+
+IMPORTANTE: as correcoes foram revisadas estaticamente. O SDK Flutter nao
+estava disponivel no ambiente para reexecutar o analyzer ou os testes.

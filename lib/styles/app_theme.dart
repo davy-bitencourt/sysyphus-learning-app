@@ -70,6 +70,8 @@ class AppOptions {
   static const List<LanguageOption> languages = [
     LanguageOption('pt_BR', 'Português (Brasil)'),
     LanguageOption('en', 'English'),
+    LanguageOption('es', 'Español'),
+    LanguageOption('ja', '日本語'),
   ];
 }
 
@@ -315,6 +317,7 @@ class AppTheme {
     );
 
     return ThemeData(
+      fontFamily: 'Arial',
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,

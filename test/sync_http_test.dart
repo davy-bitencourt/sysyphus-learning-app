@@ -6,13 +6,13 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:Sysyphus/data/sync/sync_auth.dart';
-import 'package:Sysyphus/data/sync/sync_engine.dart';
-import 'package:Sysyphus/data/sync/sync_http_server.dart';
-import 'package:Sysyphus/data/sync/sync_http_transport.dart';
-import 'package:Sysyphus/data/sync/sync_memory_transport.dart';
-import 'package:Sysyphus/data/sync/sync_models.dart';
-import 'package:Sysyphus/data/sync/sync_schema.dart';
+import 'package:sysyphus/data/sync/sync_auth.dart';
+import 'package:sysyphus/data/sync/sync_engine.dart';
+import 'package:sysyphus/data/sync/sync_http_server.dart';
+import 'package:sysyphus/data/sync/sync_http_transport.dart';
+import 'package:sysyphus/data/sync/sync_memory_transport.dart';
+import 'package:sysyphus/data/sync/sync_models.dart';
+import 'package:sysyphus/data/sync/sync_schema.dart';
 
 const String _id = 'K7QF2-MZP9X-HD4TR-AWB3E-6YNCLH';
 
@@ -57,6 +57,24 @@ void main() {
     tearDown(() async {
       client.close();
       await server.stop();
+    });
+
+    test('CORS: navegador consegue consultar preflight OPTIONS sem autenticação', () async {
+      final httpClient = HttpClient();
+      try {
+        final request = await httpClient.openUrl(
+          'OPTIONS', Uri.parse('http://127.0.0.1:${server.boundPort}/v1/ping'));
+        request.headers.set('Origin', 'http://localhost:7357');
+        request.headers.set('Access-Control-Request-Method', 'GET');
+        request.headers.set('Access-Control-Request-Headers', 'x-sysy-time,x-sysy-sig');
+        final response = await request.close();
+        expect(response.statusCode, 204);
+        expect(response.headers.value('access-control-allow-origin'), '*');
+        expect(response.headers.value('access-control-allow-headers'), contains('X-Sysy-Sig'));
+        await response.drain<void>();
+      } finally {
+        httpClient.close(force: true);
+      }
     });
 
     test('ID certo conecta; ID errado é recusado', () async {

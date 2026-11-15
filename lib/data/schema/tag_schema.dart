@@ -1,7 +1,7 @@
-import 'package:Sysyphus/data/DAO/tag_dao.dart';
+import 'package:sysyphus/data/DAO/tag_dao.dart';
 
 class TagSchema {
-  Map<int, String> tag_schema = {};
+  Map<int, String> tagSchema = {};
 
   Future<void> getTagData() async {
     TagDao dao = TagDao();
@@ -9,7 +9,7 @@ class TagSchema {
     List<Map<String, dynamic>> result = await dao.getAll();
 
     for( final item in result){
-      tag_schema[item['id'] as int] = item['title'] as String;
+      tagSchema[item['id'] as int] = item['title'] as String;
     }
   }
 }

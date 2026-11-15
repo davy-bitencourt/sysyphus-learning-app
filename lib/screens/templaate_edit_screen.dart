@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:Sysyphus/l10n/strings.dart';
-import 'package:Sysyphus/styles/app_theme.dart';
-import 'package:Sysyphus/data/DAO/template_dao.dart';
-import 'package:Sysyphus/data/models/field_model.dart';
+import 'package:sysyphus/l10n/strings.dart';
+import 'package:sysyphus/styles/app_theme.dart';
+import 'package:sysyphus/data/DAO/template_dao.dart';
+import 'package:sysyphus/data/models/field_model.dart';
 
 class _DividerMarker {
   const _DividerMarker();

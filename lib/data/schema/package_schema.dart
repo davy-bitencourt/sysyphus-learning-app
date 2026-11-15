@@ -1,25 +1,26 @@
-import 'package:Sysyphus/data/DAO/package_dao.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:sysyphus/data/DAO/package_dao.dart';
 
 class PackageSchema {
-  Map<int, String> package_schema = {};
+  Map<int, String> packageSchema = {};
 
   Future<void> getPackageDataByProfile(int profileId) async {
-    print('SCHEMA 1');
+    debugPrint('SCHEMA 1');
 
     PackageDao dao = PackageDao();
 
-    print('SCHEMA 2 - chamando DAO');
+    debugPrint('SCHEMA 2 - chamando DAO');
 
     List<Map<String, dynamic>> result =
         await dao.getProfilePackages(profileId);
 
-    print('SCHEMA 3 - DAO retornou');
-    print(result);
+    debugPrint('SCHEMA 3 - DAO retornou');
+    debugPrint('$result');
 
     for (final item in result) {
-      package_schema[item['id'] as int] = item['name'] as String;
+      packageSchema[item['id'] as int] = item['name'] as String;
     }
 
-    print('SCHEMA 4 - terminou');
+    debugPrint('SCHEMA 4 - terminou');
   }
 }

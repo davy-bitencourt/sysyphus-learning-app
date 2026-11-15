@@ -5,15 +5,8 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 
 import 'sync_auth.dart';
-
-class SyncHost {
-  final String address;
-  final int port;
-  const SyncHost(this.address, this.port);
-
-  @override
-  String toString() => '$address:$port';
-}
+import 'sync_host.dart';
+export 'sync_host.dart';
 
 String discoveryHint(String accountId) => sha256
     .convert(utf8.encode('disc:${normalizeAccountId(accountId)}'))

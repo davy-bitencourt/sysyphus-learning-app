@@ -1,4 +1,4 @@
-import 'package:Sysyphus/data/database_helper.dart';
+import 'package:sysyphus/data/database_helper.dart';
 
 class ProfileDao {
 

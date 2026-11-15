@@ -2,6 +2,18 @@ import '../../data/database_helper.dart';
 import '../../data/DTO/question_dto.dart';
 
 class QuestionDao {
+  /// Contagem de questões por matéria em uma única consulta.
+  Future<Map<int, int>> getPackageCounts() async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.rawQuery(
+      'SELECT package_id, COUNT(*) AS total FROM question WHERE package_id IS NOT NULL GROUP BY package_id',
+    );
+    return {
+      for (final row in rows)
+        (row['package_id'] as num).toInt(): (row['total'] as num).toInt(),
+    };
+  }
+
   Future<List<Map<String, dynamic>>> getAll() async {
     final db = await DatabaseHelper.instance.database;
     return db.query('question');

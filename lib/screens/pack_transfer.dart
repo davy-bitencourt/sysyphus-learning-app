@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +10,10 @@ import '../data/transfer/pack_parser.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import 'home.dart';
+import '../data/platform/local_file_io.dart'
+    if (dart.library.js_interop) '../data/platform/local_file_web.dart' as local_files;
+import '../data/platform/download_stub.dart'
+    if (dart.library.html) '../data/platform/download_web.dart' as downloader;
 
 String _two(int n) => n.toString().padLeft(2, '0');
 
@@ -39,19 +43,22 @@ Future<bool> startPackImport(BuildContext context) async {
     picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['zip'],
+      withData: kIsWeb,
     );
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.pickerFailed', {'error': e}))));
     return false;
   }
-  final path = picked?.files.single.path;
-  if (path == null) return false;
+  if (picked == null || picked.files.isEmpty) return false;
+  final selected = picked.files.single;
+  if (!kIsWeb && selected.path == null) return false;
 
   PackImportPlan? builtPlan;
   Map<String, List<int>>? unzipped;
   String? failure;
   try {
-    final bytes = await File(path).readAsBytes();
+    final bytes = kIsWeb ? selected.bytes : await local_files.readBytes(selected.path!);
+    if (bytes == null) throw StateError('Não foi possível ler o arquivo ZIP.');
     unzipped = unzipPack(bytes);
     builtPlan = await buildImportPlan(parsePack(unzipped));
   } on FormatException catch (e) {
@@ -370,22 +377,28 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
   String? savedPath;
   String? saveError;
   try {
-    savedPath = await FilePicker.platform.saveFile(
-      dialogTitle: t('transfer.saveExport'),
-      fileName: 'sysyphus-${_today()}.zip',
-      type: FileType.custom,
-      allowedExtensions: const ['zip'],
-      bytes: export.bytes,
-    );
-    if (savedPath != null && !Platform.isAndroid) {
-      await File(savedPath).writeAsBytes(export.bytes);
+    final fileName = 'sysyphus-${_today()}.zip';
+    if (kIsWeb) {
+      // A browser download is not a filesystem path.
+      if (await downloader.downloadFile(fileName, export.bytes)) savedPath = fileName;
+    } else {
+      savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: t('transfer.saveExport'),
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: const ['zip'],
+        bytes: export.bytes,
+      );
+      if (savedPath != null && defaultTargetPlatform != TargetPlatform.android) {
+        await local_files.writeBytes(savedPath, export.bytes);
+      }
     }
   } catch (e) {
     saveError = '$e';
   }
 
   if (saveError != null) {
-    messenger.showSnackBar(SnackBar(content: Text(t('transfer.saveFailed', {'error': saveError ?? ''}))));
+    messenger.showSnackBar(SnackBar(content: Text(t('transfer.saveFailed', {'error': saveError}))));
     return;
   }
   if (savedPath == null) {

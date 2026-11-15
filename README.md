@@ -1,5 +1,9 @@
 # Sysyphus Learning App
 
+> **Atualização de usabilidade (15/11/2026):** criação rápida de matérias, novos tipos de questões e melhorias de navegação. Consulte [relatório comparativo](docs/RELATORIO_COMPARATIVO_UX.md), [instruções de execução](docs/INSTRUCOES_EXECUCAO_UX.md) e [relatório de validação](docs/RELATORIO_VALIDACAO_UX.md). Os testes Flutter ainda devem ser executados no ambiente local e as traduções antigas de ES/JA são parciais.
+
+> **Flutter Web:** antes de executar `flutter run -d chrome`, siga [INSTRUCOES_WEB_WINDOWS.md](INSTRUCOES_WEB_WINDOWS.md). O SQLite Web necessita de configuração inicial com `dart run sqflite_common_ffi_web:setup`. Consulte também [RELATORIO_TECNICO_WEB.md](RELATORIO_TECNICO_WEB.md).
+
 ## Overview
 
 Sysyphus is a cross-platform study application built with Flutter. It lets users test their knowledge using customizable question banks, backed by a local database layer that stores questions, study sessions, review history, and user data.

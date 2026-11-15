@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'package:flutter/material.dart';
 
@@ -87,7 +87,7 @@ class HeatmapCard extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
+                  if(!kIsWeb && (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS)) ...[
                     Text(context.tr('home.studyActivity'), style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
                     const SizedBox(height: 2),
                   ],

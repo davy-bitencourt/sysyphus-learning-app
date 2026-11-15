@@ -1,4 +1,4 @@
-name: Sysyphus
+name: sysyphus
 description: "A learning app to test your knowledge."
 publish_to: 'none'
 
@@ -14,6 +14,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.7+1
+  sqflite_common_ffi_web: ^1.0.2
+  http: ^1.5.0
   audioplayers: ^6.1.0
   image_picker: ^1.1.2
   file_picker: ^8.1.2

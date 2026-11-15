@@ -155,7 +155,7 @@ class PackQuestion {
   final String statement;
 
   /// Rótulo normalizado do campo -> String (texto ou caminho de mídia dentro
-  /// do zip) ou List<PackOption> (alternativas).
+  /// do zip) ou `List<PackOption>` (alternativas).
   final Map<String, Object> values;
 
   final String sourceFile;

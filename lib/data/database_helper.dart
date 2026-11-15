@@ -1,5 +1,6 @@
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:sqflite/sqflite.dart';
-import 'dart:io';
+import 'package:path/path.dart' as p;
 
 import 'sync/sync_schema.dart';
 
@@ -10,30 +11,25 @@ class DatabaseHelper{
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    print('DB GETTER 1');
+    debugPrint('DB GETTER 1');
 
     if (_database != null) {
-      print('DB GETTER 2 - database existe');
+      debugPrint('DB GETTER 2 - database existe');
       return _database!;
     }
 
-    print('DB GETTER 3 - chamando _initDB');
+    debugPrint('DB GETTER 3 - chamando _initDB');
     _database = await _initDB('sysy_app.db');
 
-    print('DB GETTER 4 - _initDB terminou');
+    debugPrint('DB GETTER 4 - _initDB terminou');
     return _database!;
   }
 
   Future<Database> _initDB(String fileNane) async {
-    final dirDb = await getDatabasesPath();
-    print('DB: $dirDb');    
-
-    final String dir;
-    if(Platform.isWindows){
-      dir = '$dirDb\\$fileNane';
-    } else {
-      dir = '$dirDb/$fileNane';
-    }
+    // Web names are relative to the worker's IndexedDB-backed database root.
+    // Native paths are kept unchanged to preserve existing user databases.
+    final dir = kIsWeb ? fileNane : p.join(await getDatabasesPath(), fileNane);
+    debugPrint('DB: $dir');
 
     return await openDatabase(
       dir, 

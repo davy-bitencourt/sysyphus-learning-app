@@ -4,17 +4,20 @@ import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
+import 'questions_edit_screen.dart';
 
 class PackageEditScreen extends StatefulWidget {
   final int? packageId;
   final String? initialTitle;
   final int? initialSessionId;
+  final bool allowAddQuestions;
 
   const PackageEditScreen({
     super.key,
     this.packageId,
     this.initialTitle,
     this.initialSessionId,
+    this.allowAddQuestions = true,
   });
 
   @override
@@ -28,6 +31,9 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _createdAny = false;
+  bool _leaving = false;
+  String _originalTitle = '';
+  int? _originalSessionId;
 
   bool get _isEditing => widget.packageId != null;
 
@@ -57,6 +63,8 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
       _selectedSessionId = null;
     }
 
+    _originalTitle = _titleController.text;
+    _originalSessionId = _selectedSessionId;
     if (mounted) setState(() => _loading = false);
   }
 
@@ -66,29 +74,46 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool addQuestions = false}) async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('pkg.nameRequired'))));
+        SnackBar(content: Text(context.tr('pkg.nameRequired'))),
+      );
       return;
     }
 
     setState(() => _saving = true);
-    final dao = PackageDao();
     try {
+      final dao = PackageDao();
       if (_isEditing) {
         await dao.update(widget.packageId!, _selectedSessionId, title);
-        if (mounted) Navigator.pop(context, true);
-      } else {
-        await dao.insert(_selectedSessionId, title);
-        _createdAny = true;
         if (!mounted) return;
-        _titleController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('pkg.saved', {'title': title}))),
         );
+        Navigator.pop(context, true);
+      } else {
+        final newId = await dao.insert(_selectedSessionId, title);
+        _createdAny = true;
+        if (!mounted) return;
+        if (addQuestions) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => QuestionsEditScreen(packageId: newId)),
+          );
+          if (!mounted) return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('pkg.saved', {'title': title}))),
+        );
+        Navigator.pop(context, true);
       }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('pkg.saveFailed', {'error': error}))),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -133,9 +158,37 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
     }
   }
 
-  void _leave() {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    Navigator.pop(context, _createdAny);
+  Future<void> _leave() async {
+    if (_saving || _leaving) return;
+    _leaving = true;
+    try {
+      if (_titleController.text != _originalTitle ||
+          _selectedSessionId != _originalSessionId) {
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(context.tr('ux.discardTitle')),
+            content: Text(context.tr('ux.discardBody')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(context.tr('common.cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(context.tr('ux.discard')),
+              ),
+            ],
+          ),
+        );
+        if (discard != true) return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      Navigator.pop(context, _createdAny);
+    } finally {
+      _leaving = false;
+    }
   }
 
   @override
@@ -177,47 +230,77 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
               children: [
                 TextField(
                   controller: _titleController,
+                  autofocus: !_isEditing,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) { if (!_saving) _save(); },
                   decoration: InputDecoration(
                     labelText: context.tr('pkg.name'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int?>(
-                  initialValue: _selectedSessionId,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text(context.tr('pkg.noSession'))),
-                    ..._sessions.map((s) => DropdownMenuItem(
-                      value: s['id'] as int,
-                      child: Text((s['title'] as String?) ?? context.tr('pkg.sessionFallback', {'id': s['id'] as Object})),
-                    )),
-                  ],
-                  onChanged: (v) => setState(() => _selectedSessionId = v),
-                  decoration: InputDecoration(
-                    labelText: context.tr('pkg.sessionOptional'),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                if (_sessions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    initiallyExpanded: _selectedSessionId != null,
+                    title: Text(context.tr('ux.advancedOptions')),
+                    children: [
+                      DropdownButtonFormField<int?>(
+                        initialValue: _selectedSessionId,
+                        items: [
+                          DropdownMenuItem(value: null, child: Text(context.tr('pkg.noSession'))),
+                          ..._sessions.map((session) => DropdownMenuItem(
+                            value: session['id'] as int,
+                            child: Text((session['title'] as String?) ??
+                                context.tr('pkg.sessionFallback', {'id': session['id'] as Object})),
+                          )),
+                        ],
+                        onChanged: (value) => setState(() => _selectedSessionId = value),
+                        decoration: InputDecoration(
+                          labelText: context.tr('pkg.sessionOptional'),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ],
             ),
       bottomNavigationBar: SafeArea(
         child: Container(
           color: context.colors.bgMain,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (_saving || _loading) ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!_isEditing && widget.allowAddQuestions) ...[
+                ElevatedButton.icon(
+                  onPressed: (_saving || _loading) ? null : () => _save(addQuestions: true),
+                  icon: const Icon(Icons.add),
+                  label: Text(context.tr('pkg.createAndAdd')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.colors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+              ElevatedButton(
+                onPressed: (_saving || _loading) ? null : () => _save(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isEditing || !widget.allowAddQuestions
+                      ? context.colors.accent : context.colors.bgSecond,
+                  foregroundColor: _isEditing || !widget.allowAddQuestions
+                      ? Colors.white : context.colors.textMain,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(context.tr(_saving ? 'common.saving' : 'pkg.save')),
               ),
-              child: Text(context.tr(_saving ? 'common.saving' : 'pkg.save'), style: const TextStyle(fontSize: 15)),
-            ),
+            ],
           ),
         ),
       ),

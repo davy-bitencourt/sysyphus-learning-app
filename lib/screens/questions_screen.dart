@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
+import '../data/services/media_storage_service.dart';
+import '../widgets/media_image.dart';
 import '../styles/app_theme.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../data/schema/question_schema.dart';
@@ -107,7 +110,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       );
     } else {
       await _questionSchema.getQuestionData(widget.packageId, widget.limit);
-      rows = _questionSchema.question_schema;
+      rows = _questionSchema.questionSchema;
     }
 
     final loaded = <LoadedQuestion>[];
@@ -116,7 +119,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       if (templateId == null) continue;
 
       await _templateSchema.isOnCache(templateId);
-      final templateMap = _templateSchema.template_schema[templateId];
+      final templateMap = _templateSchema.templateSchema[templateId];
       if (templateMap == null) continue;
 
       final template = TemplateModel.fromMap(templateId, templateMap);
@@ -337,6 +340,21 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
   }
 
+  String _audioMimeType(String path) {
+    switch (path.toLowerCase().split('.').last) {
+      case 'wav':
+        return 'audio/wav';
+      case 'ogg':
+        return 'audio/ogg';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'aac':
+        return 'audio/aac';
+      default:
+        return 'audio/mpeg';
+    }
+  }
+
   Future<void> _toggleAudio(String fieldId, String path) async {
     if (_playingFieldId == fieldId) {
       await _audioPlayer.stop();
@@ -344,7 +362,13 @@ class _QuestionScreenState extends State<QuestionScreen> {
       return;
     }
     await _audioPlayer.stop();
-    await _audioPlayer.play(DeviceFileSource(path));
+    if (kIsWeb) {
+      final bytes = await MediaStorageService.readBytes(path);
+      if (bytes == null) throw StateError('Áudio não encontrado.');
+      await _audioPlayer.play(BytesSource(Uint8List.fromList(bytes), mimeType: _audioMimeType(path)));
+    } else {
+      await _audioPlayer.play(DeviceFileSource(path));
+    }
     setState(() => _playingFieldId = fieldId);
     _audioPlayer.onPlayerComplete.first.then((_) {
       if (mounted) setState(() => _playingFieldId = null);
@@ -588,7 +612,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         if (field.maxWidth == null && field.maxHeight == null) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(File(path), width: double.infinity, fit: BoxFit.cover),
+            child: MediaImage(path: path, width: double.infinity, fit: BoxFit.cover),
           );
         }
         return Center(
@@ -599,7 +623,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(File(path), fit: BoxFit.contain),
+              child: MediaImage(path: path, fit: BoxFit.contain),
             ),
           ),
         );
@@ -717,16 +741,31 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 
   Widget _buildExtraComments() {
-    if (_current.question.extraComments.isEmpty) return const SizedBox.shrink();
+    final savedComment = _current.question.values['ux_comment'] as String? ?? '';
+    final existingComment = _current.question.extraComments;
+    if (savedComment.isEmpty && existingComment.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.colors.bgSecond,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.4)),
+        border: Border.all(color: context.colors.accent.withValues(alpha: 0.4)),
       ),
-      child: Text(_current.question.extraComments, style: TextStyle(fontSize: 13, color: context.colors.textMain)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (savedComment.isNotEmpty) ...[
+            Text(context.tr('ux.explanation'), style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            MarkdownText(text: savedComment, style: TextStyle(fontSize: 13, color: context.colors.textMain)),
+          ],
+          if (existingComment.isNotEmpty) ...[
+            if (savedComment.isNotEmpty) const SizedBox(height: 8),
+            Text(existingComment, style: TextStyle(fontSize: 13, color: context.colors.textMain)),
+          ],
+        ],
+      ),
     );
   }
 

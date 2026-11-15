@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import '../services/media_storage_service.dart';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -216,8 +216,8 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
     final already = mediaNames[localPath];
     if (already != null) return already;
 
-    final file = File(localPath);
-    if (!await file.exists()) {
+    final bytes = await MediaStorageService.readBytes(localPath);
+    if (bytes == null) {
       warnings.add('Arquivo de mídia não encontrado (ignorado): $localPath');
       return null;
     }
@@ -228,7 +228,7 @@ Future<ExportResult> buildExport({Set<int>? packageIds}) async {
       return null;
     }
     final name = isImage ? 'media/img_${++imageCount}$ext' : 'media/aud_${++audioCount}$ext';
-    addBytes(name, await file.readAsBytes());
+    addBytes(name, bytes);
     mediaNames[localPath] = name;
     return name;
   }

@@ -310,8 +310,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       final dto = SessionDto(
         id: widget.session?['id'] as int?,
         title: name,
-        time_limit: SessionDao.formatTimeLimit(limitSeconds), 
-        total_q: total,
+        timeLimit: SessionDao.formatTimeLimit(limitSeconds), 
+        totalQ: total,
         tagFilters: filters == null ? null : jsonEncode(filters),
         spacedRepetition: _spacedRepetition,
       );

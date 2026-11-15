@@ -9,10 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:Sysyphus/data/sync/sync_engine.dart';
-import 'package:Sysyphus/data/sync/sync_memory_transport.dart';
-import 'package:Sysyphus/data/sync/sync_models.dart';
-import 'package:Sysyphus/data/sync/sync_schema.dart';
+import 'package:sysyphus/data/sync/sync_engine.dart';
+import 'package:sysyphus/data/sync/sync_memory_transport.dart';
+import 'package:sysyphus/data/sync/sync_models.dart';
+import 'package:sysyphus/data/sync/sync_schema.dart';
 
 const List<String> _baseSchema = [
   'CREATE TABLE account (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, senha TEXT)',

@@ -5,7 +5,6 @@ import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 import '../screens/setting_screen.dart';
-import '../screens/package_edit_screen.dart';
 import '../screens/questions_edit_screen.dart';
 import '../screens/templaate_edit_screen.dart';
 import '../screens/question_bank_screen.dart';
@@ -15,6 +14,7 @@ import '../screens/sync_settings_screen.dart';
 import '../data/sync/sync_models.dart';
 import '../data/services/sync_service.dart';
 import 'new_tag_dialog.dart';
+import 'quick_subject_dialog.dart';
 
 class MainScaffold extends StatefulWidget {
   final String title;
@@ -201,11 +201,17 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   Future<void> _handleCreateAction(String action) async {
     switch (action) {
       case 'package':
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PackageEditScreen()),
-        );
-        if (result == true) widget.onItemCreated?.call();
+        final result = await showQuickSubjectDialog(context);
+        if (result != null && mounted) {
+          widget.onItemCreated?.call();
+          if (result.addQuestion) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => QuestionsEditScreen(packageId: result.id)),
+            );
+            widget.onItemCreated?.call();
+          }
+        }
         break;
 
       case 'question':

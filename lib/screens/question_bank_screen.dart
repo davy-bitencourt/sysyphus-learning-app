@@ -18,7 +18,9 @@ import 'session_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 
 class QuestionBankScreen extends StatefulWidget {
-  const QuestionBankScreen({super.key});
+  final int? initialPackageId;
+
+  const QuestionBankScreen({super.key, this.initialPackageId});
 
   @override
   State<QuestionBankScreen> createState() => _QuestionBankScreenState();
@@ -42,6 +44,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedPackageId = widget.initialPackageId;
     _load();
   }
 
@@ -72,6 +75,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
   bool _matches(String text) => _query.isEmpty || _norm(text).contains(_norm(_query));
+
+  bool _matchesQuestion(Question question) =>
+      _matches('${question.statement} ${question.values.values.join(' ')}');
 
   Widget _noResults() => Center(
         child: Text(context.tr('qb.noResults'), style: TextStyle(color: Colors.grey[500])),
@@ -543,7 +549,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         child: Text(context.tr('qs.noQuestions'), style: TextStyle(color: Colors.grey[500])),
       );
     }
-    final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
+    final visible = _packageQuestions.where(_matchesQuestion).toList();
     if (visible.isEmpty) return _noResults();
 
     final tagNames = {for (final t in _tags) t['id'] as int: t['title'] as String};

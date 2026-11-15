@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../data/sync/sync_auth.dart';
-import '../data/sync/sync_discovery.dart';
-import '../data/sync/sync_http_transport.dart';
+import '../data/sync/sync_host.dart';
+import '../data/sync/sync_errors.dart';
 import '../data/sync/sync_models.dart';
 import '../data/services/sync_service.dart';
 import '../l10n/strings.dart';
@@ -201,7 +202,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         ),
       ),
       const SizedBox(height: 12),
-      _actionCard(
+      if (kIsWeb)
+        _card(context, child: Text(context.tr('sync.webNotice'),
+          style: TextStyle(fontSize: 12, color: c.textSecond))),
+      if (!kIsWeb) _actionCard(
         context,
         icon: Icons.computer_outlined,
         title: context.tr('sync.createTitle'),
@@ -527,7 +531,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               decoration: InputDecoration(labelText: context.tr('sync.accountId'), hintText: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX'),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
+            if (!kIsWeb) OutlinedButton.icon(
               onPressed: (_idValid && !_searching && !_connecting) ? _search : null,
               icon: _searching
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))

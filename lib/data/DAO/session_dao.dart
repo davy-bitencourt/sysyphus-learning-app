@@ -90,7 +90,7 @@ class SessionDao {
       '''
         INSERT INTO session (title, time_limit, total_q, tag_filters, spaced_repetition)
         VALUES (?, ?, ?, ?, ?)
-      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters, dto.spacedRepetition ? 1 : 0]
+      ''', [dto.title, dto.timeLimit, dto.totalQ, dto.tagFilters, dto.spacedRepetition ? 1 : 0]
     );
   }
 
@@ -102,7 +102,7 @@ class SessionDao {
         UPDATE session
         SET title = ?, time_limit = ?, total_q = ?, tag_filters = ?, spaced_repetition = ?
         WHERE id = ?
-      ''', [dto.title, dto.time_limit, dto.total_q, dto.tagFilters, dto.spacedRepetition ? 1 : 0, dto.id]
+      ''', [dto.title, dto.timeLimit, dto.totalQ, dto.tagFilters, dto.spacedRepetition ? 1 : 0, dto.id]
     );
   }
 

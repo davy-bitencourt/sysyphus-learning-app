@@ -90,6 +90,16 @@ class SyncHttpServer {
   Future<void> _handle(HttpRequest req) async {
     final res = req.response;
     try {
+      // Browser clients issue an unauthenticated OPTIONS request before
+      // sending signed HTTP requests with custom headers.
+      res.headers.set('Access-Control-Allow-Origin', '*');
+      res.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, OPTIONS');
+      res.headers.set('Access-Control-Allow-Headers', 'X-Sysy-Time, X-Sysy-Sig, Content-Type');
+      res.headers.set('Access-Control-Max-Age', '600');
+      if (req.method.toUpperCase() == 'OPTIONS') {
+        await _sendStatus(res, 204);
+        return;
+      }
       final body = await _readBody(req);
       if (body == null) {
         await _sendJson(res, 413, {'error': 'corpo grande demais'});

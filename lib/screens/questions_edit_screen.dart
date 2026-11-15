@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:path/path.dart' as p;
+import '../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
@@ -12,7 +13,9 @@ import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
 import '../data/services/order_service.dart';
 import '../data/services/media_storage_service.dart';
-import 'package_edit_screen.dart';
+import '../data/services/simple_question_template.dart';
+import '../data/services/quick_question_templates.dart';
+import '../widgets/quick_subject_dialog.dart';
 import 'templaate_edit_screen.dart';
 import '../widgets/markdown_text.dart';
 
@@ -82,10 +85,14 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   String _tagQuery = '';
 
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _commentController = TextEditingController();
 
   bool _loading = true;
   bool _saving = false;
-  bool _createdAny = false; 
+  bool _createdAny = false;
+  bool _showAdvanced = false;
+  bool _leaving = false;
+  String _initialSnapshot = '';
 
   bool get _isEditing => widget.question != null;
 
@@ -100,56 +107,90 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   }
 
   Future<void> _loadOptions() async {
-    final templateRows = await OrderService.apply(
-        OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
+    final templateDao = TemplateDao();
+    var templateRows = await OrderService.apply(
+      OrderService.templatesKey,
+      await templateDao.getAll(),
+      (t) => t['id'] as int,
+    );
     final tagRows = await TagDao().getAll();
     final packageRows = await OrderService.apply(
-        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
+      OrderService.packagesKey,
+      await PackageDao().getAll(),
+      (p) => p['id'] as int,
+    );
 
     _templates = templateRows
         .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
         .toList();
+    if (!_isEditing) {
+      final basicId = await SimpleQuestionTemplate.ensureExists(templateDao, _templates);
+      await QuickQuestionTemplates.ensureExists(templateDao, _templates);
+      // Recarrega sempre: os modelos de múltipla escolha e V/F podem ter sido
+      // inseridos sem alterar os modelos/questões já existentes.
+      templateRows = await OrderService.apply(
+        OrderService.templatesKey,
+        await templateDao.getAll(),
+        (t) => t['id'] as int,
+      );
+      _templates = templateRows
+          .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
+          .toList();
+      _selectedTemplate = _templates.firstWhere((t) => t.id == basicId);
+    }
     _tags = tagRows;
     _packages = packageRows;
+    if (_selectedPackageId == null && _packages.isNotEmpty) {
+      _selectedPackageId = _packages.first['id'] as int;
+    }
 
     final q = widget.question;
     if (q != null) {
-      _selectedPackageId = q.packageId ?? widget.packageId;
-
+      _commentController.text = q.values['ux_comment'] as String? ?? '';
+      _selectedPackageId = q.packageId ?? widget.packageId ?? _selectedPackageId;
       if (q.tagId != null) {
         final match = _tags.firstWhere(
           (t) => t['id'] == q.tagId,
           orElse: () => const <String, dynamic>{},
         );
-        if (match.isNotEmpty) {
-          _tagInputController.text = '#${match['title']} ';
-        }
+        if (match.isNotEmpty) _tagInputController.text = '#${match['title']} ';
       }
-
-      TemplateModel? match;
       for (final t in _templates) {
         if (t.id == q.templateId) {
-          match = t;
+          _selectedTemplate = t;
           break;
         }
       }
-      _selectedTemplate = match ?? (_templates.isNotEmpty ? _templates.first : null);
+      _selectedTemplate ??= _templates.isNotEmpty ? _templates.first : null;
+      _showAdvanced = _selectedTemplate != null &&
+          !SimpleQuestionTemplate.matches(_selectedTemplate!) &&
+          QuickQuestionTemplates.kindOf(_selectedTemplate!) == null;
       if (_selectedTemplate != null) {
         _setupControllersForTemplate(
           _selectedTemplate!,
           initialValues: {...q.values, ..._bufferValuesFor(_selectedTemplate!)},
         );
       }
-    } else if (_templates.isNotEmpty) {
-      _selectedTemplate = _templates.first;
+    } else if (_selectedTemplate != null) {
       _setupControllersForTemplate(
         _selectedTemplate!,
         initialValues: _bufferValuesFor(_selectedTemplate!),
       );
     }
 
+    _initialSnapshot = _formSnapshot();
     if (mounted) setState(() => _loading = false);
   }
+
+  String _formSnapshot() => jsonEncode({
+    'template': _selectedTemplate?.id,
+    'package': _selectedPackageId,
+    'tag': _tagInputController.text,
+    'comment': _commentController.text,
+    'values': _selectedTemplate == null
+        ? <String, dynamic>{} : _collectValues(_selectedTemplate!),
+    'buffer': _buffer,
+  });
 
   void _setupControllersForTemplate(TemplateModel template, {Map<String, dynamic>? initialValues}) {
     for (final c in _textControllers.values) {
@@ -185,6 +226,10 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               const <OptionValue>[];
           _optionControllers[field.id] = List.generate(
               field.optionCount, (i) => TextEditingController(text: i < options.length ? options[i].text : ''));
+          if (field.id == QuickQuestionTemplates.truthId && options.isEmpty) {
+            _optionControllers[field.id]![0].text = trg('ux.trueLabel');
+            _optionControllers[field.id]![1].text = trg('ux.falseLabel');
+          }
           _optionCorrect[field.id] =
               List.generate(field.optionCount, (i) => i < options.length ? options[i].correct : false);
           break;
@@ -207,24 +252,19 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       };
 
   Future<void> _openNewPackage() async {
-    final previousIds = _packages.map((p) => p['id']).toSet();
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PackageEditScreen()),
-    );
-    if (result != true || !mounted) return;
-
+    final created = await showQuickSubjectDialog(context, allowAddQuestion: false);
+    if (created == null || !mounted) return;
     final rows = await OrderService.apply(
         OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
     if (!mounted) return;
-    final created = rows.where((p) => !previousIds.contains(p['id'])).toList();
     setState(() {
       _packages = rows;
-      if (created.isNotEmpty) _selectedPackageId = created.last['id'] as int;
+      _selectedPackageId = created.id;
     });
   }
 
   Future<void> _openNewTemplate() async {
+    final previousIds = _templates.map((template) => template.id).toSet();
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const TemplateEditScreen()),
@@ -233,6 +273,15 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       if (_selectedTemplate != null) _saveToBuffer(_selectedTemplate!);
       setState(() => _loading = true);
       await _loadOptions();
+      if (!mounted) return;
+      final added = _templates.where((template) => !previousIds.contains(template.id));
+      if (added.isEmpty) return;
+      setState(() {
+        _selectedTemplate = added.last;
+        _showAdvanced = true;
+        _setupControllersForTemplate(
+          _selectedTemplate!, initialValues: _bufferValuesFor(_selectedTemplate!));
+      });
     }
   }
 
@@ -259,6 +308,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       }
     }
     _tagInputController.dispose();
+    _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -277,12 +327,18 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         c.clear();
       }
     }
+    final trueFalseInputs = _optionControllers[QuickQuestionTemplates.truthId];
+    if (trueFalseInputs != null && trueFalseInputs.length >= 2) {
+      trueFalseInputs[0].text = trg('ux.trueLabel');
+      trueFalseInputs[1].text = trg('ux.falseLabel');
+    }
     for (final list in _optionCorrect.values) {
       for (var i = 0; i < list.length; i++) {
         list[i] = false;
       }
     }
     _tagInputController.clear();
+    _commentController.clear();
     _tagQuery = '';
   }
 
@@ -359,18 +415,27 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         case FieldType.vof:
           final controllers = _optionControllers[field.id] ?? [];
           final corrects = _optionCorrect[field.id] ?? [];
-          values[field.id] = List.generate(
-            controllers.length,
-            (i) => OptionValue(text: controllers[i].text.trim(), correct: corrects[i]).toMap(),
-          );
+          values[field.id] = [
+            for (var i = 0; i < controllers.length; i++)
+              if (field.id != QuickQuestionTemplates.choicesId ||
+                  controllers[i].text.trim().isNotEmpty)
+                OptionValue(text: controllers[i].text.trim(), correct: corrects[i]).toMap(),
+          ];
           break;
       }
     }
+    values['ux_comment'] = _commentController.text.trim();
     return values;
   }
 
-  Future<void> _save() async {
-    if (_selectedTemplate == null || _selectedTemplate!.id == null) {
+  Future<void> _save({bool addAnother = false}) async {
+    final template = _selectedTemplate;
+    if (template == null) {
+      _showError(context.tr('qe.pickTemplate'));
+      return;
+    }
+    final templateId = template.id;
+    if (templateId == null) {
       _showError(context.tr('qe.pickTemplate'));
       return;
     }
@@ -384,38 +449,61 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       _showError(context.tr('qe.fillStatement'));
       return;
     }
+    if (SimpleQuestionTemplate.matches(template) &&
+        (_textControllers[SimpleQuestionTemplate.answerId]?.text.trim().isEmpty ?? true)) {
+      _showError(context.tr('qe.fillAnswer'));
+      return;
+    }
+    final quickKind = QuickQuestionTemplates.kindOf(template);
+    if (quickKind != null) {
+      final fieldId = quickKind == 'multiple'
+          ? QuickQuestionTemplates.choicesId : QuickQuestionTemplates.truthId;
+      final texts = _optionControllers[fieldId] ?? [];
+      final marks = _optionCorrect[fieldId] ?? [];
+      final nonEmpty = texts.where((c) => c.text.trim().isNotEmpty).length;
+      final selected = <int>[
+        for (var i = 0; i < marks.length; i++) if (marks[i]) i,
+      ];
+      if (nonEmpty < 2 || selected.length != 1 ||
+          texts[selected.first].text.trim().isEmpty) {
+        _showError(context.tr('ux.optionValidation'));
+        return;
+      }
+    }
 
     setState(() => _saving = true);
-
-    final values = _collectValues(_selectedTemplate!);
-    final tagId = await _resolveFirstTagId();
-
-    final dto = QuestionDto(
-      packageId: _selectedPackageId!,
-      tagId: tagId,
-      templateId: _selectedTemplate!.id!,
-      questions: jsonEncode(values),
-    );
-
-    final dao = QuestionDao();
     try {
+      final values = _collectValues(template);
+      final tagId = await _resolveFirstTagId();
+      final dto = QuestionDto(
+        packageId: _selectedPackageId!,
+        tagId: tagId,
+        templateId: templateId,
+        questions: jsonEncode(values),
+      );
+      final dao = QuestionDao();
       if (_isEditing) {
         await dao.updateQuestion(widget.question!.id!, dto);
-        if (mounted) Navigator.pop(context, true);
+        if (!mounted) return;
+        _showError(context.tr('qe.saved'));
+        Navigator.pop(context, true);
       } else {
         await dao.insert(dto);
         _createdAny = true;
         if (!mounted) return;
-        setState(_resetForm);
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
+        if (addAnother) {
+          setState(_resetForm);
+          _initialSnapshot = _formSnapshot();
+          if (_scrollController.hasClients) _scrollController.jumpTo(0);
+          _showError(context.tr('qe.savedNext'));
+        } else {
+          _showError(context.tr('qe.saved'));
+          Navigator.pop(context, true);
         }
-        _showError(context.tr('qe.saved'));
       }
+    } catch (error) {
+      if (!mounted) return;
+      _showError(context.tr('qe.saveFailed', {'error': error}));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -423,10 +511,31 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   Future<void> _delete() async {
     if (!_isEditing) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.tr('qb.deleteQuestion')),
+        content: Text(context.tr('qb.deleteQuestionBody',
+            {'name': widget.question!.statement})),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.tr('common.cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(context.tr('common.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     setState(() => _saving = true);
     try {
       await QuestionDao().delete(widget.question!.id!);
       if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) _showError(context.tr('qe.deleteFailed', {'error': error}));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -436,9 +545,36 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _leave() {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    Navigator.pop(context, _createdAny);
+  Future<void> _leave() async {
+    if (_saving || _leaving) return;
+    _leaving = true;
+    try {
+      if (_initialSnapshot.isNotEmpty && _formSnapshot() != _initialSnapshot) {
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(context.tr('ux.discardTitle')),
+            content: Text(context.tr('ux.discardBody')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(context.tr('common.cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(context.tr('ux.discard')),
+              ),
+            ],
+          ),
+        );
+        if (discard != true) return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      Navigator.pop(context, _createdAny);
+    } finally {
+      _leaving = false;
+    }
   }
 
   @override
@@ -489,23 +625,35 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   }
 
   Widget _buildSaveFooter() {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return SafeArea(
       top: false,
       child: Container(
         color: context.colors.bgMain,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.colors.accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(context.tr(_saving ? 'common.saving' : 'qe.save'), style: const TextStyle(fontSize: 15)),
-          ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              TextButton(
+                onPressed: _saving ? null : _leave,
+                child: Text(context.tr('common.cancel')),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _saving ? null : () => _save(),
+                icon: const Icon(Icons.check),
+                label: Text(context.tr(_saving ? 'common.saving' : 'qe.save')),
+              ),
+            ]),
+            if (!_isEditing && !keyboardOpen)
+              TextButton.icon(
+                onPressed: _saving ? null : () => _save(addAnother: true),
+                icon: const Icon(Icons.add),
+                label: Text(context.tr('qe.saveAndAnother')),
+              ),
+          ],
         ),
       ),
     );
@@ -540,77 +688,211 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   Widget _buildForm() {
     final template = _selectedTemplate;
-    final questionFields = template?.questionFields ?? const [];
-    final answerFields = template?.answerFields ?? const [];
+    if (template == null) return _buildNoTemplates();
+    final basic = SimpleQuestionTemplate.matches(template);
+    final statement = template.fields.firstWhere((f) => f.isStatement);
+    final additional = template.fields.where((f) => !f.isStatement &&
+        !(basic && f.id == SimpleQuestionTemplate.answerId)).toList();
+    final selectedPackage = _packages.where((p) => p['id'] == _selectedPackageId);
+    final packageName = selectedPackage.isNotEmpty
+        ? selectedPackage.first['title'] as String : context.tr('qe.pickPackage');
 
     return ListView(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildDropdown<int?>(
-                label: context.tr('qb.package'),
-                value: _selectedPackageId,
-                items: _packages
-                    .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedPackageId = v),
-              ),
-            ),
-            IconButton(
-              onPressed: _openNewPackage,
-              icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDropdown<TemplateModel?>(
-                label: context.tr('qe.template'),
-                value: _selectedTemplate,
-                items: _templates.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
-                onChanged: (t) {
-                  if (t == null || t == _selectedTemplate) return;
-                  setState(() {
-                    if (_selectedTemplate != null) _saveToBuffer(_selectedTemplate!);
-                    _selectedTemplate = t;
-                    _setupControllersForTemplate(t, initialValues: _bufferValuesFor(t));
-                  });
-                },
-              ),
-            ),
-            IconButton(
-              onPressed: _openNewTemplate,
-              icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildTagField(),
-        const SizedBox(height: 20),
-        if (template != null) ...[
-          ...questionFields.map((f) => Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: _buildFieldInput(f),
-              )),
-          if (answerFields.isNotEmpty) ...[
-            Divider(
-              color: context.colors.bgSecond,
-              thickness: 1.5,
-              height: 1.5,
-            ),
-            const SizedBox(height: 20),
-            ...answerFields.map((f) => Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: _buildFieldInput(f),
-                )),
-          ],
+        if (_selectedPackageId != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Text(context.tr('qe.inPackage', {'name': packageName}),
+              style: TextStyle(color: context.colors.textSecond)),
+          )
+        else
+          Text(context.tr('qe.chooseOrCreate'),
+            style: TextStyle(color: context.colors.textSecond)),
+        if (_selectedPackageId == null)
+          Align(alignment: Alignment.centerLeft, child: TextButton.icon(
+            onPressed: _openNewPackage,
+            icon: const Icon(Icons.add),
+            label: Text(context.tr('ux.newSubject')),
+          )),
+        if (basic || QuickQuestionTemplates.kindOf(template) != null) ...[
+          _buildQuickTypeSelector(template),
+          const SizedBox(height: 16),
         ],
-        const SizedBox(height: 24),
+        _buildMarkdownField(statement, labelOverride: context.tr('qe.questionRequired')),
+        const SizedBox(height: 16),
+        if (basic) ...[
+          _buildMarkdownField(
+            template.fields.firstWhere((f) => f.id == SimpleQuestionTemplate.answerId),
+            labelOverride: context.tr('qe.answerRequired'),
+          ),
+          const SizedBox(height: 10),
+        ] else ...[
+          ...additional.map((f) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: QuickQuestionTemplates.kindOf(template) != null &&
+                    f.type == FieldType.options
+                ? _buildQuickOptionsField(f)
+                : _buildFieldInput(f),
+          )),
+        ],
+        TextField(
+          controller: _commentController,
+          minLines: 2,
+          maxLines: 4,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: context.tr('ux.commentOptional'),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ExpansionTile(
+          key: ValueKey('advanced_${template.id}'),
+          initiallyExpanded: _showAdvanced,
+          onExpansionChanged: (expanded) => setState(() => _showAdvanced = expanded),
+          tilePadding: EdgeInsets.zero,
+          title: Text(context.tr('ux.advancedOptions')),
+          children: [
+            Row(
+              children: [
+                Expanded(child: _buildDropdown<int?>(
+                  label: context.tr('qb.package'),
+                  value: _selectedPackageId,
+                  items: _packages.map((p) => DropdownMenuItem(
+                    value: p['id'] as int, child: Text(p['title'] as String),
+                  )).toList(),
+                  onChanged: (value) => setState(() => _selectedPackageId = value),
+                )),
+                IconButton(
+                  tooltip: context.tr('pkg.new'),
+                  onPressed: _openNewPackage,
+                  icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _buildDropdown<TemplateModel?>(
+                  label: context.tr('qe.template'),
+                  value: _selectedTemplate,
+                  items: _templates.map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(_templateLabel(t)),
+                  )).toList(),
+                  onChanged: (selected) {
+                    if (selected == null || selected == _selectedTemplate) return;
+                    setState(() {
+                      if (_selectedTemplate != null) _saveToBuffer(_selectedTemplate!);
+                      _selectedTemplate = selected;
+                      _showAdvanced = !SimpleQuestionTemplate.matches(selected);
+                      _setupControllersForTemplate(
+                        selected, initialValues: _bufferValuesFor(selected));
+                    });
+                  },
+                )),
+                IconButton(
+                  tooltip: context.tr('qe.createTemplate'),
+                  onPressed: _openNewTemplate,
+                  icon: Icon(Icons.add_circle_outline, color: context.colors.accent),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildTagField(),
+            const SizedBox(height: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  String _templateLabel(TemplateModel template) {
+    if (SimpleQuestionTemplate.matches(template)) return context.tr('qe.basicTemplate');
+    switch (QuickQuestionTemplates.kindOf(template)) {
+      case 'multiple': return context.tr('ux.multipleType');
+      case 'trueFalse': return context.tr('ux.trueFalseType');
+      default: return template.name;
+    }
+  }
+
+  Widget _buildQuickTypeSelector(TemplateModel template) {
+    final selected = SimpleQuestionTemplate.matches(template)
+        ? 'open' : QuickQuestionTemplates.kindOf(template)!;
+    final choices = <String, TemplateModel>{};
+    for (final item in _templates) {
+      if (SimpleQuestionTemplate.matches(item)) choices['open'] = item;
+      final kind = QuickQuestionTemplates.kindOf(item);
+      if (kind != null) choices[kind] = item;
+    }
+    return DropdownButtonFormField<String>(
+      key: ValueKey('quick_type_$selected'),
+      initialValue: selected,
+      decoration: InputDecoration(
+        labelText: context.tr('ux.questionType'),
+        border: const OutlineInputBorder(),
+      ),
+      items: [
+        DropdownMenuItem(value: 'open', child: Text(context.tr('ux.openType'))),
+        DropdownMenuItem(value: 'multiple', child: Text(context.tr('ux.multipleType'))),
+        DropdownMenuItem(value: 'trueFalse', child: Text(context.tr('ux.trueFalseType'))),
+      ],
+      onChanged: (kind) {
+        final chosen = choices[kind];
+        if (chosen == null || chosen == _selectedTemplate) return;
+        setState(() {
+          _saveToBuffer(template);
+          _selectedTemplate = chosen;
+          _showAdvanced = false;
+          _setupControllersForTemplate(chosen,
+              initialValues: _bufferValuesFor(chosen));
+        });
+      },
+    );
+  }
+
+  Widget _buildQuickOptionsField(FieldDefinition field) {
+    final inputs = _optionControllers[field.id] ?? [];
+    final correct = _optionCorrect[field.id] ?? [];
+    final isTruth = field.id == QuickQuestionTemplates.truthId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.tr('ux.chooseCorrect'),
+          style: TextStyle(color: context.colors.textSecond)),
+        const SizedBox(height: 8),
+        for (var i = 0; i < inputs.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(children: [
+              IconButton(
+                tooltip: context.tr('ux.markCorrect'),
+                onPressed: () => setState(() {
+                  for (var j = 0; j < correct.length; j++) {
+                    correct[j] = j == i;
+                  }
+                }),
+                icon: Icon(correct[i]
+                    ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: correct[i] ? context.colors.accent : context.colors.textSecond),
+              ),
+              Expanded(child: TextField(
+                controller: inputs[i],
+                readOnly: isTruth,
+                maxLines: 2,
+                minLines: 1,
+                decoration: InputDecoration(
+                  labelText: isTruth
+                      ? (i == 0 ? context.tr('ux.trueLabel') : context.tr('ux.falseLabel'))
+                      : context.tr('qe.option', {'n': i + 1}),
+                  border: const OutlineInputBorder(),
+                ),
+              )),
+            ]),
+          ),
       ],
     );
   }
@@ -671,16 +953,18 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
   }
 
-  Widget _buildMarkdownField(FieldDefinition field) {
+  Widget _buildMarkdownField(FieldDefinition field, {String? labelOverride}) {
     final controller = _textControllers[field.id]!;
-    final label = field.isStatement ? '${field.label}*' : field.label;
+    final label = labelOverride ?? (field.isStatement ? '${field.label}*' : field.label);
     final previewing = _previewing.contains(field.id);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildMarkdownToolbar(field.id, controller, previewing),
-        const SizedBox(height: 6),
+        if (_showAdvanced) ...[
+          _buildMarkdownToolbar(field.id, controller, previewing),
+          const SizedBox(height: 6),
+        ],
         if (previewing)
           _buildMarkdownPreview(controller.text, label, field.isStatement)
         else
@@ -793,13 +1077,13 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           if (isImage)
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.file(File(path), height: 140, fit: BoxFit.cover, width: double.infinity),
+              child: MediaImage(path: path, height: 140, fit: BoxFit.cover, width: double.infinity),
             )
           else
             Row(children: [
               Icon(Icons.audiotrack, color: context.colors.accent),
               const SizedBox(width: 8),
-              Expanded(child: Text(path.split(Platform.pathSeparator).last, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(p.basename(path), overflow: TextOverflow.ellipsis)),
             ]),
           const SizedBox(height: 8),
         ],
@@ -909,6 +1193,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     required void Function(T?) onChanged,
   }) {
     return DropdownButtonFormField<T>(
+      key: ValueKey('$label:$value'),
       initialValue: value,
       items: items,
       onChanged: onChanged,

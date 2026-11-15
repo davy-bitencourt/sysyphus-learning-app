@@ -26,9 +26,9 @@ class PackageDao {
     );
   } 
 
-  Future<void> insert(int? sessionId, String title) async {
+  Future<int> insert(int? sessionId, String title) async {
     final db = await DatabaseHelper.instance.database;
-    await db.rawInsert(
+    return db.rawInsert(
       '''
         INSERT INTO package (session_id, title)
         VALUES (?, ?)

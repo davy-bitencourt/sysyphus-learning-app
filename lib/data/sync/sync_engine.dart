@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import '../services/media_storage_service.dart';
 
 import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
@@ -93,10 +93,8 @@ class SyncEngine {
 
   bool _running = false;
 
-  static Future<List<int>?> _defaultReadFile(String path) async {
-    final f = File(path);
-    return await f.exists() ? await f.readAsBytes() : null;
-  }
+  static Future<List<int>?> _defaultReadFile(String path) =>
+      MediaStorageService.readBytes(path);
 
   Future<SyncReport> sync() async {
     if (_running) throw StateError('Já existe uma sincronização em andamento.');
@@ -202,7 +200,7 @@ class SyncEngine {
     final rows = await db.rawQuery('SELECT path FROM sync_media WHERE hash = ?', [hash]);
     if (rows.isNotEmpty) {
       final p = rows.first['path'] as String;
-      if (await File(p).exists()) return p;
+      if (await MediaStorageService.exists(p)) return p;
     }
     final bytes = await transport.getBlob(hash);
     if (bytes == null) return null;
