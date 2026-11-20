@@ -166,26 +166,26 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
 
   static const double _handleW = 40;
-  static const double _idW = 44;
 
   Future<void> _persistPackageOrder() async {
     await OrderService.save(
       OrderService.packagesKey,
       _packages.map((p) => p['id'] as int).toList(),
     );
-    Home.packagesChanged.value++; // a Home recarrega na nova ordem
+    Home.packagesChanged.value++; 
   }
+
+  Future<void> _persistSessionOrder() => OrderService.save(
+        OrderService.sessionsKey,
+        _sessions.map((x) => x['id'] as int).toList(),
+      );
 
   Future<void> _persistTemplateOrder() => OrderService.save(
         OrderService.templatesKey,
         _templates.map((t) => t.id).whereType<int>().toList(),
       );
 
-  // ---- helpers de tabela -------------------------------------------------
-  // Cada coluna é (rótulo/texto, flex). flex 0 = largura fixa (coluna de ID).
-
-  Widget _cell(int flex, Widget child) =>
-      flex <= 0 ? SizedBox(width: _idW, child: child) : Expanded(flex: flex, child: child);
+  Widget _cell(int flex, Widget child) => Expanded(flex: flex, child: child);
 
   Widget _tableHeader(List<(String, int)> cols, {bool handle = false}) {
     return Container(
@@ -209,7 +209,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 ),
               ),
             ),
-          const SizedBox(width: 48), // espaço do menu ⋮
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -217,6 +217,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
   Widget _tableRow({
     required Key key,
+    required int index,
     required List<(String, int)> cells,
     required Widget menu,
     Widget? handle,
@@ -225,7 +226,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       key: key,
       constraints: const BoxConstraints(minHeight: 52),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: context.colors.bgSecond)),
+        color: index.isEven ? context.colors.bgSecond : context.colors.bgMain,
       ),
       child: Material(
         color: Colors.transparent,
@@ -239,12 +240,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
                     c.$1,
-                    maxLines: c.$2 <= 0 ? 1 : 2,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: c.$2 <= 0 ? Colors.grey[500] : context.colors.textMain,
-                    ),
+                    style: TextStyle(fontSize: 14, color: context.colors.textMain),
                   ),
                 ),
               ),
@@ -270,7 +268,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       );
 
   Widget _tagsTable(List<Map<String, dynamic>> rows) {
-    const cols = [('ID', 0), ('Tag', 6)];
+    const cols = [('Tag', 1)];
     return _tableShell(
       header: _tableHeader(cols),
       list: ListView.builder(
@@ -279,7 +277,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           final tag = rows[i];
           return _tableRow(
             key: ValueKey(tag['id']),
-            cells: [('${tag['id']}', 0), ('#${tag['title']}', 6)],
+            index: i,
+            cells: [('#${tag['title']}', 1)],
             menu: _itemMenu(onDelete: () => _deleteTag(tag)),
           );
         },
@@ -295,7 +294,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final templateRows = await OrderService.apply(
         OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
     final tagRows = await TagDao().getAll();
-    final sessionRows = await SessionDao().getAll();
+    final sessionRows = await OrderService.apply(
+        OrderService.sessionsKey, await SessionDao().getAll(), (x) => x['id'] as int);
 
     if (!mounted) return;
 
@@ -551,7 +551,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       for (final t in _templates)
         if (t.id != null) t.id!: t.name,
     };
-    const cols = [('ID', 0), ('Enunciado', 6), ('Template', 2), ('Tag', 2)];
+    const cols = [('Enunciado', 6), ('Template', 2), ('Tag', 2)];
 
     return Column(
       children: [
@@ -564,8 +564,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
               return _tableRow(
                 key: ValueKey(question.id ?? i),
+                index: i,
                 cells: [
-                  ('${question.id ?? '-'}', 0),
                   (title, 6),
                   (templateNames[question.templateId] ?? '-', 2),
                   (question.tagId == null ? '-' : '#${tagNames[question.tagId] ?? '?'}', 2),
@@ -658,12 +658,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
   Widget _packagesTable(List<Map<String, dynamic>> rows, {required bool reorderable}) {
-    const cols = [('ID', 0), ('Título', 6)];
+    const cols = [('Título', 1)];
 
     Widget row(Map<String, dynamic> pkg, int i) => _tableRow(
           key: ValueKey(pkg['id']),
+          index: i,
           handle: reorderable ? _dragHandle(i) : null,
-          cells: [('${pkg['id']}', 0), (pkg['title'] as String, 6)],
+          cells: [(pkg['title'] as String, 1)],
           menu: _itemMenu(
             onEdit: () => _editPackage(pkg),
             onExport: () => _exportPackage(pkg),
@@ -763,12 +764,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
   Widget _templatesTable(List<TemplateModel> rows, {required bool reorderable}) {
-    const cols = [('ID', 0), ('Nome', 5), ('Campos', 2)];
+    const cols = [('Nome', 5), ('Campos', 2)];
 
     Widget row(TemplateModel t, int i) => _tableRow(
           key: ValueKey(t.id ?? t.name),
+          index: i,
           handle: reorderable ? _dragHandle(i) : null,
-          cells: [('${t.id ?? '-'}', 0), (t.name, 5), ('${t.fields.length}', 2)],
+          cells: [(t.name, 5), ('${t.fields.length}', 2)],
           menu: _itemMenu(
             onEdit: () => _editTemplate(t),
             onDelete: () => _deleteTemplate(t),
@@ -878,7 +880,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ? (_sessions.isEmpty
                   ? Center(child: Text(context.tr('qb.noSessions'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
-              : _sessionsTable(visible),
+              : _sessionsTable(visible, reorderable: _query.isEmpty),
         ),
         SafeArea(
           top: false,
@@ -922,30 +924,45 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · ');
   }
 
-  Widget _sessionsTable(List<Map<String, dynamic>> rows) {
-    const cols = [('ID', 0), ('Título', 4), ('Limite', 3), ('Questões', 2), ('Tags', 4)];
+  Widget _sessionsTable(List<Map<String, dynamic>> rows, {required bool reorderable}) {
+    const cols = [('Título', 4), ('Limite', 3), ('Questões', 2), ('Tags', 4)];
+
+    Widget row(Map<String, dynamic> session, int i) => _tableRow(
+          key: ValueKey(session['id']),
+          index: i,
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [
+            ((session['title'] as String?) ?? 'Sessão ${session['id']}', 4),
+            (_sessionLimit(session), 3),
+            ('${(session['total_q'] as num?)?.toInt() ?? '-'}', 2),
+            (_sessionFilters(session), 4),
+          ],
+          menu: _itemMenu(
+            onEdit: () => _editSession(session),
+            onDelete: () => _deleteSession(session),
+          ),
+        );
+
     return _tableShell(
-      header: _tableHeader(cols),
-      list: ListView.builder(
-        itemCount: rows.length,
-        itemBuilder: (context, i) {
-          final session = rows[i];
-          return _tableRow(
-            key: ValueKey(session['id']),
-            cells: [
-              ('${session['id']}', 0),
-              ((session['title'] as String?) ?? 'Sessão ${session['id']}', 4),
-              (_sessionLimit(session), 3),
-              ('${(session['total_q'] as num?)?.toInt() ?? '-'}', 2),
-              (_sessionFilters(session), 4),
-            ],
-            menu: _itemMenu(
-              onEdit: () => _editSession(session),
-              onDelete: () => _deleteSession(session),
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _sessions.removeAt(oldIndex);
+                  _sessions.insert(newIndex, item);
+                });
+                _persistSessionOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
             ),
-          );
-        },
-      ),
     );
   }
 

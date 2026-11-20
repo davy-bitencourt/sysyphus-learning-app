@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
+import '../data/services/order_service.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
@@ -40,7 +41,8 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
   }
 
   Future<void> _loadSessions() async {
-    _sessions = await SessionDao().getAll();
+    _sessions = await OrderService.apply(
+        OrderService.sessionsKey, await SessionDao().getAll(), (s) => s['id'] as int);
 
     if (_isEditing && _selectedSessionId == null) {
       final rows = await PackageDao().getAll();

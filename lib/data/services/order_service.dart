@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OrderService {
   static const packagesKey = 'order.packages';
   static const templatesKey = 'order.templates';
+  static const sessionsKey = 'order.sessions';
 
   static Future<void> save(String key, List<int> ids) async {
     final prefs = await SharedPreferences.getInstance();
