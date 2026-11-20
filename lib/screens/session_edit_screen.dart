@@ -7,6 +7,7 @@ import '../data/DAO/question_state_dao.dart';
 import '../data/DAO/session_dao.dart';
 import '../data/DAO/tag_dao.dart';
 import '../data/DTO/session_dto.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 class _TagQuota {
@@ -36,7 +37,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   final _tagInputController = TextEditingController();
   String _tagQuery = '';
   final _tagFocus = FocusNode();
-  _TagQuota? _editingQuota; // tag que está sendo editada (saiu da lista temporariamente)
+  _TagQuota? _editingQuota;   
   static final _quotaPattern = RegExp(r'^#?([^\s=#]+)=(\d+)$');
 
   bool get _isEditing => widget.session != null;
@@ -163,7 +164,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       s.trim().replaceAll(RegExp(r',+$'), '').trim();
 
   void _onTagInputChanged(String text) {
-    // espaço ou vírgula no final = fecha o token "tag=num" e vira tag
     final closed = text.endsWith(' ') || text.endsWith(',');
     if (closed && _quotaPattern.hasMatch(_clean(text))) {
       _commitTagInput();
@@ -182,7 +182,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _tagFocus.requestFocus();
   }
 
-  /// Transforma o texto do campo em tag. Retorna false se não conseguiu.
   bool _commitTagInput({bool warnFormat = true}) {
     final raw = _clean(_tagInputController.text);
     if (raw.isEmpty) return true;
@@ -190,7 +189,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     final m = _quotaPattern.firstMatch(raw);
     if (m == null) {
       if (warnFormat) {
-        _quickWarning('Use o formato tag=quantidade, ex.: matematica=4');
+        _quickWarning(context.tr('ses.formatHint'));
       }
       return false;
     }
@@ -202,11 +201,11 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         .firstOrNull;
 
     if (tag == null) {
-      _quickWarning('A tag "$name" não existe.');
+      _quickWarning(context.tr('ses.tagMissing', {'name': name}));
       return false;
     }
     if (qty < 1) {
-      _quickWarning('Cada tag precisa de pelo menos 1 questão.');
+      _quickWarning(context.tr('ses.tagMinOne'));
       return false;
     }
 
@@ -216,9 +215,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         .fold<int>(0, (s, q) => s + q.quantity);
 
     if (_total != null && others + qty > _total!) {
-      _quickWarning(
-        'A soma não pode passar do total da sessão ($_total).',
-      );
+      _quickWarning(context.tr('ses.sumOverTotal', {'total': '$_total'}));
       return false;
     }
 
@@ -273,13 +270,13 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      _showError('Dê um nome à sessão.');
+      _showError(context.tr('ses.nameRequired'));
       return;
     }
 
     final totalText = _totalController.text.trim();
     if (totalText.isNotEmpty && (int.tryParse(totalText) ?? 0) < 1) {
-      _showError('A quantidade de questões deve ser maior que zero (ou deixe vazio para ilimitado).');
+      _showError(context.tr('ses.totalInvalid'));
       return;
     }
     final int? total = _total;
@@ -288,7 +285,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     if (!_unlimitedTime) {
       limitSeconds = _limitSeconds;
       if (limitSeconds == null) {
-        _showError('Defina o tempo limite (um número maior que zero).');
+        _showError(context.tr('ses.timeRequired'));
         return;
       }
     }
@@ -296,14 +293,11 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     List<Map<String, int>>? filters;
     if (_quotas.isNotEmpty) {
       if (_quotas.any((q) => q.tagId == null || q.quantity < 1)) {
-        _showError('Cada tag precisa de pelo menos 1 questão.');
+        _showError(context.tr('ses.tagMinOne'));
         return;
       }
       if (total != null && _quotaSum > total) {
-        _showError(
-          'A soma das questões por tag ($_quotaSum) não pode passar do '
-          'total da sessão ($total).',
-        );
+        _showError(context.tr('ses.quotaOverTotal', {'sum': _quotaSum, 'total': total}));
         return;
       }
       filters = [
@@ -332,13 +326,13 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           _resetForm();
           _saving = false;
         });
-        _showMessage('Sessão "$name" salva.');
+        _showMessage(context.tr('ses.saved', {'name': name}));
       }
     } catch (e) {
       debugPrint('Erro ao salvar sessão: $e');
       if (!mounted) return;
       setState(() => _saving = false);
-      _showError('Não foi possível salvar a sessão: $e');
+      _showError(context.tr('ses.saveFailed', {'error': e}));
     }
   }
 
@@ -360,16 +354,16 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
-        title: Text(_isEditing ? 'Editar sessão' : 'Nova sessão',
-          style: TextStyle(color: context.colors.text,
+        title: Text(context.tr(_isEditing ? 'ses.edit' : 'ses.new'),
+          style: TextStyle(color: context.colors.textMain,
             fontWeight: FontWeight.bold, fontSize: 20)),
       ),
       body: _loading
@@ -381,7 +375,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                   controller: _nameController,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
-                    labelText: 'Nome da sessão',
+                    labelText: context.tr('ses.name'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -391,15 +385,15 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<bool>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: true,
-                        label: Text('Sem limite'),
+                        label: Text(context.tr('ses.noLimit')),
                         icon: Icon(Icons.all_inclusive),
                       ),
                       ButtonSegment(
                         value: false,
-                        label: Text('Limitar'),
+                        label: Text(context.tr('ses.limit')),
                         icon: Icon(Icons.timer_outlined),
                       ),
                     ],
@@ -415,20 +409,18 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 const SizedBox(height: 16),
                 _numberField(
                   _totalController,
-                  'Total de questões',
-                  hint: 'Ilimitado',
+                  context.tr('ses.totalQuestions'),
+                  hint: context.tr('ses.unlimited'),
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Repetição espaçada',
-                      style: TextStyle(color: context.colors.text)),
+                  title: Text(context.tr('ses.spaced'),
+                      style: TextStyle(color: context.colors.textMain)),
                   subtitle: Text(
-                    _spacedRepetition
-                        ? 'Oferta só as questões pendentes de hoje'
-                        : 'Oferta questões aleatórias',
-                    style: TextStyle(fontSize: 12, color: context.colors.mutedText),
+                    context.tr(_spacedRepetition ? 'ses.spacedOn' : 'ses.spacedOff'),
+                    style: TextStyle(fontSize: 12, color: context.colors.textSecond),
                   ),
                   value: _spacedRepetition,
                   onChanged: (v) => setState(() => _spacedRepetition = v),
@@ -440,7 +432,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          color: context.colors.bg,
+          color: context.colors.bgMain,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: SizedBox(
             width: double.infinity,
@@ -452,7 +444,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(_saving ? 'Salvando...' : 'Salvar sessão',
+              child: Text(context.tr(_saving ? 'common.saving' : 'ses.save'),
                 style: const TextStyle(fontSize: 15)),
             ),
           ),
@@ -473,7 +465,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             Expanded(
               child: _numberField(
                 _timeController,
-                'Tempo limite',
+                context.tr('ses.timeLimit'),
                 onChanged: (_) => setState(() {}),
               ),
             ),
@@ -483,14 +475,14 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               child: DropdownButtonFormField<String>(
                 initialValue: _timeUnit,
                 isExpanded: true,
-                items: const [
-                  DropdownMenuItem(value: 's', child: Text('Segundos')),
-                  DropdownMenuItem(value: 'min', child: Text('Minutos')),
-                  DropdownMenuItem(value: 'h', child: Text('Horas')),
+                items: [
+                  DropdownMenuItem(value: 's', child: Text(context.tr('ses.seconds'))),
+                  DropdownMenuItem(value: 'min', child: Text(context.tr('ses.minutes'))),
+                  DropdownMenuItem(value: 'h', child: Text(context.tr('ses.hours'))),
                 ],
                 onChanged: (v) => setState(() => _timeUnit = v ?? 'min'),
                 decoration: InputDecoration(
-                  labelText: 'Unidade',
+                  labelText: context.tr('ses.unit'),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
@@ -502,8 +494,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Cronômetro: ${SessionDao.describeTimeLimit(seconds)}',
-              style: TextStyle(fontSize: 12, color: c.mutedText),
+              context.tr('ses.timer', {'value': SessionDao.describeTimeLimit(seconds)}),
+              style: TextStyle(fontSize: 12, color: c.textSecond),
             ),
           ),
       ],
@@ -539,7 +531,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Nenhuma tag cadastrada ainda. Crie uma pelo botão + (Nova tag).',
+              context.tr('ses.noTags'),
               style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
           )
@@ -570,8 +562,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             isFocused: _tagFocus.hasFocus,
             isEmpty: _quotas.isEmpty && _tagInputController.text.isEmpty,
             decoration: InputDecoration(
-              labelText: 'Tags',
-              hintText: 'Ex: tag=2',
+              labelText: context.tr('ses.tags'),
+              hintText: context.tr('ses.tagsHint'),
               floatingLabelBehavior: FloatingLabelBehavior.always,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -645,7 +637,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: c.text,
+                color: c.textMain,
               ),
             ),
             const SizedBox(width: 2),
@@ -654,7 +646,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               onTap: () => setState(() => _quotas.remove(q)),
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: Icon(Icons.close, size: 16, color: c.mutedText),
+                child: Icon(Icons.close, size: 16, color: c.textSecond),
               ),
             ),
           ],
@@ -669,11 +661,11 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       return Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
-          'Distribuídas $_quotaSum · total ilimitado',
+          context.tr('ses.distributedUnlimited', {'sum': _quotaSum}),
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: context.colors.mutedText,
+            color: context.colors.textSecond,
           ),
         ),
       );
@@ -683,12 +675,12 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       padding: const EdgeInsets.only(top: 2),
       child: Text(
         over
-            ? 'A soma das tags ($_quotaSum) passa do total da sessão ($_total).'
-            : 'Distribuídas $_quotaSum de $_total',
+            ? context.tr('ses.sumPassesTotal', {'sum': _quotaSum, 'total': '$_total'})
+            : context.tr('ses.distributed', {'sum': _quotaSum, 'total': '$_total'}),
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: over ? const Color(0xFFC62828) : context.colors.mutedText,
+          color: over ? const Color(0xFFC62828) : context.colors.textSecond,
         ),
       ),
     );

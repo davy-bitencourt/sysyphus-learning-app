@@ -1,12 +1,3 @@
-/// Algoritmo SM-2 (repetição espaçada), versão binária: acertou / errou.
-///
-/// Acerto:
-///   - 1ª revisão  -> 1 dia
-///   - 2ª revisão  -> 6 dias
-///   - demais      -> intervalo anterior x fator de facilidade (ease)
-///   - o ease sobe 0.1 a cada acerto (limites 1.3 a 3.0)
-/// Erro: quem trata é o QuestionDao.updateStateNeutral (volta a ficar
-/// pendente na hora, com intervalo 0 e ease 2.4).
 class Sm2Result {
   final int intervalDays;
   final double easeFactor;

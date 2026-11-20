@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/DAO/template_dao.dart';
@@ -9,6 +10,7 @@ import '../data/DAO/package_dao.dart';
 import '../data/DTO/question_dto.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
+import '../data/services/order_service.dart';
 import '../data/services/media_storage_service.dart';
 import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
@@ -66,7 +68,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   Map<String, List<TextEditingController>> _optionControllers = {};
   Map<String, List<bool>> _optionCorrect = {};
 
-  /// Campos de texto que estão mostrando a prévia do Markdown (ids).
   final Set<String> _previewing = {};
 
   final Map<String, dynamic> _buffer = {};
@@ -100,9 +101,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
   }
 
   Future<void> _loadOptions() async {
-    final templateRows = await TemplateDao().getAll();
+    final templateRows = await OrderService.apply(
+        OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
     final tagRows = await TagDao().getAll();
-    final packageRows = await PackageDao().getAll();
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
 
     _templates = templateRows
         .map((row) => TemplateModel.fromJson(row['id'] as int, row['template'] as String))
@@ -212,7 +215,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
     if (result != true || !mounted) return;
 
-    final rows = await PackageDao().getAll();
+    final rows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
     if (!mounted) return;
     final created = rows.where((p) => !previousIds.contains(p['id'])).toList();
     setState(() {
@@ -368,17 +372,17 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   Future<void> _save() async {
     if (_selectedTemplate == null || _selectedTemplate!.id == null) {
-      _showError('Escolha um template antes de salvar.');
+      _showError(context.tr('qe.pickTemplate'));
       return;
     }
     if (_selectedPackageId == null) {
-      _showError('Escolha um pacote antes de salvar.');
+      _showError(context.tr('qe.pickPackage'));
       return;
     }
 
     final statementText = _textControllers[FieldDefinition.statementId]?.text.trim() ?? '';
     if (statementText.isEmpty) {
-      _showError('Preencha o enunciado antes de salvar.');
+      _showError(context.tr('qe.fillStatement'));
       return;
     }
 
@@ -411,7 +415,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             curve: Curves.easeOut,
           );
         }
-        _showError('Questão salva.');
+        _showError(context.tr('qe.saved'));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -460,17 +464,17 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
 
   Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => _leave(),
         ),
         title: Text(
-          _isEditing ? 'Editar questão' : 'Nova questão',
-          style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+          context.tr(_isEditing ? 'qe.edit' : 'qe.new'),
+          style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
         ),
         actions: [
           if (_isEditing)
@@ -489,7 +493,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: context.colors.bg,
+        color: context.colors.bgMain,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: SizedBox(
           width: double.infinity,
@@ -501,7 +505,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text(_saving ? 'Salvando...' : 'Salvar questão', style: const TextStyle(fontSize: 15)),
+            child: Text(context.tr(_saving ? 'common.saving' : 'qe.save'), style: const TextStyle(fontSize: 15)),
           ),
         ),
       ),
@@ -516,7 +520,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Nenhum template cadastrado ainda. Crie um template antes de adicionar questões.',
+              context.tr('qe.noTemplates'),
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -527,7 +531,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                 backgroundColor: context.colors.accent,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Criar template'),
+              child: Text(context.tr('qe.createTemplate')),
             ),
           ],
         ),
@@ -548,7 +552,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           children: [
             Expanded(
               child: _buildDropdown<int?>(
-                label: 'Pacote',
+                label: context.tr('qb.package'),
                 value: _selectedPackageId,
                 items: _packages
                     .map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['title'] as String)))
@@ -567,7 +571,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           children: [
             Expanded(
               child: _buildDropdown<TemplateModel?>(
-                label: 'Template',
+                label: context.tr('qe.template'),
                 value: _selectedTemplate,
                 items: _templates.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
                 onChanged: (t) {
@@ -596,7 +600,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               )),
           if (answerFields.isNotEmpty) ...[
             Divider(
-              color: context.colors.border,
+              color: context.colors.bgSecond,
               thickness: 1.5,
               height: 1.5,
             ),
@@ -627,8 +631,8 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           maxLines: null,
           onChanged: _onTagInputChanged,
           decoration: InputDecoration(
-            labelText: "Tag (opcional)",
-            hintText: '#historia #matematica',
+            labelText: context.tr('qe.tagOptional'),
+            hintText: context.tr('qe.tagHint'),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
@@ -668,8 +672,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     }
   }
 
-  // ---------------------------------------------------------------- markdown
-
   Widget _buildMarkdownField(FieldDefinition field) {
     final controller = _textControllers[field.id]!;
     final label = field.isStatement ? '${field.label}*' : field.label;
@@ -695,16 +697,16 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       constraints: const BoxConstraints(minHeight: 96),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: context.colors.border),
+        border: Border.all(color: context.colors.bgSecond),
         borderRadius: BorderRadius.circular(10),
       ),
       child: empty
-          ? Text('Nada para visualizar em "$label".', style: TextStyle(fontSize: 13, color: context.colors.mutedText))
+          ? Text(context.tr('qe.nothingToPreview', {'label': label}), style: TextStyle(fontSize: 13, color: context.colors.textSecond))
           : MarkdownText(
               text: text,
               style: TextStyle(
                 fontSize: isStatement ? 16 : 14,
-                color: context.colors.text,
+                color: context.colors.textMain,
               ),
             ),
     );
@@ -715,27 +717,26 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           icon: Icon(icon, size: context.icon(20)),
           tooltip: tip,
           visualDensity: VisualDensity.compact,
-          color: context.colors.mutedText,
+          color: context.colors.textSecond,
           onPressed: previewing ? null : onTap,
         );
 
-    // ExcludeFocus: tocar num botão não tira o foco (nem fecha o teclado) do campo.
     return ExcludeFocus(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            btn(Icons.format_bold, 'Negrito', () => _wrapSelection(c, '**')),
-            btn(Icons.format_italic, 'Itálico', () => _wrapSelection(c, '*')),
-            btn(Icons.code, 'Código', () => _wrapSelection(c, '`')),
-            btn(Icons.link, 'Link', () => _wrapSelection(c, '[', '](https://)')),
-            btn(Icons.format_list_bulleted, 'Lista', () => _prefixLines(c, '- ')),
-            btn(Icons.format_list_numbered, 'Lista numerada', () => _prefixLines(c, '1. ')),
-            btn(Icons.format_quote, 'Citação', () => _prefixLines(c, '> ')),
+            btn(Icons.format_bold, context.tr('qe.bold'), () => _wrapSelection(c, '**')),
+            btn(Icons.format_italic, context.tr('qe.italic'), () => _wrapSelection(c, '*')),
+            btn(Icons.code, context.tr('qe.code'), () => _wrapSelection(c, '`')),
+            btn(Icons.link, context.tr('qe.link'), () => _wrapSelection(c, '[', '](https://)')),
+            btn(Icons.format_list_bulleted, context.tr('qe.list'), () => _prefixLines(c, '- ')),
+            btn(Icons.format_list_numbered, context.tr('qe.numberedList'), () => _prefixLines(c, '1. ')),
+            btn(Icons.format_quote, context.tr('qe.quote'), () => _prefixLines(c, '> ')),
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(previewing ? Icons.edit_outlined : Icons.visibility_outlined, size: context.icon(20)),
-              tooltip: previewing ? 'Voltar a editar' : 'Visualizar',
+              tooltip: context.tr(previewing ? 'qe.backToEdit' : 'qe.preview'),
               visualDensity: VisualDensity.compact,
               color: context.colors.accent,
               onPressed: () => setState(() {
@@ -748,8 +749,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
   }
 
-  /// Envolve a seleção com [left]/[right] (ex.: **texto**). Sem seleção,
-  /// insere o par e deixa o cursor no meio.
   void _wrapSelection(TextEditingController c, String left, [String? right]) {
     right ??= left;
     final text = c.text;
@@ -767,7 +766,6 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     );
   }
 
-  /// Coloca [prefix] no começo de cada linha tocada pela seleção.
   void _prefixLines(TextEditingController c, String prefix) {
     final text = c.text;
     final sel = c.selection;
@@ -790,7 +788,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text)),
+        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain)),
         const SizedBox(height: 8),
         if (path != null) ...[
           if (isImage)
@@ -813,18 +811,18 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               TextButton.icon(
                 onPressed: () => _pickImage(field.id, fromCamera: false),
                 icon: const Icon(Icons.photo_library_outlined),
-                label: const Text('Galeria'),
+                label: Text(context.tr('qe.gallery')),
               ),
               TextButton.icon(
                 onPressed: () => _pickImage(field.id, fromCamera: true),
                 icon: const Icon(Icons.camera_alt_outlined),
-                label: const Text('Câmera'),
+                label: Text(context.tr('qe.camera')),
               ),
             ] else
               TextButton.icon(
                 onPressed: () => _pickAudio(field.id),
                 icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Escolher áudio'),
+                label: Text(context.tr('qe.pickAudio')),
               ),
             if (path != null)
               IconButton(
@@ -844,10 +842,11 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          field.type == FieldType.options
-              ? '${field.label} (marque a correta; mais de uma = seleção múltipla)'
-              : '${field.label} (marque as verdadeiras)',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.text),
+          context.tr(
+            field.type == FieldType.options ? 'qe.optionsHint' : 'qe.trueFalseHint',
+            {'label': field.label},
+          ),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain),
         ),
         const SizedBox(height: 8),
         ...List.generate(
@@ -870,7 +869,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
                     keyboardType: TextInputType.multiline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
-                      hintText: 'Opção ${i + 1}',
+                      hintText: context.tr('qe.option', {'n': i + 1}),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),

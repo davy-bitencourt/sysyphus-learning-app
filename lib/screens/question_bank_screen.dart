@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import '../widgets/new_tag_dialog.dart';
 import 'pack_transfer.dart';
@@ -9,6 +10,7 @@ import '../data/DAO/session_dao.dart';
 import '../data/DAO/question_state_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
+import '../data/services/order_service.dart';
 import 'home.dart';
 import 'package_edit_screen.dart';
 import 'questions_edit_screen.dart';
@@ -72,7 +74,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   bool _matches(String text) => _query.isEmpty || _norm(text).contains(_norm(_query));
 
   Widget _noResults() => Center(
-        child: Text('Nenhum resultado.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noResults'), style: TextStyle(color: Colors.grey[500])),
       );
 
   Widget _itemMenu({
@@ -83,7 +85,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     const danger = Color(0xFFC62828);
 
     PopupMenuItem<String> item(String value, IconData icon, String label, {Color? color}) {
-      final c = color ?? context.colors.text;
+      final c = color ?? context.colors.textMain;
       return PopupMenuItem<String>(
         value: value,
         child: Row(
@@ -97,8 +99,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
 
     return PopupMenuButton<String>(
-      tooltip: 'Opções',
-      color: context.colors.surface,
+      tooltip: context.tr('common.options'),
+      color: context.colors.bgSecond,
       icon: Icon(Icons.more_vert, size: context.icon(20), color: Colors.grey[500]),
       onSelected: (value) {
         switch (value) {
@@ -111,9 +113,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         }
       },
       itemBuilder: (_) => [
-        if (onEdit != null) item('edit', Icons.edit_outlined, 'Editar'),
-        if (onExport != null) item('export', Icons.file_upload_outlined, 'Exportar'),
-        item('delete', Icons.delete_outline, 'Excluir', color: danger),
+        if (onEdit != null) item('edit', Icons.edit_outlined, context.tr('common.edit')),
+        if (onExport != null) item('export', Icons.file_upload_outlined, context.tr('common.export')),
+        item('delete', Icons.delete_outline, context.tr('common.delete'), color: danger),
       ],
     );
   }
@@ -163,13 +165,137 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
 
+  static const double _handleW = 40;
+
+  Future<void> _persistPackageOrder() async {
+    await OrderService.save(
+      OrderService.packagesKey,
+      _packages.map((p) => p['id'] as int).toList(),
+    );
+    Home.packagesChanged.value++; 
+  }
+
+  Future<void> _persistSessionOrder() => OrderService.save(
+        OrderService.sessionsKey,
+        _sessions.map((x) => x['id'] as int).toList(),
+      );
+
+  Future<void> _persistTemplateOrder() => OrderService.save(
+        OrderService.templatesKey,
+        _templates.map((t) => t.id).whereType<int>().toList(),
+      );
+
+  Widget _cell(int flex, Widget child) => Expanded(flex: flex, child: child);
+
+  Widget _tableHeader(List<(String, int)> cols, {bool handle = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colors.bgSecond, width: 2)),
+      ),
+      child: Row(
+        children: [
+          if (handle) const SizedBox(width: _handleW),
+          for (final c in cols)
+            _cell(
+              c.$2,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  c.$1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                ),
+              ),
+            ),
+          const SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+
+  Widget _tableRow({
+    required Key key,
+    required int index,
+    required List<(String, int)> cells,
+    required Widget menu,
+    Widget? handle,
+  }) {
+    return Container(
+      key: key,
+      constraints: const BoxConstraints(minHeight: 52),
+      decoration: BoxDecoration(
+        color: index.isEven ? context.colors.bgSecond : context.colors.bgMain,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            if (handle != null) SizedBox(width: _handleW, child: handle),
+            for (final c in cells)
+              _cell(
+                c.$2,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    c.$1,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: context.colors.textMain),
+                  ),
+                ),
+              ),
+            menu,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dragHandle(int index) => ReorderableDragStartListener(
+        index: index,
+        child: Icon(Icons.drag_handle, color: Colors.grey[500]),
+      );
+
+  Widget _tableShell({required Widget header, required Widget list}) => Column(
+        children: [
+          Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: header),
+          Expanded(
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: list),
+          ),
+        ],
+      );
+
+  Widget _tagsTable(List<Map<String, dynamic>> rows) {
+    const cols = [('Tag', 1)];
+    return _tableShell(
+      header: _tableHeader(cols),
+      list: ListView.builder(
+        itemCount: rows.length,
+        itemBuilder: (context, i) {
+          final tag = rows[i];
+          return _tableRow(
+            key: ValueKey(tag['id']),
+            index: i,
+            cells: [('#${tag['title']}', 1)],
+            menu: _itemMenu(onDelete: () => _deleteTag(tag)),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
 
-    final packageRows = await PackageDao().getAll();
-    final templateRows = await TemplateDao().getAll();
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
+    final templateRows = await OrderService.apply(
+        OrderService.templatesKey, await TemplateDao().getAll(), (t) => t['id'] as int);
     final tagRows = await TagDao().getAll();
-    final sessionRows = await SessionDao().getAll();
+    final sessionRows = await OrderService.apply(
+        OrderService.sessionsKey, await SessionDao().getAll(), (x) => x['id'] as int);
 
     if (!mounted) return;
 
@@ -215,12 +341,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return DefaultTabController(
       length: 5,
       child: Scaffold(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         appBar: AppBar(
-          backgroundColor: context.colors.bg,
+          backgroundColor: context.colors.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.colors.text),
+            icon: Icon(Icons.arrow_back, color: context.colors.textMain),
             onPressed: () => Navigator.pop(context),
           ),
           title: _searching
@@ -228,27 +354,27 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   controller: _searchController,
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v.trim()),
-                  style: TextStyle(color: context.colors.text, fontSize: 16),
+                  style: TextStyle(color: context.colors.textMain, fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'Buscar na aba atual...',
+                    hintText: context.tr('qb.searchHint'),
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     border: InputBorder.none,
                   ),
                 )
               : Text(
-                  'Banco de questões',
-                  style: TextStyle(color: context.colors.text, fontWeight: FontWeight.bold, fontSize: 20),
+                  context.tr('qb.title'),
+                  style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
                 ),
           actions: [
             IconButton(
-              tooltip: _searching ? 'Fechar busca' : 'Buscar',
-              icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.text),
+              tooltip: context.tr(_searching ? 'qb.closeSearch' : 'qb.search'),
+              icon: Icon(_searching ? Icons.close : Icons.search, color: context.colors.textMain),
               onPressed: _toggleSearch,
             ),
             PopupMenuButton<String>(
-              tooltip: 'Importar / Exportar',
-              icon: Icon(Icons.more_vert, color: context.colors.text),
-              color: context.colors.surface,
+              tooltip: context.tr('qb.importExport'),
+              icon: Icon(Icons.more_vert, color: context.colors.textMain),
+              color: context.colors.bgSecond,
               onSelected: (value) async {
                 if (value == 'import') {
                   final changed = await startPackImport(context);
@@ -264,7 +390,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_download_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text('Importar pacote (.zip)', style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.importZip'), style: TextStyle(color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -274,7 +400,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_upload_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text('Exportar tudo (.zip)', style: TextStyle(color: context.colors.text)),
+                      Text(context.tr('qb.exportZip'), style: TextStyle(color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -286,12 +412,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             labelColor: context.colors.accent,
             unselectedLabelColor: const Color(0xFF9E9E9E),
             indicatorColor: context.colors.accent,
-            tabs: const [
-              Tab(text: 'Questões'),
-              Tab(text: 'Pacotes'),
-              Tab(text: 'Templates'),
-              Tab(text: 'Sessões'),
-              Tab(text: 'Tags'),
+            tabs: [
+              Tab(text: context.tr('qb.tabQuestions')),
+              Tab(text: context.tr('qb.tabPackages')),
+              Tab(text: context.tr('qb.tabTemplates')),
+              Tab(text: context.tr('qb.tabSessions')),
+              Tab(text: context.tr('qb.tabTags')),
             ],
           ),
         ),
@@ -313,7 +439,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildQuestionsTab() {
     if (_packages.isEmpty) {
       return Center(
-        child: Text('Nenhum pacote cadastrado ainda.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noPackages'), style: TextStyle(color: Colors.grey[500])),
       );
     }
 
@@ -344,7 +470,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           _loadQuestionsForSelectedPackage();
                         },
                         decoration: InputDecoration(
-                          labelText: 'Pacote',
+                          labelText: context.tr('qb.package'),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
@@ -399,7 +525,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova questão'),
+                label: Text(context.tr('menu.newQuestion')),
               ),
             ),
           ),
@@ -414,41 +540,45 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
     if (_packageQuestions.isEmpty) {
       return Center(
-        child: Text('Nenhuma questão neste pacote ainda.', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qs.noQuestions'), style: TextStyle(color: Colors.grey[500])),
       );
     }
     final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
     if (visible.isEmpty) return _noResults();
-    return ListView.separated(
-      itemCount: visible.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final question = visible[i];
-        final title = question.statement.isEmpty ? '(sem enunciado)' : question.statement;
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.only(left: 14, right: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: context.colors.text),
+
+    final tagNames = {for (final t in _tags) t['id'] as int: t['title'] as String};
+    final templateNames = {
+      for (final t in _templates)
+        if (t.id != null) t.id!: t.name,
+    };
+    const cols = [('Enunciado', 6), ('Template', 2), ('Tag', 2)];
+
+    return Column(
+      children: [
+        _tableHeader(cols),
+        Expanded(
+          child: ListView.builder(
+            itemCount: visible.length,
+            itemBuilder: (context, i) {
+              final question = visible[i];
+              final title = question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement;
+              return _tableRow(
+                key: ValueKey(question.id ?? i),
+                index: i,
+                cells: [
+                  (title, 6),
+                  (templateNames[question.templateId] ?? '-', 2),
+                  (question.tagId == null ? '-' : '#${tagNames[question.tagId] ?? '?'}', 2),
+                ],
+                menu: _itemMenu(
+                  onEdit: () => _editQuestion(question),
+                  onDelete: () => _deleteQuestion(question),
                 ),
-              ),
-              _itemMenu(
-                    onEdit: () => _editQuestion(question),
-                    onDelete: () => _deleteQuestion(question),
-                  ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -456,16 +586,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir questão'),
-        content: Text('Tem certeza que deseja excluir "${question.statement.isEmpty ? '(sem enunciado)' : question.statement}"?'),
+        title: Text(context.tr('qb.deleteQuestion')),
+        content: Text(context.tr('qb.deleteQuestionBody', {'name': question.statement.isEmpty ? context.tr('qb.noStatement') : question.statement})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -486,41 +616,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: _query.isNotEmpty
               ? _buildPackageResults()
-              : ReorderableListView.builder(
-            padding: const EdgeInsets.all(16),
-            buildDefaultDragHandles: false,
-            itemCount: _packages.length,
-            onReorder: (oldIndex, newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final item = _packages.removeAt(oldIndex);
-                _packages.insert(newIndex, item);
-              });
-            },
-            itemBuilder: (context, index) {
-              final pkg = _packages[index];
-              return Container(
-                key: ValueKey(pkg['id']),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ListTile(
-                  leading: ReorderableDragStartListener(
-                    index: index,
-                    child: Icon(Icons.drag_handle, color: Colors.grey[500]),
-                  ),
-                  title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-                  trailing: _itemMenu(
-                        onEdit: () => _editPackage(pkg),
-                        onExport: () => _exportPackage(pkg),
-                        onDelete: () => _deletePackage(pkg),
-                      ),
-                ),
-              );
-            },
-          ),
+              : _packagesTable(_packages, reorderable: true),
         ),
         SafeArea(
           top: false,
@@ -546,7 +642,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Novo pacote'),
+                label: Text(context.tr('menu.newPackage')),
               ),
             ),
           ),
@@ -558,27 +654,44 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildPackageResults() {
     final results = _packages.where((p) => _matches(p['title'] as String)).toList();
     if (results.isEmpty) return _noResults();
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final pkg = results[i];
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ListTile(
-            title: Text(pkg['title'] as String, style: TextStyle(color: context.colors.text)),
-            trailing: _itemMenu(
-                  onEdit: () => _editPackage(pkg),
-                  onExport: () => _exportPackage(pkg),
-                  onDelete: () => _deletePackage(pkg),
-                ),
+    return _packagesTable(results, reorderable: false);
+  }
+
+  Widget _packagesTable(List<Map<String, dynamic>> rows, {required bool reorderable}) {
+    const cols = [('Título', 1)];
+
+    Widget row(Map<String, dynamic> pkg, int i) => _tableRow(
+          key: ValueKey(pkg['id']),
+          index: i,
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [(pkg['title'] as String, 1)],
+          menu: _itemMenu(
+            onEdit: () => _editPackage(pkg),
+            onExport: () => _exportPackage(pkg),
+            onDelete: () => _deletePackage(pkg),
           ),
         );
-      },
+
+    return _tableShell(
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _packages.removeAt(oldIndex);
+                  _packages.insert(newIndex, item);
+                });
+                _persistPackageOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
+            ),
     );
   }
 
@@ -586,13 +699,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Excluir Pacote'),
-        content: Text('Deseja excluir o pacote "${pkg['title']}"?'),
+        title: Text(context.tr('qb.deletePackage')),
+        content: Text(context.tr('qb.deletePackageBody', {'name': '${pkg['title']}'})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('common.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -604,58 +717,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
   }
 
-  // --- ABA 3: TEMPLATES (REORDENÁVEL) ---
   Widget _buildTemplatesTab() {
     return Column(
       children: [
         Expanded(
           child: _templates.isEmpty
-              ? Center(child: Text('Nenhum template cadastrado.', style: TextStyle(color: Colors.grey[500])))
+              ? Center(child: Text(context.tr('qb.noTemplates'), style: TextStyle(color: Colors.grey[500])))
               : _query.isNotEmpty
                   ? _buildTemplateResults()
-                  : ReorderableListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  buildDefaultDragHandles: false,
-                  itemCount: _templates.length,
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final item = _templates.removeAt(oldIndex);
-                      _templates.insert(newIndex, item);
-                    });
-                  },
-                  itemBuilder: (context, i) {
-                    final template = _templates[i];
-                    return Container(
-                      key: ValueKey(template.id ?? i),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      child: Row(
-                        children: [
-                          ReorderableDragStartListener(
-                            index: i,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: Icon(Icons.drag_handle, color: Colors.grey[500]),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
-                          ),
-                          Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                          _itemMenu(
-                                onEdit: () => _editTemplate(template),
-                                onDelete: () => _deleteTemplate(template),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                  : _templatesTable(_templates, reorderable: true),
         ),
         SafeArea(
           top: false,
@@ -678,7 +748,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Novo template'),
+                label: Text(context.tr('menu.newTemplate')),
               ),
             ),
           ),
@@ -690,32 +760,43 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildTemplateResults() {
     final results = _templates.where((t) => _matches(t.name)).toList();
     if (results.isEmpty) return _noResults();
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final template = results[i];
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(template.name, style: TextStyle(fontSize: 14, color: context.colors.text)),
-              ),
-              Text('${template.fields.length} campos', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              _itemMenu(
-                    onEdit: () => _editTemplate(template),
-                    onDelete: () => _deleteTemplate(template),
-                  ),
-            ],
+    return _templatesTable(results, reorderable: false);
+  }
+
+  Widget _templatesTable(List<TemplateModel> rows, {required bool reorderable}) {
+    const cols = [('Nome', 5), ('Campos', 2)];
+
+    Widget row(TemplateModel t, int i) => _tableRow(
+          key: ValueKey(t.id ?? t.name),
+          index: i,
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [(t.name, 5), ('${t.fields.length}', 2)],
+          menu: _itemMenu(
+            onEdit: () => _editTemplate(t),
+            onDelete: () => _deleteTemplate(t),
           ),
         );
-      },
+
+    return _tableShell(
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _templates.removeAt(oldIndex);
+                  _templates.insert(newIndex, item);
+                });
+                _persistTemplateOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
+            ),
     );
   }
 
@@ -727,42 +808,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_tags.isEmpty
-                  ? Center(child: Text('Nenhuma tag cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noTags'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final tag = visible[i];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 48),
-                          Expanded(
-                            child: Text(
-                              '#${tag['title']}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: context.colors.text,
-                              ),
-                            ),
-                          ),
-                          _itemMenu(
-                                onDelete: () => _deleteTag(tag),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              : _tagsTable(visible),
         ),
         SafeArea(
           top: false,
@@ -782,7 +830,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova tag'),
+                label: Text(context.tr('menu.newTag')),
               ),
             ),
           ),
@@ -795,19 +843,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir tag'),
-        content: Text(
-          'Tem certeza que deseja excluir a tag "#${tag['title']}"? '
-          'As questões que a usam ficarão sem tag.',
-        ),
+        title: Text(context.tr('qb.deleteTag')),
+        content: Text(context.tr('qb.deleteTagBody', {'name': '${tag['title']}'})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -821,12 +866,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       debugPrint('Erro ao excluir tag ${tag['id']}: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir a tag: $e')),
+        SnackBar(content: Text(context.tr('qb.deleteTagFailed', {'error': e}))),
       );
     }
   }
 
-  // --- ABA 5: SESSÕES ---
   Widget _buildSessionsTab() {
     final visible = _sessions.where((s) => _matches((s['title'] as String?) ?? '')).toList();
     return Column(
@@ -834,51 +878,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_sessions.isEmpty
-                  ? Center(child: Text('Nenhuma sessão cadastrada ainda.', style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noSessions'), style: TextStyle(color: Colors.grey[500])))
                   : _noResults())
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final session = visible[i];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.timer_outlined, color: context.colors.accent, size: context.icon(20)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  (session['title'] as String?) ?? 'Sessão ${session['id']}',
-                                  style: TextStyle(fontSize: 14, color: context.colors.text),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _sessionSummary(session),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _itemMenu(
-                                onEdit: () => _editSession(session),
-                                onDelete: () => _deleteSession(session),
-                              ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              : _sessionsTable(visible, reorderable: _query.isEmpty),
         ),
         SafeArea(
           top: false,
@@ -901,7 +903,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add),
-                label: const Text('Nova sessão'),
+                label: Text(context.tr('menu.newSession')),
               ),
             ),
           ),
@@ -910,20 +912,58 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
-  String _sessionSummary(Map<String, dynamic> session) {
-    final limitSeconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
-    final total = (session['total_q'] as num?)?.toInt();
-    final parts = <String>[
-      limitSeconds == null ? 'Sem limite de tempo' : SessionDao.describeTimeLimit(limitSeconds),
-      if (total != null) '$total questões',
-    ];
+  String _sessionLimit(Map<String, dynamic> session) {
+    final seconds = SessionDao.parseTimeLimitSeconds(session['time_limit'] as String?);
+    return seconds == null ? context.tr('qb.noTimeLimit') : SessionDao.describeTimeLimit(seconds);
+  }
 
+  String _sessionFilters(Map<String, dynamic> session) {
     final filters = SessionDao.parseTagFilters(session['tag_filters'] as String?);
-    if (filters.isNotEmpty) {
-      final names = {for (final t in _tags) t['id'] as int: t['title'] as String};
-      parts.add(filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · '));
-    }
-    return parts.join(' • ');
+    if (filters.isEmpty) return '-';
+    final names = {for (final t in _tags) t['id'] as int: t['title'] as String};
+    return filters.map((f) => '#${names[f['tag_id']] ?? '?'} ${f['quantity']}').join(' · ');
+  }
+
+  Widget _sessionsTable(List<Map<String, dynamic>> rows, {required bool reorderable}) {
+    const cols = [('Título', 4), ('Limite', 3), ('Questões', 2), ('Tags', 4)];
+
+    Widget row(Map<String, dynamic> session, int i) => _tableRow(
+          key: ValueKey(session['id']),
+          index: i,
+          handle: reorderable ? _dragHandle(i) : null,
+          cells: [
+            ((session['title'] as String?) ?? 'Sessão ${session['id']}', 4),
+            (_sessionLimit(session), 3),
+            ('${(session['total_q'] as num?)?.toInt() ?? '-'}', 2),
+            (_sessionFilters(session), 4),
+          ],
+          menu: _itemMenu(
+            onEdit: () => _editSession(session),
+            onDelete: () => _deleteSession(session),
+          ),
+        );
+
+    return _tableShell(
+      header: _tableHeader(cols, handle: reorderable),
+      list: reorderable
+          ? ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: rows.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _sessions.removeAt(oldIndex);
+                  _sessions.insert(newIndex, item);
+                });
+                _persistSessionOrder();
+              },
+              itemBuilder: (context, i) => row(rows[i], i),
+            )
+          : ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) => row(rows[i], i),
+            ),
+    );
   }
 
   Future<void> _editSession(Map<String, dynamic> session) async {
@@ -938,19 +978,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir sessão'),
-        content: Text(
-          'Tem certeza que deseja excluir a sessão "${session['title'] ?? ''}"? '
-          'Os pacotes ligados a ela ficarão sem sessão.',
-        ),
+        title: Text(context.tr('qb.deleteSession')),
+        content: Text(context.tr('qb.deleteSessionBody', {'name': '${session['title'] ?? ''}'})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -964,7 +1001,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       debugPrint('Erro ao excluir sessão ${session['id']}: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível excluir a sessão: $e')),
+        SnackBar(content: Text(context.tr('qb.deleteSessionFailed', {'error': e}))),
       );
     }
   }

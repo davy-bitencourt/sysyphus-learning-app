@@ -37,14 +37,14 @@ Widget build(BuildContext context) {
         right: 6,
         child: PopupMenuButton<ChartRange>(
           tooltip: 'Change period',
-          color: context.colors.surface,
+          color: context.colors.bgSecond,
           onSelected: (r) => setState(() => _range = r),
-          icon: Icon(Icons.keyboard_arrow_down, color: context.colors.text),
+          icon: Icon(Icons.keyboard_arrow_down, color: context.colors.textMain),
           itemBuilder: (_) => [
             for (final r in ChartRange.values)
               PopupMenuItem(
                 value: r,
-                child: Text(_names[r]!, style: TextStyle(color: context.colors.text)),
+                child: Text(_names[r]!, style: TextStyle(color: context.colors.textMain)),
               ),
           ],
         ),

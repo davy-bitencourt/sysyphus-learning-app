@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 
 import '../widgets/heatmap_card.dart';
 import '../widgets/main_scaffold.dart';
-import '../styles/text_styles.dart';
 import '../data/DAO/package_dao.dart';
 import '../data/DAO/question_state_dao.dart';
+import '../data/services/order_service.dart';
 import '../data/schema/revlog_schema.dart';
 import 'statistic_screen.dart';
 import 'questions_screen.dart';
@@ -37,8 +38,8 @@ class _HomeState extends State<Home> {
 
   Map<int, String> _packages = {};
   Map<DateTime, int> _activityMap = {};
-  int _newCount = 0; // questões novas (nunca vistas)
-  int _dueCount = 0; // questões para revisar
+  int _newCount = 0; 
+  int _dueCount = 0; 
   bool _loading = true;
   String? _loadError;
 
@@ -54,6 +55,13 @@ class _HomeState extends State<Home> {
   void _showPage(int index) {
     if (_pageController.hasClients) _pageController.jumpToPage(index);
   }
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+
+    final packageRows = await OrderService.apply(
+        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
+    final heatmap = await _revlogSchema.getHeatmapData();
+    final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
 
   Future<void> _loadData() async {
     setState(() {
@@ -93,7 +101,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      title: 'Home',
+      title: context.tr('nav.home'),
       currentIndex: _currentIndex,
       onTap: _showPage,
       onStatisticsTap: () => _showPage(1),
@@ -141,13 +149,13 @@ class _HomeState extends State<Home> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
-            _sectionLabel('Study Activity'),
+            _sectionLabel(context.tr('home.studyActivity')),
             HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _sectionLabel('My Packages'),
+                _sectionLabel(context.tr('home.myPackages')),
               ],
             ),
             const SizedBox(height: 12),
@@ -158,10 +166,6 @@ class _HomeState extends State<Home> {
       ),
     );
   }
-
-  // ---------------------------------------------------------------
-  // Desktop
-  // ---------------------------------------------------------------
 
   Widget _buildDesktopBody() {
     if (_loading) {
@@ -183,7 +187,7 @@ class _HomeState extends State<Home> {
                 HeatmapCard(activityMap: _activityMap, newCount: _newCount, dueCount: _dueCount),
                 const SizedBox(height: 24),
                 if (_packages.isEmpty)
-                  _noPackagesMessage('Clique no + para criar o primeiro.')
+                  _noPackagesMessage(context.tr('home.createFirstDesktop'))
                 else
                   _buildDeckTable(),
                 const SizedBox(height: 80),
@@ -197,15 +201,13 @@ class _HomeState extends State<Home> {
 
   Widget _noPackagesMessage(String hint) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('Nenhum pacote ainda. $hint', style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('home.noPackages', {'hint': hint}), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
       );
 
-  Widget _sectionLabel(String text) => Text(text,
-    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-      color: context.colors.text));
+  Widget _sectionLabel(String text) => Text(text, style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain));
 
   Widget _buildDeckList() {
-    if (_packages.isEmpty) return _noPackagesMessage('Toque no + para criar o primeiro.');
+    if (_packages.isEmpty) return _noPackagesMessage(context.tr('home.createFirstMobile'));
     return Column(
       children: _packages.entries.map(_buildDeckCard).toList(),
     );
@@ -215,20 +217,14 @@ class _HomeState extends State<Home> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: context.colors.bgSecond),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          // Área inteira do card é clicável agora, não só o texto do título.
           onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => QuestionScreen(packageId: deck.key),
-              ),
-            );
-            if (mounted) _loadData(); // atualiza o heatmap com o que foi estudado
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => QuestionScreen(packageId: deck.key)));
+            if (mounted) _loadData();
           },
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -236,10 +232,8 @@ class _HomeState extends State<Home> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(deck.value, style: mediumText),
+                  child: Text(deck.value, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                 ),
-                // Botão de configurações continua com sua própria área de
-                // toque, sobrepondo a área clicável do card.
                 IconButton(
                   onPressed: () async {
                     final result = await Navigator.push(
@@ -272,7 +266,7 @@ class _HomeState extends State<Home> {
         constraints: const BoxConstraints(maxWidth: 700),
         child: Container(
           decoration: BoxDecoration(
-            color: context.colors.surface,
+            color: context.colors.bgSecond,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.06),
@@ -287,9 +281,9 @@ class _HomeState extends State<Home> {
             children: [
               TableRow(
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: context.colors.border))),
+                  border: Border(bottom: BorderSide(color: context.colors.bgSecond))),
                 children: [
-                  _tableCell('Packages', Colors.grey[400]!, isHeader: true),
+                  _tableCell(context.tr('home.packagesHeader'), Colors.grey[400]!, isHeader: true),
                   const SizedBox(),
                 ],
               ),
@@ -298,12 +292,11 @@ class _HomeState extends State<Home> {
                 final isEven = i % 2 == 0;
                 return TableRow(
                   decoration: BoxDecoration(
-                    color: isEven ? context.colors.surface : context.colors.surfaceAlt,
+                    color: isEven ? context.colors.bgSecond : context.colors.bgSecond,
                   ),
                   children: [
                     TableCell(
                       verticalAlignment: TableCellVerticalAlignment.middle,
-                      // Toda a célula do título é clicável, não só o texto.
                       child: InkWell(
                         onTap: () async {
                           await Navigator.push(
@@ -314,7 +307,7 @@ class _HomeState extends State<Home> {
                           );
                           if (mounted) _loadData();
                         },
-                        child: _tableCell(deck.value, context.colors.text),
+                        child: _tableCell(deck.value, context.colors.textMain),
                       ),
                     ),
                     TableCell(
@@ -324,10 +317,7 @@ class _HomeState extends State<Home> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PackageEditScreen(
-                                packageId: deck.key,
-                                initialTitle: deck.value,
-                              ),
+                              builder: (_) => PackageEditScreen(packageId: deck.key,initialTitle: deck.value),
                             ),
                           );
                           if (result == true) _loadData();
@@ -356,11 +346,7 @@ class _HomeState extends State<Home> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Text(text,
         textAlign: center ? TextAlign.center : TextAlign.start,
-        style: TextStyle(
-          color: color,
-          fontSize: isHeader ? 12 : 13,
-          fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal,
-        )),
+        style: smallText(color: color, fontWeight: isHeader || bold ? FontWeight.bold : FontWeight.normal)),
     );
   }
 }

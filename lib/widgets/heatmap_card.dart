@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
-import '../styles/text_styles.dart';
 
 class HeatmapCard extends StatelessWidget {
   final Map<DateTime, int> activityMap;
@@ -53,10 +53,10 @@ class HeatmapCard extends StatelessWidget {
 
     final today       = DateTime.now();
     final todayNorm   = DateTime(today.year, today.month, today.day);
-    final c           = context.colors;
     final todayCount  = activityMap[todayNorm] ?? 0;
     final streak      = _streak(activityMap, todayNorm);
-    final monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final monthNames  = monthAbbr();
+    final weekdays    = weekdayAbbr(); 
 
     return Center(
     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 800),
@@ -91,11 +91,13 @@ class HeatmapCard extends StatelessWidget {
                      defaultTargetPlatform == TargetPlatform.windows ||
                      defaultTargetPlatform == TargetPlatform.macOS) ...[
                     const Text('Study Activity', style: mediumText),
+                  if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
+                    Text(context.tr('home.studyActivity'), style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
                     const SizedBox(height: 2),
                   ],
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('$todayCount reviewed today', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    Text('$streak day streak', style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
+                    Text(context.tr('heatmap.reviewedToday', {'n': todayCount}), style: verySmallText(fontWeight: FontWeight.normal, color: Colors.grey)),
+                    Text(context.tr('heatmap.dayStreak', {'n': streak}), style: verySmallText(fontWeight: FontWeight.w600, color: context.colors.accent)),
                   ]),
                 ]),
               ),
@@ -108,12 +110,12 @@ class HeatmapCard extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   const SizedBox(height: 14),
                   ...List.generate(7, (i) {
-                    final label = i == 0 ? 'Sun' : i == 2 ? 'Tue' : i == 4 ? 'Thu' : i == 6 ? 'Sat' : '';
+                    final label = i == 0 ? weekdays[6] : i == 2 ? weekdays[1] : i == 4 ? weekdays[3] : i == 6 ? weekdays[5] : '';
                     return SizedBox(
                       height: cellStep,
                       child: Text(label,
                         textAlign: TextAlign.right,
-                        style: TextStyle(fontSize: 7, color: Colors.grey[400])),
+                        style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                     );
                   }),
                 ]),
@@ -139,7 +141,7 @@ class HeatmapCard extends StatelessWidget {
                             if (label == null) return const SizedBox.shrink();
                             return Positioned(
                               left: ci * cellStep.toDouble(),
-                              child: Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[400])),
+                              child: Text(label, style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.bgSecond)),
                             );
                           }),
                         ),
@@ -162,9 +164,9 @@ class HeatmapCard extends StatelessWidget {
                                   width: cellSize, height: cellSize,
                                   margin: const EdgeInsets.only(bottom: cellGap),
                                   decoration: BoxDecoration(
-                                    color: isOutOfYear ? Colors.transparent : isFuture ? c.heat[0] : _heatColor(value, c),                                    
+                                    color: isOutOfYear ? Colors.transparent : isFuture ? context.colors.heat[0] : _heatColor(value, context.colors),                                    
                                     borderRadius: BorderRadius.circular(2),
-                                    border: isToday ? Border.all(color: c.accent, width: 1.5) : null,
+                                    border: isToday ? Border.all(color: context.colors.accent, width: 1.5) : null,
                                   ),
                                 );
                               }),
@@ -183,19 +185,19 @@ class HeatmapCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(children: [
-                  Text('Less', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
+                  Text(context.tr('heatmap.less'), style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                   const SizedBox(width: 4),
                   ...[0, 1, 2, 3, 4].map((v) => Container(
                     width: 9, height: 9,
                     margin: const EdgeInsets.only(right: 2),
-                    decoration: BoxDecoration(color: _colorForLevel(v, c), borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(color: _colorForLevel(v, context.colors), borderRadius: BorderRadius.circular(2)),
                   )),
-                  Text('More', style: TextStyle(fontSize: 9, color: Colors.grey[400])),
+                  Text(context.tr('heatmap.more'), style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                 ]),
                 Row(children: [
-                  Text('+$newCount', style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
+                  Text('+$newCount', style: verySmallText(color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
                   const SizedBox(width: 6),
-                  Text('$dueCount', style: TextStyle(fontSize: 10, color: c.accent, fontWeight: FontWeight.w600)),
+                  Text('$dueCount', style: verySmallText(color: context.colors.accent, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 10),
                 ]),
               ],

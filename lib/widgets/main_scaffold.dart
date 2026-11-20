@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
-import '../styles/text_styles.dart';
 
 import '../screens/setting_screen.dart';
 import '../screens/package_edit_screen.dart';
@@ -58,9 +58,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     if (state == AppLifecycleState.resumed) _autoSync();
   }
 
-  /// Botão de sincronizar da barra de cima.
-  ///  - sem conta neste aparelho: abre Settings > Sync para cadastrar;
-  ///  - com conta: só mostra um pop-up enquanto a atualização acontece.
   Future<void> _onSyncPressed() async {
     if (_syncing) return;
     final service = SyncService.instance;
@@ -96,8 +93,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     }
   }
 
-  /// Sincronização automática: silenciosa, no máximo uma por minuto (a menos
-  /// que [force]) e só se este aparelho já tiver uma conta funcionando.
   Future<void> _autoSync({bool force = false}) async {
     final service = SyncService.instance;
     if (!mounted || _syncing || !service.isConfigured) return;
@@ -118,7 +113,8 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
 
   void _toggleMenu() {
     if (_isMenuOpen) {
-      _closeMenu();
+      _overlayEntry?.remove();
+      _overlayEntry = null;
     } else {
       _openMenu();
     }
@@ -142,7 +138,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     return OverlayEntry(
       builder: (context) => Stack(
         children: [
-          // Fundo semi-transparente para fechar o menu ao clicar fora
           GestureDetector(
             onTap: _closeMenu,
             behavior: HitTestBehavior.translucent,
@@ -150,7 +145,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               color: Colors.black.withValues(alpha: 0.2),
             ),
           ),
-          // Menu Flutuante posicionado acima do BottomAppBar / FAB central
           Positioned(
             bottom: 80,
             left: 0,
@@ -159,18 +153,18 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(16),
-                color: context.colors.surface,
+                color: context.colors.bgSecond,
                 child: Container(
                   width: 220,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _menuItem(Icons.folder_outlined, 'Novo pacote', 'package'),
-                      _menuItem(Icons.quiz_outlined, 'Nova questão', 'question'),
-                      _menuItem(Icons.dashboard_customize_outlined, 'Novo template', 'template'),
-                      _menuItem(Icons.label_outline, 'Nova tag', 'tag'),
-                      _menuItem(Icons.timer_outlined, 'Nova sessão', 'session'),
+                      _menuItem(Icons.folder_outlined, context.tr('menu.newPackage'), 'package'),
+                      _menuItem(Icons.quiz_outlined, context.tr('menu.newQuestion'), 'question'),
+                      _menuItem(Icons.dashboard_customize_outlined, context.tr('menu.newTemplate'), 'template'),
+                      _menuItem(Icons.label_outline, context.tr('menu.newTag'), 'tag'),
+                      _menuItem(Icons.timer_outlined, context.tr('menu.newSession'), 'session'),
                     ],
                   ),
                 ),
@@ -196,11 +190,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             const SizedBox(width: 12),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.colors.text,
-                fontWeight: FontWeight.w500,
-              ),
+              style: smallText(fontWeight: FontWeight.w500, color: context.colors.textMain),
             ),
           ],
         ),
@@ -248,11 +238,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
         break;
     }
 
-    // O que acabou de ser criado sobe para o servidor (se a sincronização estiver ligada).
     unawaited(_autoSync(force: true));
   }
 
-  // Só o ícone (o rótulo vira tooltip, para acessibilidade).
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isActive = widget.currentIndex == index;
     return Tooltip(
@@ -275,29 +263,18 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   }) {
     return ListTile(
       leading: Icon(icon,
-        color: active ? context.colors.accent : context.colors.text, size: context.icon(21)),
+        color: active ? context.colors.accent : context.colors.textMain, size: context.icon(21)),
       title: Text(label,
-        style: TextStyle(
-          color: active ? context.colors.accent : context.colors.text,
-          fontSize: 14,
-          fontWeight: active ? FontWeight.bold : FontWeight.normal,
-        )),
+        style: smallText(fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? context.colors.accent : context.colors.textMain)),
       tileColor: active ? context.colors.accent.withValues(alpha: 0.10) : Colors.transparent,
       onTap: onTap ?? () => Navigator.pop(context),
     );
   }
 
-  /// Barra inferior com recorte para o FAB central.
-  ///
-  /// Não usa `BottomAppBar(shape: CircularNotchedRectangle())` de propósito:
-  /// o clipper dele lê `Scaffold.geometryOf()`, que só pode ser lido durante o
-  /// paint. Com a Home coberta por outra rota, o mouse (desktop) faz hit-test
-  /// nela fora do paint e estoura a asserção. Como o FAB é sempre
-  /// `centerDocked`, o recorte é fixo e dispensa a geometria do Scaffold.
   Widget _buildBottomBar() {
     return PhysicalShape(
       clipper: const _CenterNotchClipper(),
-      color: context.colors.surface,
+      color: context.colors.bgSecond,
       elevation: 8,
       shadowColor: Colors.black,
       child: SafeArea(
@@ -307,9 +284,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home_outlined, 'Home', 0),
+              _buildNavItem(Icons.home_outlined, context.tr('nav.home'), 0),
               const SizedBox(width: 48),
-              _buildNavItem(Icons.bar_chart_outlined, 'Statistics', 1),
+              _buildNavItem(Icons.bar_chart_outlined, context.tr('nav.statistics'), 1),
             ],
           ),
         ),
@@ -327,9 +304,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(
@@ -338,17 +315,18 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             Row(children: [
               Builder(
                 builder: (ctx) => IconButton(
-                  icon: Icon(Icons.menu, color: context.colors.mutedText),
+                  icon: Icon(Icons.menu, color: context.colors.textSecond),
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text('Sysyphus', style: bigText),
+              Text('Sysyphus', style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
             ]),
             IconButton(
               tooltip: SyncService.instance.isSupported
                   ? 'Sincronizar'
                   : 'Sincronização indisponível no navegador',
+              tooltip: context.tr('sync.tooltip'),
               icon: _syncing
                   ? SizedBox(
                       width: context.icon(20),
@@ -364,33 +342,31 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
       ),
       drawer: Drawer(
         width: 240,
-        backgroundColor: context.colors.surface,
+        backgroundColor: context.colors.bgSecond,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: SafeArea(
           child: Column(
             children: [
-              _drawerItem(context, Icons.list, 'Home', active: true, onTap: () {
-                Navigator.pop(context); // fecha o drawer
-                // Volta para a Home que já existe (primeira rota) em vez de
-                // empilhar outra, e garante que a aba aberta seja a Home.
+              _drawerItem(context, Icons.list, context.tr('nav.home'), active: true, onTap: () {
+                Navigator.pop(context);
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 widget.onTap?.call(0);
               }),
-              _drawerItem(context, Icons.chrome_reader_mode, 'Database', onTap: () {
+              _drawerItem(context, Icons.chrome_reader_mode, context.tr('nav.database'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
-              _drawerItem(context, Icons.bar_chart_outlined, 'Statistics', onTap: () {
+              _drawerItem(context, Icons.bar_chart_outlined, context.tr('nav.statistics'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const DetailedStatisticsScreen()));
               }),
-              Divider(color: context.colors.border, thickness: 1, indent: 16, endIndent: 16),
-              _drawerItem(context, Icons.settings, 'Settings', onTap: () {
+              Divider(color: context.colors.bgSecond, thickness: 1, indent: 16, endIndent: 16),
+              _drawerItem(context, Icons.settings, context.tr('nav.settings'), onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }),
-              _drawerItem(context, Icons.help_outline, 'Help', onTap: () {}),
-              _drawerItem(context, Icons.sports_soccer, 'Support', onTap: () {}),
+              // _drawerItem(context, Icons.help_outline, context.tr('nav.help'), onTap: () {}),
+              // _drawerItem(context, Icons.sports_soccer, context.tr('nav.support'), onTap: () {}),
             ],
           ),
         ),
@@ -417,8 +393,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
   }
 }
 
-/// Recorte circular no topo-centro da barra, igual ao do FAB `centerDocked`
-/// (FAB de 56 px com margem de 8 px, centro na borda superior da barra).
 class _CenterNotchClipper extends CustomClipper<Path> {
   const _CenterNotchClipper();
 
@@ -484,10 +458,10 @@ class _SyncProgressDialogState extends State<_SyncProgressDialog> {
                     child: CircularProgressIndicator(strokeWidth: 3, color: context.colors.accent),
                   ),
                   const SizedBox(width: 20),
-                  const Expanded(child: Text('Atualizando…')),
+                  Expanded(child: Text(context.tr('sync.updating'))),
                 ],
               )
-            : Text('Não foi possível sincronizar: ${failed.error}'),
+            : Text(context.tr('sync.failedDialog', {'error': failed.error ?? ''})),
         actions: failed == null
             ? null
             : [TextButton(onPressed: () => Navigator.pop(context, failed), child: const Text('OK'))],

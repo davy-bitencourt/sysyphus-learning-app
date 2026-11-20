@@ -1,42 +1,36 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
-import '../styles/text_styles.dart';
 import 'sync_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   final List<Map<String, dynamic>> _settings = const [
-    {'icon': Icons.settings,        'title': 'General',       'sub': 'Language • Studying • System-wide'},
-    {'icon': Icons.rate_review,     'title': 'Reviewing',     'sub': 'Scheduling • Keep screen on'},
-    {'icon': Icons.sync,            'title': 'Sync',          'sub': 'Account • Synchronization'},
-    {'icon': Icons.notifications,   'title': 'Notifications', 'sub': 'Notify when • Vibrate • Blink light'},
-    {'icon': Icons.palette,         'title': 'Appearance',    'sub': 'Themes • Accent • Heatmap'},
-    {'icon': Icons.tune,            'title': 'Controls',      'sub': 'Gestures • Keyboard • Bluetooth'},
-    {'icon': Icons.accessibility,   'title': 'Accessibility', 'sub': 'Font size • Icon size'},
-    {'icon': Icons.tune,            'title': 'Advanced',      'sub': 'Workrounds • Plugins'},
-    {'icon': Icons.info_outline,    'title': 'About',         'sub': ' '},
+    {'id': 'general',       'icon': Icons.settings,      'title': 'settings.general',       'sub': 'settings.general.sub'},
+    // {'id': 'reviewing',     'icon': Icons.rate_review,   'title': 'settings.reviewing',     'sub': 'settings.reviewing.sub'},
+    {'id': 'sync',          'icon': Icons.sync,          'title': 'settings.sync',          'sub': 'settings.sync.sub'},
+    // {'id': 'notifications', 'icon': Icons.notifications, 'title': 'settings.notifications', 'sub': 'settings.notifications.sub'},
+    {'id': 'appearance',    'icon': Icons.palette,       'title': 'settings.appearance',    'sub': 'settings.appearance.sub'},
+    // {'id': 'controls',      'icon': Icons.tune,          'title': 'settings.controls',      'sub': 'settings.controls.sub'},
+    {'id': 'accessibility', 'icon': Icons.accessibility, 'title': 'settings.accessibility', 'sub': 'settings.accessibility.sub'},
+    // {'id': 'advanced',      'icon': Icons.tune,          'title': 'settings.advanced',      'sub': 'settings.advanced.sub'},
+    // {'id': 'about',         'icon': Icons.info_outline,  'title': 'settings.about',         'sub': 'settings.about.sub'},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.bg,
+      backgroundColor: context.colors.bgMain,
       appBar: AppBar(
-        backgroundColor: context.colors.bg,
+        backgroundColor: context.colors.bgMain,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.colors.text),
+          icon: Icon(Icons.arrow_back, color: context.colors.textMain),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Settings',
-          style: TextStyle(
-            color: context.colors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        title: Text(context.tr('settings.title'), style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain),
         ),
       ),
       body: SafeArea(
@@ -46,7 +40,6 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
 
-          // Lista de itens
           Column(
             children: List.generate(_settings.length, (i) {
               final item = _settings[i];
@@ -60,48 +53,27 @@ class SettingsScreen extends StatelessWidget {
                       child: Icon(
                         item['icon'] as IconData,
                         size: context.icon(18),
-                        color: context.colors.text,
+                        color: context.colors.textMain,
                       ),
                     ),
-                    title: Text(
-                      item['title'] as String,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.text,
-                      ),
-                    ),
+                    title: Text(context.tr(item['title'] as String), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain,),),
                     subtitle: Text(
-                      item['sub'] as String,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-                    trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+                      context.tr(item['sub'] as String), style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
+                    trailing: Icon(Icons.chevron_right, color: context.colors.textSecond),
                     onTap: () {
-                      if (item['title'] == 'General') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const GeneralSettingsScreen()),
-                        );
-                      } else if (item['title'] == 'Appearance') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
-                        );
-                      } else if (item['title'] == 'Accessibility') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
-                        );
-                      } else if (item['title'] == 'Sync') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
-                        );
+                      if (item['id'] == 'general') {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const GeneralSettingsScreen()));
+                      } else if (item['id'] == 'appearance') {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()));
+                      } else if (item['id'] == 'accessibility') {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()));
+                      } else if (item['id'] == 'sync') {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncSettingsScreen()));
                       }
                     },
                   ),
                   if (!isLast)
-                    Divider(height: 1, indent: 16, color: context.colors.border),
+                    Divider(height: 1, indent: 16, color: context.colors.bgSecond),
                 ],
               );
             }),
@@ -113,7 +85,6 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Settings > General: idioma (placeholder).
 class GeneralSettingsScreen extends StatelessWidget {
   const GeneralSettingsScreen({super.key});
 
@@ -123,24 +94,23 @@ class GeneralSettingsScreen extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final s = AppSettings.instance;
-        final c = context.colors;
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: c.text),
+              icon: Icon(Icons.arrow_back, color: context.colors.textMain),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'General',
-              style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
+              context.tr('settings.general'),
+              style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Language'),
+              _sectionTitle(context, context.tr('general.language')),
               const SizedBox(height: 8),
               _languageTile(context, s),
             ],
@@ -156,7 +126,7 @@ class GeneralSettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text),
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
       ),
     );
   }
@@ -164,14 +134,14 @@ class GeneralSettingsScreen extends StatelessWidget {
   Widget _languageTile(BuildContext context, AppSettings s) {
     final c = context.colors;
     return Container(
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: c.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(Icons.language, color: c.text),
+        leading: Icon(Icons.language, color: context.colors.textMain),
         title: Text(
-          'App language',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.text),
+          context.tr('general.appLanguage'),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textMain),
         ),
-        subtitle: Text(s.language.name, style: TextStyle(fontSize: 12, color: c.mutedText)),
+        subtitle: Text(s.language.name, style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
         trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
         onTap: () => _pickLanguage(context, s),
       ),
@@ -191,20 +161,12 @@ class GeneralSettingsScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: Text(
-                  'App language',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.text),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  'Placeholder: translations are not available yet. '
-                  'Your choice is saved for when they are.',
-                  style: TextStyle(fontSize: 12, color: c.mutedText),
+                  sheetContext.tr('general.appLanguage'),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
                 ),
               ),
               ...AppOptions.languages.map((l) => ListTile(
-                    title: Text(l.name, style: TextStyle(color: c.text)),
+                    title: Text(l.name, style: TextStyle(color: context.colors.textMain)),
                     trailing: l.id == s.language.id ? Icon(Icons.check, color: c.accent) : null,
                     onTap: () {
                       s.setLanguage(l.id);
@@ -219,7 +181,6 @@ class GeneralSettingsScreen extends StatelessWidget {
   }
 }
 
-/// Settings > Appearance: tema claro/escuro, cor de destaque e paleta do heatmap.
 class AppearanceSettingsScreen extends StatelessWidget {
   const AppearanceSettingsScreen({super.key});
 
@@ -229,42 +190,41 @@ class AppearanceSettingsScreen extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final s = AppSettings.instance;
-        final c = context.colors;
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: c.text),
+              icon: Icon(Icons.arrow_back, color: context.colors.textMain),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Appearance',
-              style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
+              context.tr('settings.appearance'),
+              style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Theme'),
+              _sectionTitle(context, context.tr('appearance.theme')),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<ThemeMode>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: ThemeMode.system,
-                      label: Text('System'),
+                      label: Text(context.tr('appearance.system')),
                       icon: Icon(Icons.brightness_auto),
                     ),
                     ButtonSegment(
                       value: ThemeMode.light,
-                      label: Text('Light'),
+                      label: Text(context.tr('appearance.light')),
                       icon: Icon(Icons.light_mode_outlined),
                     ),
                     ButtonSegment(
                       value: ThemeMode.dark,
-                      label: Text('Dark'),
+                      label: Text(context.tr('appearance.dark')),
                       icon: Icon(Icons.dark_mode_outlined),
                     ),
                   ],
@@ -274,10 +234,10 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Accent color'),
+              _sectionTitle(context, context.tr('appearance.accent')),
               Text(
-                'Buttons, tabs and highlights',
-                style: TextStyle(fontSize: 12, color: c.mutedText),
+                context.tr('appearance.accentHint'),
+                style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -287,7 +247,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Heatmap colors'),
+              _sectionTitle(context, context.tr('appearance.heatmap')),
               const SizedBox(height: 8),
               ...AppOptions.heatmaps.map((p) => _heatmapOption(context, s, p)),
             ],
@@ -301,15 +261,11 @@ class AppearanceSettingsScreen extends StatelessWidget {
   Widget _sectionTitle(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text),
-      ),
+      child: Text(text, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
     );
   }
 
   Widget _accentSwatch(BuildContext context, AppSettings s, AccentOption a) {
-    final c = context.colors;
     final selected = s.accent.id == a.id;
     return GestureDetector(
       onTap: () => s.setAccent(a.id),
@@ -319,7 +275,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: a.color,
           shape: BoxShape.circle,
-          border: Border.all(color: selected ? c.text : Colors.transparent, width: 2.5),
+          border: Border.all(color: selected ? context.colors.textMain : Colors.transparent, width: 2.5),
         ),
         child: selected ? Icon(Icons.check, color: Colors.white, size: context.icon(20)) : null,
       ),
@@ -327,7 +283,6 @@ class AppearanceSettingsScreen extends StatelessWidget {
   }
 
   Widget _heatmapOption(BuildContext context, AppSettings s, HeatmapPalette p) {
-    final c = context.colors;
     final selected = s.heatmap.id == p.id;
     return GestureDetector(
       onTap: () => s.setHeatmap(p.id),
@@ -335,16 +290,16 @@ class AppearanceSettingsScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: c.surfaceAlt,
+          color: context.colors.bgSecond,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? c.accent : Colors.transparent, width: 1.5),
+          border: Border.all(color: selected ? context.colors.accent : Colors.transparent, width: 1.5),
         ),
         child: Row(
           children: [
             Expanded(
-              child: Text(p.name, style: TextStyle(fontSize: 14, color: c.text)),
+              child: Text(p.name, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
             ),
-            ...[c.heat[0], ...p.levels].map(
+            ...[context.colors.heat[0], ...p.levels].map(
               (color) => Container(
                 width: 16,
                 height: 16,
@@ -354,7 +309,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             ),
             if (selected) ...[
               const SizedBox(width: 10),
-              Icon(Icons.check, size: context.icon(18), color: c.accent),
+              Icon(Icons.check, size: context.icon(18), color: context.colors.accent),
             ],
           ],
         ),
@@ -363,8 +318,6 @@ class AppearanceSettingsScreen extends StatelessWidget {
   }
 }
 
-
-/// Settings > Accessibility: tamanho da fonte e dos ícones do aplicativo.
 class AccessibilitySettingsScreen extends StatelessWidget {
   const AccessibilitySettingsScreen({super.key});
 
@@ -374,51 +327,45 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final s = AppSettings.instance;
-        final c = context.colors;
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: c.text),
+              icon: Icon(Icons.arrow_back, color: context.colors.textMain),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Accessibility',
-              style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20),
+              context.tr('settings.accessibility'),
+              style: bigText(fontWeight: FontWeight.normal, color: context.colors.textMain),
             ),
           ),
           body: SafeArea(
-          top: false, // a AppBar já cuida do topo
+          top: false, 
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _sectionTitle(context, 'Font size'),
-              Text(
-                'Changes the text size across the whole app',
-                style: TextStyle(fontSize: 12, color: c.mutedText),
-              ),
+              _sectionTitle(context, context.tr('a11y.fontSize')),
+              Text(context.tr('a11y.fontSizeHint'), style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
               const SizedBox(height: 8),
               _scaleSlider(
                 context,
                 value: s.fontScale,
-                small: Text('A', style: TextStyle(fontSize: 12, color: c.mutedText)),
-                large: Text('A', style: TextStyle(fontSize: 22, color: c.mutedText)),
+                small: Text('A', style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
+                large: Text('A', style: bigText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                 onChanged: (v) => s.setFontScale(v, save: false),
                 onChangeEnd: (v) => s.setFontScale(v),
               ),
               _fontPreview(context, s),
               const SizedBox(height: 28),
 
-              _sectionTitle(context, 'Icon size'),
-              Text(
-                'Changes the size of icons across the whole app',
-                style: TextStyle(fontSize: 12, color: c.mutedText),
-              ),
+              _sectionTitle(context, context.tr('a11y.iconSize')),
+              Text(context.tr('a11y.iconSizeHint'), style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
+
               const SizedBox(height: 8),
               _scaleSlider(
                 context,
                 value: s.iconScale,
-                small: Icon(Icons.circle, size: context.icon(10), color: c.mutedText),
-                large: Icon(Icons.circle, size: context.icon(22), color: c.mutedText),
+                small: Icon(Icons.circle, size: context.icon(10), color: context.colors.textSecond),
+                large: Icon(Icons.circle, size: context.icon(22), color: context.colors.textSecond),
                 onChanged: (v) => s.setIconScale(v, save: false),
                 onChangeEnd: (v) => s.setIconScale(v),
               ),
@@ -428,7 +375,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: s.resetAccessibility,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Reset to default'),
+                label: Text(context.tr('a11y.reset')),
               ),
             ],
           ),
@@ -443,7 +390,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.text),
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
       ),
     );
   }
@@ -476,7 +423,6 @@ class AccessibilitySettingsScreen extends StatelessWidget {
   }
 
   Widget _fontPreview(BuildContext context, AppSettings s) {
-    final c = context.colors;
 
     Widget row(String label, TextStyle base) {
       final pt = (base.fontSize! * s.fontScale).round();
@@ -484,8 +430,8 @@ class AccessibilitySettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            Expanded(child: Text('$label text', style: base.copyWith(color: c.text))),
-            Text('$pt pt', style: TextStyle(fontSize: 12, color: c.mutedText)),
+            Expanded(child: Text(context.tr('a11y.sampleText', {'label': label}), style: base.copyWith(color: context.colors.textMain))),
+            Text('$pt pt', style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
           ],
         ),
       );
@@ -494,12 +440,12 @@ class AccessibilitySettingsScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: context.colors.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          row('Large', bigText),
-          row('Medium', mediumText),
-          row('Small', smallText),
+          row(context.tr('a11y.large'), bigText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
+          row(context.tr('a11y.medium'), mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
+          row(context.tr('a11y.small'), smallText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
         ],
       ),
     );
@@ -511,22 +457,22 @@ class AccessibilitySettingsScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: c.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Icon(Icons.home_outlined, size: context.icon(24), color: c.text),
+              Icon(Icons.home_outlined, size: context.icon(24), color: context.colors.textMain),
               const SizedBox(width: 12),
-              Icon(Icons.bar_chart_outlined, size: context.icon(24), color: c.text),
+              Icon(Icons.bar_chart_outlined, size: context.icon(24), color: context.colors.textMain),
               const SizedBox(width: 12),
-              Icon(Icons.settings, size: context.icon(24), color: c.text),
+              Icon(Icons.settings, size: context.icon(24), color: context.colors.textMain),
               const SizedBox(width: 12),
-              Icon(Icons.edit_outlined, size: context.icon(24), color: c.text),
+              Icon(Icons.edit_outlined, size: context.icon(24), color: context.colors.textMain),
             ],
           ),
-          Text('$px px', style: TextStyle(fontSize: 12, color: c.mutedText)),
+          Text('$px px', style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
         ],
       ),
     );

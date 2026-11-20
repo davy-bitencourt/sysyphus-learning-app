@@ -6,6 +6,7 @@ import '../data/transfer/pack_exporter.dart';
 import '../data/transfer/pack_importer.dart';
 import '../data/transfer/pack_models.dart';
 import '../data/transfer/pack_parser.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import 'home.dart';
 
@@ -16,18 +17,19 @@ String _today() {
   return '${d.year}-${_two(d.month)}-${_two(d.day)}';
 }
 
-String _outcomeText(ImportOutcome o) {
-  final parts = <String>['${o.questionsAdded} questões'];
-  if (o.packagesCreated > 0) parts.add('${o.packagesCreated} pacotes novos');
-  if (o.templatesCreated > 0) parts.add('${o.templatesCreated} templates novos');
-  if (o.sessionsCreated > 0) parts.add('${o.sessionsCreated} sessões novas');
-  if (o.tagsCreated > 0) parts.add('${o.tagsCreated} tags novas');
-  var text = 'Importado: ${parts.join(', ')}.';
-  if (o.duplicatesSkipped > 0) text += ' ${o.duplicatesSkipped} já existiam e foram ignoradas.';
+String _outcomeText(Tr t, ImportOutcome o) {
+  final parts = <String>[t('transfer.o.questions', {'n': o.questionsAdded})];
+  if (o.packagesCreated > 0) parts.add(t('transfer.o.packages', {'n': o.packagesCreated}));
+  if (o.templatesCreated > 0) parts.add(t('transfer.o.templates', {'n': o.templatesCreated}));
+  if (o.sessionsCreated > 0) parts.add(t('transfer.o.sessions', {'n': o.sessionsCreated}));
+  if (o.tagsCreated > 0) parts.add(t('transfer.o.tags', {'n': o.tagsCreated}));
+  var text = t('transfer.o.imported', {'parts': parts.join(', ')});
+  if (o.duplicatesSkipped > 0) text += ' ${t('transfer.o.skipped', {'n': o.duplicatesSkipped})}';
   return text;
 }
 
 Future<bool> startPackImport(BuildContext context) async {
+  final t = context.tr;   
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
 
@@ -39,7 +41,7 @@ Future<bool> startPackImport(BuildContext context) async {
       withData: true,
     );
   } catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text('Não foi possível abrir o seletor de arquivos: $e')));
+    messenger.showSnackBar(SnackBar(content: Text(t('transfer.pickerFailed', {'error': e}))));
     return false;
   }
   if (picked == null) return false;
@@ -55,13 +57,13 @@ Future<bool> startPackImport(BuildContext context) async {
   } on FormatException catch (e) {
     failure = e.message;
   } catch (e) {
-    failure = 'Não foi possível ler o arquivo: $e';
+    failure = t('transfer.readFailed', {'error': e});
   }
 
   final plan = builtPlan;
   final files = unzipped;
   if (failure != null || plan == null || files == null) {
-    messenger.showSnackBar(SnackBar(content: Text(failure ?? 'Não foi possível ler o arquivo.')));
+    messenger.showSnackBar(SnackBar(content: Text(failure ?? t('transfer.readFailedShort'))));
     return false;
   }
 
@@ -70,8 +72,8 @@ Future<bool> startPackImport(BuildContext context) async {
   );
   if (outcome == null) return false;
 
-  Home.packagesChanged.value++; // a Home recarrega pacotes e contagens
-  messenger.showSnackBar(SnackBar(content: Text(_outcomeText(outcome))));
+  Home.packagesChanged.value++; 
+  messenger.showSnackBar(SnackBar(content: Text(_outcomeText(t, outcome))));
   return true;
 }
 
@@ -100,7 +102,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
       if (!mounted) return;
       setState(() => _importing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível importar (nada foi gravado): $e')),
+        SnackBar(content: Text(context.tr('transfer.importFailed', {'error': e}))),
       );
     }
   }
@@ -115,28 +117,28 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
 
     final String buttonLabel;
     if (_importing) {
-      buttonLabel = 'Importando...';
+      buttonLabel = context.tr('transfer.importing');
     } else if (errors.isNotEmpty) {
-      buttonLabel = 'Corrija os erros para importar';
+      buttonLabel = context.tr('transfer.fixErrors');
     } else if (!_plan.hasChanges) {
-      buttonLabel = 'Nada novo para importar';
+      buttonLabel = context.tr('transfer.nothingNew');
     } else {
-      buttonLabel = count > 0 ? 'Importar $count questões' : 'Importar';
+      buttonLabel = count > 0 ? context.tr('transfer.importN', {'n': count}) : context.tr('transfer.import');
     }
 
     return PopScope(
       canPop: !_importing,
       child: Scaffold(
-        backgroundColor: c.bg,
+        backgroundColor: c.bgMain,
         appBar: AppBar(
-          backgroundColor: c.bg,
+          backgroundColor: c.bgMain,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
+            icon: Icon(Icons.arrow_back, color: context.colors.textMain),
             onPressed: _importing ? null : () => Navigator.pop(context),
           ),
-          title: Text('Importar pacote',
-            style: TextStyle(color: c.text, fontWeight: FontWeight.bold, fontSize: 20)),
+          title: Text(context.tr('transfer.importTitle'),
+            style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -146,7 +148,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
               const SizedBox(height: 14),
               _buildIssues(
                 context,
-                title: 'Erros (${errors.length}) — corrija o arquivo e tente de novo',
+                title: context.tr('transfer.errorsTitle', {'n': errors.length}),
                 issues: errors,
                 color: const Color(0xFFC62828),
                 icon: Icons.error_outline,
@@ -160,7 +162,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
               const SizedBox(height: 14),
               _buildIssues(
                 context,
-                title: 'Avisos (${warnings.length})',
+                title: context.tr('transfer.warningsTitle', {'n': warnings.length}),
                 issues: warnings,
                 color: const Color(0xFFEF6C00),
                 icon: Icons.warning_amber_rounded,
@@ -170,7 +172,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
         ),
         bottomNavigationBar: SafeArea(
           child: Container(
-            color: c.bg,
+            color: c.bgMain,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: SizedBox(
               width: double.infinity,
@@ -182,7 +184,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(buttonLabel, style: const TextStyle(fontSize: 15)),
+                child: Text(buttonLabel, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
               ),
             ),
           ),
@@ -195,41 +197,42 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
     final c = context.colors;
     final p = _plan;
 
-    String join(List<String> parts) => parts.isEmpty ? 'nenhum' : parts.join(', ');
+    String join(List<String> parts) => parts.isEmpty ? context.tr('transfer.none') : parts.join(', ');
+    String n(String key, int v) => context.tr(key, {'n': v});
 
     final packages = join([
-      if (p.packagesNew > 0) '${p.packagesNew} novos',
-      if (p.packagesExisting > 0) '${p.packagesExisting} já existem (recebem as questões)',
+      if (p.packagesNew > 0) n('transfer.nNew', p.packagesNew),
+      if (p.packagesExisting > 0) n('transfer.nExistReceive', p.packagesExisting),
     ]);
     final questions = join([
-      '${p.questionsToAdd.length} a importar',
-      if (p.duplicatesSkipped > 0) '${p.duplicatesSkipped} já existem (ignoradas)',
+      n('transfer.nToImport', p.questionsToAdd.length),
+      if (p.duplicatesSkipped > 0) n('transfer.nExistIgnored', p.duplicatesSkipped),
     ]);
     final templates = join([
-      if (p.templatesNew > 0) '${p.templatesNew} novos',
-      if (p.templatesReused > 0) '${p.templatesReused} reaproveitados',
-      if (p.templatesCopied > 0) '${p.templatesCopied} cópias',
+      if (p.templatesNew > 0) n('transfer.nNew', p.templatesNew),
+      if (p.templatesReused > 0) n('transfer.nReused', p.templatesReused),
+      if (p.templatesCopied > 0) n('transfer.nCopies', p.templatesCopied),
     ]);
     final sessions = join([
-      if (p.sessionsNew > 0) '${p.sessionsNew} novas',
-      if (p.sessionsExisting > 0) '${p.sessionsExisting} já existem',
+      if (p.sessionsNew > 0) n('transfer.nNewF', p.sessionsNew),
+      if (p.sessionsExisting > 0) n('transfer.nExist', p.sessionsExisting),
     ]);
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: c.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: c.bgSecond, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('O que será importado',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.text)),
+          Text(context.tr('transfer.willImport'),
+            style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
           const SizedBox(height: 10),
-          _summaryRow(context, Icons.folder_outlined, 'Pacotes', packages),
-          _summaryRow(context, Icons.quiz_outlined, 'Questões', questions),
-          _summaryRow(context, Icons.dashboard_customize_outlined, 'Templates', templates),
-          _summaryRow(context, Icons.timer_outlined, 'Sessões', sessions),
-          _summaryRow(context, Icons.label_outline, 'Tags novas', '${p.tagsNew}'),
-          _summaryRow(context, Icons.perm_media_outlined, 'Mídias', '${p.mediaToCopy.length} arquivos'),
+          _summaryRow(context, Icons.folder_outlined, context.tr('transfer.packages'), packages),
+          _summaryRow(context, Icons.quiz_outlined, context.tr('transfer.questions'), questions),
+          _summaryRow(context, Icons.dashboard_customize_outlined, context.tr('transfer.templates'), templates),
+          _summaryRow(context, Icons.timer_outlined, context.tr('transfer.sessions'), sessions),
+          _summaryRow(context, Icons.label_outline, context.tr('transfer.newTags'), '${p.tagsNew}'),
+          _summaryRow(context, Icons.perm_media_outlined, context.tr('transfer.media'), context.tr('transfer.nFiles', {'n': p.mediaToCopy.length})),
         ],
       ),
     );
@@ -246,10 +249,10 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
           const SizedBox(width: 10),
           SizedBox(
             width: 92,
-            child: Text(label, style: TextStyle(fontSize: 13, color: c.mutedText)),
+            child: Text(label, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
           ),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text)),
+            child: Text(value, style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain)),
           ),
         ],
       ),
@@ -257,11 +260,10 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
   }
 
   Widget _buildNotes(BuildContext context) {
-    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(color: c.border),
+        border: Border.all(color: context.colors.bgSecond),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -273,9 +275,9 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: context.icon(16), color: c.mutedText),
+                  Icon(Icons.info_outline, size: context.icon(16), color: context.colors.textSecond),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: c.text))),
+                  Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: context.colors.textMain))),
                 ],
               ),
             ),
@@ -321,9 +323,9 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
                   children: [
                     TextSpan(
                       text: '${issue.where}\n',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c.mutedText),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c.textSecond),
                     ),
-                    TextSpan(text: issue.message, style: TextStyle(fontSize: 12, color: c.text)),
+                    TextSpan(text: issue.message, style: TextStyle(fontSize: 12, color: c.textMain)),
                   ],
                 ),
               ),
@@ -331,8 +333,8 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
           if (issues.length > maxShown)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text('... e mais ${issues.length - maxShown}',
-                style: TextStyle(fontSize: 12, color: c.mutedText)),
+              child: Text(context.tr('transfer.andMore', {'n': issues.length - maxShown}),
+                style: TextStyle(fontSize: 12, color: c.textSecond)),
             ),
         ],
       ),
@@ -341,6 +343,7 @@ class _ImportPreviewScreenState extends State<ImportPreviewScreen> {
 }
 
 Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async {
+  final t = context.tr; 
   final messenger = ScaffoldMessenger.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
 
@@ -357,10 +360,10 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
   } catch (e) {
     buildError = '$e';
   }
-  rootNavigator.pop(); // fecha o indicador de progresso
+  rootNavigator.pop(); 
 
   if (export == null) {
-    messenger.showSnackBar(SnackBar(content: Text('Não foi possível exportar: $buildError')));
+    messenger.showSnackBar(SnackBar(content: Text(t('transfer.exportFailed', {'error': buildError ?? ''}))));
     return;
   }
 
@@ -368,24 +371,39 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
   String? saveError;
   try {
     saved = await savePack(export.bytes, 'sysyphus-${_today()}.zip');
+    savedPath = await FilePicker.platform.saveFile(
+      dialogTitle: t('transfer.saveExport'),
+      fileName: 'sysyphus-${_today()}.zip',
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+      bytes: export.bytes,
+    );
+    if (savedPath != null && !Platform.isAndroid) {
+      await File(savedPath).writeAsBytes(export.bytes);
+    }
   } catch (e) {
     saveError = '$e';
   }
 
   if (saveError != null) {
-    messenger.showSnackBar(SnackBar(content: Text('Não foi possível salvar o arquivo: $saveError')));
+    messenger.showSnackBar(SnackBar(content: Text(t('transfer.saveFailed', {'error': saveError ?? ''}))));
     return;
   }
   if (!saved) {
     messenger.showSnackBar(const SnackBar(content: Text('Exportação cancelada.')));
+  if (savedPath == null) {
+    messenger.showSnackBar(SnackBar(content: Text(t('transfer.exportCancelled'))));
     return;
   }
 
   messenger.showSnackBar(SnackBar(
-    content: Text(
-      'Exportado: ${export.questions} questões, ${export.packages} pacotes, '
-      '${export.templates} templates, ${export.sessions} sessões, ${export.mediaFiles} mídias.',
-    ),
+    content: Text(t('transfer.exported', {
+      'questions': export.questions,
+      'packages': export.packages,
+      'templates': export.templates,
+      'sessions': export.sessions,
+      'media': export.mediaFiles,
+    })),
   ));
 
   if (export.warnings.isNotEmpty && context.mounted) {
@@ -393,7 +411,7 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Exportado com ${warnings.length} aviso(s)'),
+        title: Text(t('transfer.exportedWarnings', {'n': warnings.length})),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView(
@@ -402,14 +420,14 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
               for (final w in warnings.take(30))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Text(w, style: const TextStyle(fontSize: 12)),
+                  child: Text(w, style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                 ),
-              if (warnings.length > 30) Text('... e mais ${warnings.length - 30}'),
+              if (warnings.length > 30) Text(t('transfer.andMore', {'n': warnings.length - 30})),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('OK')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(t('common.ok'))),
         ],
       ),
     );
