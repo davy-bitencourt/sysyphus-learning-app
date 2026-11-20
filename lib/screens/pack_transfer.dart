@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../data/platform/save_pack.dart';
 import '../data/transfer/pack_exporter.dart';
 import '../data/transfer/pack_importer.dart';
 import '../data/transfer/pack_models.dart';
@@ -39,19 +38,20 @@ Future<bool> startPackImport(BuildContext context) async {
     picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['zip'],
+      withData: true,
     );
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.pickerFailed', {'error': e}))));
     return false;
   }
-  final path = picked?.files.single.path;
-  if (path == null) return false;
+  if (picked == null) return false;
 
   PackImportPlan? builtPlan;
   Map<String, List<int>>? unzipped;
   String? failure;
   try {
-    final bytes = await File(path).readAsBytes();
+    final bytes = picked.files.single.bytes;
+    if (bytes == null) throw StateError('Não foi possível ler o ZIP.');
     unzipped = unzipPack(bytes);
     builtPlan = await buildImportPlan(parsePack(unzipped));
   } on FormatException catch (e) {
@@ -367,9 +367,10 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
     return;
   }
 
-  String? savedPath;
+  var saved = false;
   String? saveError;
   try {
+    saved = await savePack(export.bytes, 'sysyphus-${_today()}.zip');
     savedPath = await FilePicker.platform.saveFile(
       dialogTitle: t('transfer.saveExport'),
       fileName: 'sysyphus-${_today()}.zip',
@@ -388,6 +389,8 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.saveFailed', {'error': saveError ?? ''}))));
     return;
   }
+  if (!saved) {
+    messenger.showSnackBar(const SnackBar(content: Text('Exportação cancelada.')));
   if (savedPath == null) {
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.exportCancelled'))));
     return;

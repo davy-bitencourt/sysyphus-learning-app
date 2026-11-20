@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+
+import 'data/platform/database_setup.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:io';
@@ -12,10 +14,7 @@ import 'l10n/strings.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  initializeDatabase();
 
   await AppSettings.instance.load();
   await loadStrings();

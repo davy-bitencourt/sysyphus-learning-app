@@ -44,6 +44,7 @@ class SyncService {
   SyncHttpServer? _server;
   SqliteSyncStore? _store;
 
+  bool get isSupported => !kIsWeb;
   bool get hasAccount => accountId != null && accountId!.isNotEmpty;
   bool get isConfigured => transport != null;
   bool get isHosting => _server?.isRunning ?? false;
@@ -54,6 +55,7 @@ class SyncService {
 
   /// Chame no main(), depois de abrir o banco: retoma a conta e o servidor.
   Future<void> init() async {
+    if (!isSupported) return;
     try {
       final db = await _db;
       final id = await getSyncMeta(db, 'account_id');
@@ -95,6 +97,7 @@ class SyncService {
 
   /// Tenta subir o servidor de novo (ex.: depois de liberar a porta no firewall).
   Future<void> restartHosting() async {
+    _requireSupport();
     final id = accountId;
     if (role != SyncRole.host || id == null) return;
     try {
@@ -109,6 +112,7 @@ class SyncService {
 
   /// Cria uma conta nova e deixa ESTE aparelho como host. Devolve o ID.
   Future<String> createAccount() async {
+    _requireSupport();
     await leave(); // limpa conta/servidor anteriores (inclui a cópia central antiga)
     final db = await _db;
     final id = generateAccountId();
@@ -132,6 +136,7 @@ class SyncService {
   /// Entra numa conta existente, sincronizando com o host em [host]:[port].
   /// Testa a conexão e o ID antes de salvar qualquer coisa.
   Future<void> joinAccount({required String id, required String host, int port = kSyncPort}) async {
+    _requireSupport();
     if (!isValidAccountId(id)) {
       throw ArgumentError('O ID precisa ter 26 letras e números (ex.: XXXXX-XXXXX-XXXXX-XXXXX-XXXXXX).');
     }
@@ -214,6 +219,9 @@ class SyncService {
   /// outra está em andamento (ex.: o botão da barra durante a automática)
   /// recebe o resultado da mesma execução.
   Future<SyncReport> syncNow() {
+    if (!isSupported) {
+      return Future.error(UnsupportedError('A sincronização não está disponível no navegador.'));
+    }
     final current = _running;
     if (current != null) return current;
     final run = _syncOnce().whenComplete(() => _running = null);
@@ -288,5 +296,11 @@ class SyncService {
     final t = transport;
     if (t is HttpSyncTransport) t.close();
     transport = null;
+  }
+
+  void _requireSupport() {
+    if (!isSupported) {
+      throw UnsupportedError('A sincronização não está disponível no navegador.');
+    }
   }
 }

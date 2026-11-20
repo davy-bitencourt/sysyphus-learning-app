@@ -27,7 +27,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _refresh();
+    if (_svc.isSupported) _refresh();
   }
 
   Future<void> _refresh() async {
@@ -172,7 +172,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         title: Text(context.tr('settings.sync'),
           style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
-      body: ListView(
+      body: !_svc.isSupported
+          ? const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('A sincronização entre aparelhos ainda não está disponível no navegador. '
+                  'Você pode estudar e salvar seus dados neste navegador, '
+                  'ou transferir pacotes por importação e exportação.'),
+            )
+          : ListView(
         padding: const EdgeInsets.all(16),
         children: _svc.hasAccount ? _buildAccount(context) : _buildSetup(context),
       ),

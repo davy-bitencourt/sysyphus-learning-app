@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
@@ -15,6 +15,7 @@ import '../data/services/media_storage_service.dart';
 import 'package_edit_screen.dart';
 import 'templaate_edit_screen.dart';
 import '../widgets/markdown_text.dart';
+import '../widgets/media_image.dart';
 
 class TagTextEditingController extends TextEditingController {
   TextStyle tagStyle;
@@ -793,13 +794,13 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
           if (isImage)
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.file(File(path), height: 140, fit: BoxFit.cover, width: double.infinity),
+              child: MediaImage(path: path, height: 140, fit: BoxFit.cover, width: double.infinity),
             )
           else
             Row(children: [
               Icon(Icons.audiotrack, color: context.colors.accent),
               const SizedBox(width: 8),
-              Expanded(child: Text(path.split(Platform.pathSeparator).last, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(p.basename(path).replaceFirst('sysyphus-media:', ''), overflow: TextOverflow.ellipsis)),
             ]),
           const SizedBox(height: 8),
         ],

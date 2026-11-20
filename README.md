@@ -83,7 +83,7 @@ What has been implemented so far:
    To run on the web:
 
    ```bash
-   flutter run -d chrome
+   flutter run -d chrome --web-port=8000
    ```
 
 ### Optional: regenerate launcher icons

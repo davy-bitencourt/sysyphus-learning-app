@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+
 import 'sync_models.dart';
 
 class MemorySyncTransport implements SyncTransport {
@@ -37,6 +39,9 @@ class MemorySyncTransport implements SyncTransport {
 
   @override
   Future<void> putBlob(String hash, List<int> bytes) async {
+    if (sha256.convert(bytes).toString() != hash) {
+      throw ArgumentError('o conteúdo não confere com o hash informado');
+    }
     _blobs[hash] = List<int>.from(bytes);
     blobUploads++;
   }

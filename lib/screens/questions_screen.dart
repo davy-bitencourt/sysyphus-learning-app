@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
@@ -12,8 +12,10 @@ import '../data/DAO/session_dao.dart';
 import '../data/models/field_model.dart';
 import '../data/models/question_model.dart';
 import '../data/services/sm2.dart';
+import '../data/services/media_storage_service.dart';
 import 'questions_edit_screen.dart';
 import '../widgets/markdown_text.dart';
+import '../widgets/media_image.dart';
 
 class QuestionScreen extends StatefulWidget {
   final int packageId;
@@ -344,7 +346,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
       return;
     }
     await _audioPlayer.stop();
-    await _audioPlayer.play(DeviceFileSource(path));
+    if (kIsWeb) {
+      final bytes = await MediaStorageService.readBytes(path);
+      if (bytes == null) throw StateError('Áudio não encontrado.');
+      await _audioPlayer.play(BytesSource(bytes,
+          mimeType: MediaStorageService.audioMimeType(path)));
+    } else {
+      await _audioPlayer.play(DeviceFileSource(path));
+    }
     setState(() => _playingFieldId = fieldId);
     _audioPlayer.onPlayerComplete.first.then((_) {
       if (mounted) setState(() => _playingFieldId = null);
@@ -588,7 +597,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         if (field.maxWidth == null && field.maxHeight == null) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(File(path), width: double.infinity, fit: BoxFit.cover),
+            child: MediaImage(path: path, width: double.infinity, fit: BoxFit.cover),
           );
         }
         return Center(
@@ -599,7 +608,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(File(path), fit: BoxFit.contain),
+              child: MediaImage(path: path, fit: BoxFit.contain),
             ),
           ),
         );

@@ -323,6 +323,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
               Text('Sysyphus', style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
             ]),
             IconButton(
+              tooltip: SyncService.instance.isSupported
+                  ? 'Sincronizar'
+                  : 'Sincronização indisponível no navegador',
               tooltip: context.tr('sync.tooltip'),
               icon: _syncing
                   ? SizedBox(
@@ -330,8 +333,9 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                       height: context.icon(20),
                       child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.accent),
                     )
-                  : Icon(Icons.sync, color: context.colors.textSecond),
-              onPressed: _syncing ? null : _onSyncPressed,
+                  : Icon(Icons.sync, color: context.colors.mutedText),
+              onPressed: _syncing || !SyncService.instance.isSupported
+                  ? null : _onSyncPressed,
             ),
           ],
         ),

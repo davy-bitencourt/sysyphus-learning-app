@@ -1,71 +1,56 @@
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
-/// documentos do app. O picker geralmente devolve um arquivo em cache
-/// temporário, que o sistema operacional pode limpar a qualquer momento --
-/// por isso persistimos uma cópia própria e guardamos esse caminho no banco.
+import '../platform/media_files.dart' as storage;
+
+/// Stores native files on disk and browser media in the app's SQLite database.
 class MediaStorageService {
   static Future<String?> pickImage({required bool fromCamera}) async {
-    final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(
+    final picked = await ImagePicker().pickImage(
       source: fromCamera ? ImageSource.camera : ImageSource.gallery,
       imageQuality: 85,
     );
     if (picked == null) return null;
-    return _persist(File(picked.path), 'images');
+    return saveBytes(
+      await picked.readAsBytes(),
+      p.extension(picked.name),
+      isImage: true,
+    );
   }
 
   static Future<String?> pickAudio() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.audio);
-    final path = result?.files.single.path;
-    if (path == null) return null;
-    return _persist(File(path), 'audio');
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      withData: true,
+    );
+    if (result == null) return null;
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    if (bytes == null) throw StateError('Não foi possível ler o áudio.');
+    return saveBytes(bytes, p.extension(picked.name), isImage: false);
   }
 
-  static int _counter = 0;
-
-  /// Grava bytes (ex.: arquivos vindos de um .zip importado) no mesmo lugar
-  /// que pickImage/pickAudio usam, e devolve o caminho. O contador evita nome
-  /// repetido quando vários arquivos são gravados no mesmo microssegundo.
   static Future<String> saveBytes(
     List<int> bytes,
     String extension, {
     required bool isImage,
-  }) async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    final targetDir = Directory(
-      p.join(docsDir.path, 'sysyphus_media', isImage ? 'images' : 'audio'),
-    );
-    if (!await targetDir.exists()) {
-      await targetDir.create(recursive: true);
-    }
-    final fileName = '${DateTime.now().microsecondsSinceEpoch}_${_counter++}$extension';
-    final targetPath = p.join(targetDir.path, fileName);
-    await File(targetPath).writeAsBytes(bytes, flush: true);
-    return targetPath;
-  }
+  }) => storage.saveMediaBytes(bytes, extension, isImage: isImage);
 
-  static Future<String> _persist(File source, String subfolder) async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    final targetDir = Directory(p.join(docsDir.path, 'sysyphus_media', subfolder));
-    if (!await targetDir.exists()) {
-      await targetDir.create(recursive: true);
-    }
-    final fileName = '${DateTime.now().microsecondsSinceEpoch}${p.extension(source.path)}';
-    final targetPath = p.join(targetDir.path, fileName);
-    await source.copy(targetPath);
-    return targetPath;
-  }
+  static Future<Uint8List?> readBytes(String path) =>
+      storage.readMediaBytes(path);
 
-  /// Remove um arquivo persistido (ex: quando o campo é limpo/trocado).
+  static String? audioMimeType(String path) => const {
+    '.mp3': 'audio/mpeg',
+    '.m4a': 'audio/mp4',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.aac': 'audio/aac',
+  }[p.extension(path).toLowerCase()];
+
   static Future<void> delete(String? path) async {
-    if (path == null) return;
-    final file = File(path);
-    if (await file.exists()) {
-      await file.delete();
-    }
+    if (path != null) await storage.deleteMedia(path);
   }
 }
