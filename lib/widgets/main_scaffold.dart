@@ -324,16 +324,15 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             ]),
             IconButton(
               tooltip: SyncService.instance.isSupported
-                  ? 'Sincronizar'
+                  ? context.tr('sync.tooltip')
                   : 'Sincronização indisponível no navegador',
-              tooltip: context.tr('sync.tooltip'),
               icon: _syncing
                   ? SizedBox(
                       width: context.icon(20),
                       height: context.icon(20),
                       child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.accent),
                     )
-                  : Icon(Icons.sync, color: context.colors.mutedText),
+                  : Icon(Icons.sync, color: context.colors.textSecond),
               onPressed: _syncing || !SyncService.instance.isSupported
                   ? null : _onSyncPressed,
             ),

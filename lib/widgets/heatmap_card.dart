@@ -90,8 +90,6 @@ class HeatmapCard extends StatelessWidget {
                   if(defaultTargetPlatform == TargetPlatform.linux ||
                      defaultTargetPlatform == TargetPlatform.windows ||
                      defaultTargetPlatform == TargetPlatform.macOS) ...[
-                    const Text('Study Activity', style: mediumText),
-                  if(Platform.isLinux || Platform.isWindows || Platform.isMacOS) ...[
                     Text(context.tr('home.studyActivity'), style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
                     const SizedBox(height: 2),
                   ],

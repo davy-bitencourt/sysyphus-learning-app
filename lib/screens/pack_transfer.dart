@@ -371,16 +371,6 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
   String? saveError;
   try {
     saved = await savePack(export.bytes, 'sysyphus-${_today()}.zip');
-    savedPath = await FilePicker.platform.saveFile(
-      dialogTitle: t('transfer.saveExport'),
-      fileName: 'sysyphus-${_today()}.zip',
-      type: FileType.custom,
-      allowedExtensions: const ['zip'],
-      bytes: export.bytes,
-    );
-    if (savedPath != null && !Platform.isAndroid) {
-      await File(savedPath).writeAsBytes(export.bytes);
-    }
   } catch (e) {
     saveError = '$e';
   }
@@ -390,8 +380,6 @@ Future<void> startPackExport(BuildContext context, {Set<int>? packageIds}) async
     return;
   }
   if (!saved) {
-    messenger.showSnackBar(const SnackBar(content: Text('Exportação cancelada.')));
-  if (savedPath == null) {
     messenger.showSnackBar(SnackBar(content: Text(t('transfer.exportCancelled'))));
     return;
   }

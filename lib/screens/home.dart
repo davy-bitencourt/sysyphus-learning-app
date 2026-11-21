@@ -55,13 +55,6 @@ class _HomeState extends State<Home> {
   void _showPage(int index) {
     if (_pageController.hasClients) _pageController.jumpToPage(index);
   }
-  Future<void> _loadData() async {
-    setState(() => _loading = true);
-
-    final packageRows = await OrderService.apply(
-        OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
-    final heatmap = await _revlogSchema.getHeatmapData();
-    final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
 
   Future<void> _loadData() async {
     setState(() {
@@ -69,7 +62,8 @@ class _HomeState extends State<Home> {
       _loadError = null;
     });
     try {
-      final packageRows = await PackageDao().getAll();
+      final packageRows = await OrderService.apply(
+          OrderService.packagesKey, await PackageDao().getAll(), (p) => p['id'] as int);
       final heatmap = await _revlogSchema.getHeatmapData();
       final counts = await QuestionDao().getStudyCounts(_formatDate(DateTime.now()));
       if (!mounted) return;
