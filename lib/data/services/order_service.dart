@@ -1,6 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Guarda a ordem manual (lista de ids) de pacotes e templates.
 class OrderService {
   static const packagesKey = 'order.packages';
   static const templatesKey = 'order.templates';
@@ -11,8 +10,6 @@ class OrderService {
     await prefs.setStringList(key, ids.map((e) => e.toString()).toList());
   }
 
-  /// Ordena [items] pela ordem salva. Itens sem posição salva (novos)
-  /// vão para o fim, mantendo a ordem original entre si.
   static Future<List<T>> apply<T>(
       String key, List<T> items, int? Function(T) idOf) async {
     final prefs = await SharedPreferences.getInstance();
@@ -24,7 +21,7 @@ class OrderService {
       ..sort((a, b) {
         final ra = rank[idOf(items[a])] ?? saved.length;
         final rb = rank[idOf(items[b])] ?? saved.length;
-        return ra != rb ? ra.compareTo(rb) : a.compareTo(b); // desempate estável
+        return ra != rb ? ra.compareTo(rb) : a.compareTo(b); 
       });
     return [for (final i in order) items[i]];
   }

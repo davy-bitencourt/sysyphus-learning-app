@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 
 import '../platform/media_files.dart' as storage;
 
-/// Stores native files on disk and browser media in the app's SQLite database.
 class MediaStorageService {
   static Future<String?> pickImage({required bool fromCamera}) async {
     final picked = await ImagePicker().pickImage(

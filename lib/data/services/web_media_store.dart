@@ -3,8 +3,6 @@ import 'dart:typed_data';
 
 import 'package:sqflite/sqflite.dart';
 
-/// Media bytes live in the same persistent browser database as the questions.
-/// References keep their extension so ZIP import/export preserves the format.
 class WebMediaStore {
   WebMediaStore(this.db);
 
