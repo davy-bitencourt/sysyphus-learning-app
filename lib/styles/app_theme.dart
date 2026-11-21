@@ -70,6 +70,8 @@ class AppOptions {
   static const List<LanguageOption> languages = [
     LanguageOption('pt_BR', 'Português (Brasil)'),
     LanguageOption('en', 'English'),
+    LanguageOption('es', 'Español'),
+    LanguageOption('ja', '日本語'),
   ];
 }
 

@@ -7,7 +7,7 @@ import '../styles/app_theme.dart';
 
 typedef Tr = String Function(String key, [Map<String, Object> args]);
 
-const List<String> kLangCodes = ['en', 'pt'];
+const List<String> kLangCodes = ['en', 'pt', 'es', 'ja'];
 
 String currentLang() {
   final l = AppSettings.instance.language;
@@ -21,7 +21,12 @@ String currentLang() {
 
 Locale appLocale() => currentLang() == 'pt' ? const Locale('pt', 'BR') : Locale(currentLang());
 
-const List<Locale> kSupportedLocales = [Locale('en'), Locale('pt', 'BR')];
+const List<Locale> kSupportedLocales = [
+  Locale('en'),
+  Locale('pt', 'BR'),
+  Locale('es'),
+  Locale('ja'),
+];
 
 final Map<String, Map<String, String>> _strings = {};
 
