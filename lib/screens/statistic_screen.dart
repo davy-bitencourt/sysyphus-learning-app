@@ -87,11 +87,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         children: [
           Icon(icon, size: context.icon(64), color: c.bgSecond),
           const SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.textMain)),
+          Text(title, style: mediumText(fontWeight: FontWeight.bold, color: c.textMain)),
           const SizedBox(height: 4),
           Text(text,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+            style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)),
         ],
       ),
     );

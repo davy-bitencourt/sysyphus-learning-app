@@ -56,7 +56,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
         ),
         title: Text(
           context.tr('stats.detailedTitle'),
-          style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20),
+          style: bigText(fontWeight: FontWeight.bold, color: c.textMain),
         ),
       ),
       body: SafeArea(
@@ -85,7 +85,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             child: _error == null
                 ? const CircularProgressIndicator()
                 : Text(context.tr('stats.loadFailedWith', {'error': _error!}),
-                    textAlign: TextAlign.center, style: TextStyle(color: c.textSecond)),
+                    textAlign: TextAlign.center, style: smallText(fontWeight: FontWeight.normal, color: c.textSecond)),
           ),
         ),
       ];
@@ -98,7 +98,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
           icon: Icons.insights_outlined,
           child: Text(
             context.tr('stats.noReviewsHint'),
-            style: TextStyle(fontSize: 13, color: c.textSecond),
+            style: smallText(fontWeight: FontWeight.normal, color: c.textSecond),
           ),
         ),
       ];
@@ -157,7 +157,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               context.tr('stats.arrowsHint'),
-              style: TextStyle(fontSize: 11, color: c.textSecond),
+              style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
             ),
           ),
         ],
@@ -242,7 +242,7 @@ class _DetailedStatisticsScreenState extends State<DetailedStatisticsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: _danger)),
+            child: Text(context.tr('common.delete'), style: smallText(fontWeight: FontWeight.normal, color: _danger)),
           ),
         ],
       ),

@@ -95,7 +95,7 @@ class HeatmapCard extends StatelessWidget {
                   ],
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     Text(context.tr('heatmap.reviewedToday', {'n': todayCount}), style: verySmallText(fontWeight: FontWeight.normal, color: Colors.grey)),
-                    Text(context.tr('heatmap.dayStreak', {'n': streak}), style: verySmallText(fontWeight: FontWeight.w600, color: context.colors.accent)),
+                    Text(context.tr('heatmap.dayStreak', {'n': streak}), style: verySmallText(fontWeight: FontWeight.bold, color: context.colors.accent)),
                   ]),
                 ]),
               ),
@@ -193,9 +193,9 @@ class HeatmapCard extends StatelessWidget {
                   Text(context.tr('heatmap.more'), style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
                 ]),
                 Row(children: [
-                  Text('+$newCount', style: verySmallText(color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
+                  Text('+$newCount', style: verySmallText(color: Color(0xFF1565C0), fontWeight: FontWeight.bold)),
                   const SizedBox(width: 6),
-                  Text('$dueCount', style: verySmallText(color: context.colors.accent, fontWeight: FontWeight.w600)),
+                  Text('$dueCount', style: verySmallText(color: context.colors.accent, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 10),
                 ]),
               ],

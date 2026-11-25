@@ -114,7 +114,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(context.tr('pkg.deleteAll'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('pkg.deleteAll'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -162,8 +162,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'pkg.edit' : 'pkg.new'),
-          style: TextStyle(color: context.colors.textMain,
-            fontWeight: FontWeight.bold, fontSize: 20)),
+          style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
         actions: [
           if (_isEditing)
             IconButton(
@@ -218,7 +217,7 @@ class _PackageEditScreenState extends State<PackageEditScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(context.tr(_saving ? 'common.saving' : 'pkg.save'), style: const TextStyle(fontSize: 15)),
+              child: Text(context.tr(_saving ? 'common.saving' : 'pkg.save'), style: smallText(fontWeight: FontWeight.normal, color: Colors.white)),
             ),
           ),
         ),

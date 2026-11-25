@@ -363,8 +363,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'ses.edit' : 'ses.new'),
-          style: TextStyle(color: context.colors.textMain,
-            fontWeight: FontWeight.bold, fontSize: 20)),
+          style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -417,10 +416,10 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(context.tr('ses.spaced'),
-                      style: TextStyle(color: context.colors.textMain)),
+                      style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                   subtitle: Text(
                     context.tr(_spacedRepetition ? 'ses.spacedOn' : 'ses.spacedOff'),
-                    style: TextStyle(fontSize: 12, color: context.colors.textSecond),
+                    style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond),
                   ),
                   value: _spacedRepetition,
                   onChanged: (v) => setState(() => _spacedRepetition = v),
@@ -445,7 +444,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(context.tr(_saving ? 'common.saving' : 'ses.save'),
-                style: const TextStyle(fontSize: 15)),
+                style: smallText(fontWeight: FontWeight.normal, color: Colors.white)),
             ),
           ),
         ),
@@ -495,7 +494,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               context.tr('ses.timer', {'value': SessionDao.describeTimeLimit(seconds)}),
-              style: TextStyle(fontSize: 12, color: c.textSecond),
+              style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
             ),
           ),
       ],
@@ -532,7 +531,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               context.tr('ses.noTags'),
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!),
             ),
           )
         else ...[
@@ -634,11 +633,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           children: [
             Text(
               '${_tagTitle(q.tagId)} ${q.quantity}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: c.textMain,
-              ),
+              style: smallText(fontWeight: FontWeight.w600, color: c.textMain),
             ),
             const SizedBox(width: 2),
             InkWell(
@@ -662,11 +657,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         padding: const EdgeInsets.only(top: 2),
         child: Text(
           context.tr('ses.distributedUnlimited', {'sum': _quotaSum}),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: context.colors.textSecond,
-          ),
+          style: verySmallText(fontWeight: FontWeight.w600, color: context.colors.textSecond),
         ),
       );
     }
@@ -677,11 +668,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         over
             ? context.tr('ses.sumPassesTotal', {'sum': _quotaSum, 'total': '$_total'})
             : context.tr('ses.distributed', {'sum': _quotaSum, 'total': '$_total'}),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: over ? const Color(0xFFC62828) : context.colors.textSecond,
-        ),
+        style: verySmallText(fontWeight: FontWeight.w600, color: over ? const Color(0xFFC62828) : context.colors.textSecond),
       ),
     );
   }

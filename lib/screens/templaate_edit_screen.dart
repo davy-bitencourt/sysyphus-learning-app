@@ -217,8 +217,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
           onPressed: () => _leave(),
         ),
         title: Text(context.tr(_isEditing ? 'tpl.edit' : 'tpl.new'),
-          style: TextStyle(color: context.colors.textMain,
-            fontWeight: FontWeight.bold, fontSize: 20)),
+          style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
         actions: [
           if (_isEditing)
             IconButton(
@@ -248,7 +247,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
               child: TextButton.icon(
                 onPressed: _addField,
                 icon: Icon(Icons.add, color: context.colors.accent),
-                label: Text(context.tr('tpl.addField'), style: TextStyle(color: context.colors.accent)),
+                label: Text(context.tr('tpl.addField'), style: smallText(fontWeight: FontWeight.normal, color: context.colors.accent)),
               ),
             ),
           ),
@@ -283,7 +282,7 @@ class _TemplateEditScreenState extends State<TemplateEditScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(context.tr(_saving ? 'common.saving' : 'tpl.save'), style: const TextStyle(fontSize: 15)),
+              child: Text(context.tr(_saving ? 'common.saving' : 'tpl.save'), style: smallText(fontWeight: FontWeight.normal, color: Colors.white)),
             ),
           ),
         ),
@@ -328,7 +327,7 @@ Widget _buildDividerRow({required Key key}) {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(field.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(field.label, style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain)),
                 Text(
                   field.isStatement
                       ? context.tr('tpl.textRequired')
@@ -337,7 +336,7 @@ Widget _buildDividerRow({required Key key}) {
                           : field.type == FieldType.image
                               ? '${FieldType.label(field.type)} • ${_imageLimitText(field)}'
                               : FieldType.label(field.type),
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  style: verySmallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!),
                 ),
               ],
             ),
@@ -416,7 +415,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.tr('tpl.newField'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(context.tr('tpl.newField'), style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain)),
           const SizedBox(height: 12),
           TextField(
             controller: _labelController,
@@ -441,7 +440,7 @@ class _AddFieldSheetState extends State<_AddFieldSheet> {
           if (_type == FieldType.image) ...[
             const SizedBox(height: 12),
             Text(context.tr('tpl.maxImageSizeOptional'),
-              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              style: verySmallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -548,7 +547,7 @@ class _ImageSizeDialogState extends State<_ImageSizeDialog> {
         children: [
           Text(
             context.tr('tpl.imageSizeBody'),
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: verySmallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!),
           ),
           const SizedBox(height: 16),
           _limitField(_width, context.tr('tpl.maxWidthPx')),

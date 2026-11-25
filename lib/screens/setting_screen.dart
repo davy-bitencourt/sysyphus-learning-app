@@ -102,7 +102,7 @@ class GeneralSettingsScreen extends StatelessWidget {
             ),
             title: Text(
               context.tr('settings.general'),
-              style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
+              style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain),
             ),
           ),
           body: SafeArea(
@@ -126,7 +126,7 @@ class GeneralSettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
+        style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain),
       ),
     );
   }
@@ -139,9 +139,9 @@ class GeneralSettingsScreen extends StatelessWidget {
         leading: Icon(Icons.language, color: context.colors.textMain),
         title: Text(
           context.tr('general.appLanguage'),
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textMain),
+          style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain),
         ),
-        subtitle: Text(s.language.name, style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
+        subtitle: Text(s.language.name, style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
         trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
         onTap: () => _pickLanguage(context, s),
       ),
@@ -162,11 +162,11 @@ class GeneralSettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: Text(
                   sheetContext.tr('general.appLanguage'),
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
+                  style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain),
                 ),
               ),
               ...AppOptions.languages.map((l) => ListTile(
-                    title: Text(l.name, style: TextStyle(color: context.colors.textMain)),
+                    title: Text(l.name, style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                     trailing: l.id == s.language.id ? Icon(Icons.check, color: c.accent) : null,
                     onTap: () {
                       s.setLanguage(l.id);
@@ -198,7 +198,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             ),
             title: Text(
               context.tr('settings.appearance'),
-              style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
+              style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain),
             ),
           ),
           body: SafeArea(
@@ -390,7 +390,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textMain),
+        style: mediumText(fontWeight: FontWeight.bold, color: context.colors.textMain),
       ),
     );
   }
@@ -431,7 +431,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
         child: Row(
           children: [
             Expanded(child: Text(context.tr('a11y.sampleText', {'label': label}), style: base.copyWith(color: context.colors.textMain))),
-            Text('$pt pt', style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
+            Text('$pt pt', style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
           ],
         ),
       );
@@ -472,7 +472,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               Icon(Icons.edit_outlined, size: context.icon(24), color: context.colors.textMain),
             ],
           ),
-          Text('$px px', style: TextStyle(fontSize: 12, color: context.colors.textSecond)),
+          Text('$px px', style: verySmallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
         ],
       ),
     );

@@ -54,7 +54,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Ao voltar para o app (ex.: depois de estudar no outro aparelho).
     if (state == AppLifecycleState.resumed) _autoSync();
   }
 
@@ -71,8 +70,6 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
     }
 
     setState(() => _syncing = true);
-    // Se uma sincronização automática já está rodando, o serviço devolve a
-    // mesma execução (nunca há duas ao mesmo tempo).
     final outcome = service.syncNow().then(
           (report) => _SyncOutcome(report: report),
           onError: (Object e) => _SyncOutcome(error: e),
@@ -190,7 +187,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
             const SizedBox(width: 12),
             Text(
               label,
-              style: smallText(fontWeight: FontWeight.w500, color: context.colors.textMain),
+              style: smallText(fontWeight: FontWeight.bold, color: context.colors.textMain),
             ),
           ],
         ),

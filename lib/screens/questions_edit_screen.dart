@@ -474,7 +474,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         ),
         title: Text(
           context.tr(_isEditing ? 'qe.edit' : 'qe.new'),
-          style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
+          style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain),
         ),
         actions: [
           if (_isEditing)
@@ -505,7 +505,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text(context.tr(_saving ? 'common.saving' : 'qe.save'), style: const TextStyle(fontSize: 15)),
+            child: Text(context.tr(_saving ? 'common.saving' : 'qe.save'), style: smallText(fontWeight: FontWeight.normal, color: Colors.white)),
           ),
         ),
       ),
@@ -522,7 +522,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             Text(
               context.tr('qe.noTemplates'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[600]!),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -701,13 +701,12 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: empty
-          ? Text(context.tr('qe.nothingToPreview', {'label': label}), style: TextStyle(fontSize: 13, color: context.colors.textSecond))
+          ? Text(context.tr('qe.nothingToPreview', {'label': label}), style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond))
           : MarkdownText(
               text: text,
-              style: TextStyle(
-                fontSize: isStatement ? 16 : 14,
-                color: context.colors.textMain,
-              ),
+              style: isStatement
+                  ? mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)
+                  : smallText(fontWeight: FontWeight.normal, color: context.colors.textMain),
             ),
     );
   }
@@ -788,7 +787,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(field.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain)),
+        Text(field.label, style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain)),
         const SizedBox(height: 8),
         if (path != null) ...[
           if (isImage)
@@ -846,7 +845,7 @@ class _QuestionsEditScreenState extends State<QuestionsEditScreen> {
             field.type == FieldType.options ? 'qe.optionsHint' : 'qe.trueFalseHint',
             {'label': field.label},
           ),
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textMain),
+          style: smallText(fontWeight: FontWeight.w600, color: context.colors.textMain),
         ),
         const SizedBox(height: 8),
         ...List.generate(

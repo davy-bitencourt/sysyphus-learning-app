@@ -69,17 +69,17 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           children: [
             SelectableText(
               formatAccountId(id),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1, color: c.textMain),
+              style: mediumText(fontWeight: FontWeight.bold, color: c.textMain).copyWith(letterSpacing: 1),
             ),
             const SizedBox(height: 12),
             Text(
               dialogContext.tr('sync.idDialogBody'),
-              style: TextStyle(fontSize: 12, color: c.textSecond),
+              style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
             ),
             if (_addresses.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(dialogContext.tr('sync.deviceOnNetwork', {'addresses': _addresses.join(', ')}),
-                style: TextStyle(fontSize: 12, color: c.textSecond)),
+                style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond)),
             ],
           ],
         ),
@@ -140,7 +140,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(dialogContext.tr('common.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(dialogContext.tr('sync.leave'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(dialogContext.tr('sync.leave'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -170,7 +170,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(context.tr('settings.sync'),
-          style: TextStyle(color: c.textMain, fontWeight: FontWeight.bold, fontSize: 20)),
+          style: bigText(fontWeight: FontWeight.bold, color: c.textMain)),
       ),
       body: !_svc.isSupported
           ? const Padding(
@@ -201,7 +201,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             Expanded(
               child: Text(
                 context.tr('sync.intro'),
-                style: TextStyle(fontSize: 12, color: c.textSecond),
+                style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
               ),
             ),
           ],
@@ -259,7 +259,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                         : (isHost
                             ? context.tr('sync.hosting')
                             : context.tr('sync.connectedTo', {'host': '${_svc.hostAddress}'})),
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain),
+                    style: smallText(fontWeight: FontWeight.bold, color: c.textMain),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -269,13 +269,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                             ? context.tr('sync.hostBody') +
                                 (_addresses.isEmpty ? '.' : ' (${_addresses.join(', ')}).')
                             : context.tr('sync.clientBody'),
-                    style: TextStyle(fontSize: 12, color: c.textSecond),
+                    style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
                   ),
                   if (isHost && _svc.discoveryError != null) ...[
                     const SizedBox(height: 6),
                     Text(
                       context.tr('sync.discoveryOff'),
-                      style: TextStyle(fontSize: 11, color: c.textSecond),
+                      style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
                     ),
                   ],
                 ],
@@ -302,14 +302,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.tr('sync.accountId'),
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
+              style: smallText(fontWeight: FontWeight.bold, color: c.textMain)),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     accountText,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1, color: c.textMain),
+                    style: smallText(fontWeight: FontWeight.w600, color: c.textMain).copyWith(letterSpacing: 1),
                   ),
                 ),
                 IconButton(
@@ -329,7 +329,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               ],
             ),
             Text(context.tr('sync.idWarning'),
-              style: TextStyle(fontSize: 11, color: c.textSecond)),
+              style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond)),
           ],
         ),
       ),
@@ -340,7 +340,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.tr('sync.thisDevice'),
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
+              style: smallText(fontWeight: FontWeight.bold, color: c.textMain)),
             const SizedBox(height: 10),
             _row(context, context.tr('sync.deviceId'), status?.deviceId ?? '...'),
             _row(context, context.tr('sync.pending'), '${status?.pendingChanges ?? 0}'),
@@ -369,7 +369,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         width: double.infinity,
         child: TextButton(
           onPressed: _busy ? null : _leave,
-          child: Text(context.tr('sync.leaveAccount'), style: const TextStyle(color: Color(0xFFC62828))),
+          child: Text(context.tr('sync.leaveAccount'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
         ),
       ),
     ];
@@ -406,12 +406,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(title,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: c.textMain)),
+                  style: smallText(fontWeight: FontWeight.bold, color: c.textMain)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(text, style: TextStyle(fontSize: 12, color: c.textSecond)),
+          Text(text, style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond)),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -439,11 +439,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label, style: TextStyle(fontSize: 13, color: c.textSecond)),
+            child: Text(label, style: smallText(fontWeight: FontWeight.normal, color: c.textSecond)),
           ),
           Expanded(
             child: Text(value,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textMain)),
+              style: smallText(fontWeight: FontWeight.w600, color: c.textMain)),
           ),
         ],
       ),
@@ -558,7 +558,7 @@ class _JoinDialogState extends State<_JoinDialog> {
               const SizedBox(height: 8),
               Text(
                 context.tr('sync.noHost'),
-                style: TextStyle(fontSize: 12, color: c.textSecond),
+                style: verySmallText(fontWeight: FontWeight.normal, color: c.textSecond),
               ),
             ],
             const SizedBox(height: 12),
@@ -570,7 +570,7 @@ class _JoinDialogState extends State<_JoinDialog> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 10),
-              Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFC62828))),
+              Text(_error!, style: verySmallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
             ],
           ],
         ),

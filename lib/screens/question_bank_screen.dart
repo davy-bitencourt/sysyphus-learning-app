@@ -74,7 +74,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   bool _matches(String text) => _query.isEmpty || _norm(text).contains(_norm(_query));
 
   Widget _noResults() => Center(
-        child: Text(context.tr('qb.noResults'), style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noResults'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)),
       );
 
   Widget _itemMenu({
@@ -92,7 +92,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           children: [
             Icon(icon, size: context.icon(20), color: c),
             const SizedBox(width: 10),
-            Text(label, style: TextStyle(color: c)),
+            Text(label, style: mediumText(fontWeight: FontWeight.normal, color: c)),
           ],
         ),
       );
@@ -205,7 +205,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   c.$1,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  style: verySmallText(fontWeight: FontWeight.bold, color: Colors.grey[500]!),
                 ),
               ),
             ),
@@ -242,7 +242,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     c.$1,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, color: context.colors.textMain),
+                    style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain),
                   ),
                 ),
               ),
@@ -354,16 +354,16 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   controller: _searchController,
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v.trim()),
-                  style: TextStyle(color: context.colors.textMain, fontSize: 16),
+                  style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain),
                   decoration: InputDecoration(
                     hintText: context.tr('qb.searchHint'),
-                    hintStyle: TextStyle(color: Colors.grey[500]),
+                    hintStyle: mediumText(fontWeight: FontWeight.normal, color: Colors.grey[500]!),
                     border: InputBorder.none,
                   ),
                 )
               : Text(
                   context.tr('qb.title'),
-                  style: TextStyle(color: context.colors.textMain, fontWeight: FontWeight.bold, fontSize: 20),
+                  style: bigText(fontWeight: FontWeight.bold, color: context.colors.textMain),
                 ),
           actions: [
             IconButton(
@@ -390,7 +390,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_download_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text(context.tr('qb.importZip'), style: TextStyle(color: context.colors.textMain)),
+                      Text(context.tr('qb.importZip'), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -400,7 +400,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     children: [
                       Icon(Icons.file_upload_outlined, size: context.icon(20), color: context.colors.accent),
                       const SizedBox(width: 10),
-                      Text(context.tr('qb.exportZip'), style: TextStyle(color: context.colors.textMain)),
+                      Text(context.tr('qb.exportZip'), style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
                     ],
                   ),
                 ),
@@ -439,7 +439,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildQuestionsTab() {
     if (_packages.isEmpty) {
       return Center(
-        child: Text(context.tr('qb.noPackages'), style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qb.noPackages'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)),
       );
     }
 
@@ -540,7 +540,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
     if (_packageQuestions.isEmpty) {
       return Center(
-        child: Text(context.tr('qs.noQuestions'), style: TextStyle(color: Colors.grey[500])),
+        child: Text(context.tr('qs.noQuestions'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)),
       );
     }
     final visible = _packageQuestions.where((q) => _matches(q.statement)).toList();
@@ -595,7 +595,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -705,7 +705,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('common.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -722,7 +722,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       children: [
         Expanded(
           child: _templates.isEmpty
-              ? Center(child: Text(context.tr('qb.noTemplates'), style: TextStyle(color: Colors.grey[500])))
+              ? Center(child: Text(context.tr('qb.noTemplates'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)))
               : _query.isNotEmpty
                   ? _buildTemplateResults()
                   : _templatesTable(_templates, reorderable: true),
@@ -808,7 +808,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_tags.isEmpty
-                  ? Center(child: Text(context.tr('qb.noTags'), style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noTags'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)))
                   : _noResults())
               : _tagsTable(visible),
         ),
@@ -852,7 +852,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -878,7 +878,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
         Expanded(
           child: visible.isEmpty
               ? (_sessions.isEmpty
-                  ? Center(child: Text(context.tr('qb.noSessions'), style: TextStyle(color: Colors.grey[500])))
+                  ? Center(child: Text(context.tr('qb.noSessions'), style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[500]!)))
                   : _noResults())
               : _sessionsTable(visible, reorderable: _query.isEmpty),
         ),
@@ -987,7 +987,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: Color(0xFFC62828))),
+            child: Text(context.tr('common.delete'), style: smallText(fontWeight: FontWeight.normal, color: Color(0xFFC62828))),
           ),
         ],
       ),

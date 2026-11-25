@@ -217,7 +217,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               const SizedBox(width: 4),
               Text(
                 _formatDuration(d),
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
+                style: smallText(fontWeight: FontWeight.w600, color: color),
               ),
             ],
           ),
@@ -419,7 +419,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                 Text(
                   context.tr(_doneToday ? 'qs.allDone' : 'qs.noQuestions'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: smallText(fontWeight: FontWeight.normal, color: Colors.grey[600]!),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -445,7 +445,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
           children: [
             Icon(icon, size: context.icon(20), color: c),
             const SizedBox(width: 10),
-            Text(label, style: TextStyle(color: c)),
+            Text(label, style: mediumText(fontWeight: FontWeight.normal, color: c)),
           ],
         ),
       );
@@ -464,7 +464,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${_currentQuestion + 1} / ${_questions.length}',
-              style: TextStyle(fontSize: 14, color: context.colors.textSecond)),
+              style: smallText(fontWeight: FontWeight.normal, color: context.colors.textSecond)),
             const SizedBox(width: 10),
             SizedBox(
               width: 70,
@@ -541,7 +541,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       padding: const EdgeInsets.all(16),
       child: MarkdownText(
         text: _current.question.statement,
-        style: TextStyle(fontSize: 16, color: context.colors.textMain),
+        style: mediumText(fontWeight: FontWeight.normal, color: context.colors.textMain),
       ),
     );
   }
@@ -564,7 +564,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
       child: Center(
         child: Text(
           '$percent%',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+          style: smallText(fontWeight: FontWeight.w600, color: color),
         ),
       ),
     );
@@ -589,7 +589,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         if (value == null || value.isEmpty) return const SizedBox.shrink();
         return MarkdownText(
           text: value,
-          style: TextStyle(fontSize: 14, color: context.colors.textMain),
+          style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain),
         );
       case FieldType.image:
         final path = _current.question.textFor(field.id);
@@ -670,7 +670,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
+            child: Text(option.text, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
           ),
         );
       }),
@@ -718,7 +718,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.5),
             ),
-            child: Text(option.text, style: TextStyle(fontSize: 14, color: context.colors.textMain)),
+            child: Text(option.text, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
           ),
         );
       }),
@@ -735,7 +735,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.4)),
       ),
-      child: Text(_current.question.extraComments, style: TextStyle(fontSize: 13, color: context.colors.textMain)),
+      child: Text(_current.question.extraComments, style: smallText(fontWeight: FontWeight.normal, color: context.colors.textMain)),
     );
   }
 
@@ -805,7 +805,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 15)),
+        child: Text(label, style: smallText(fontWeight: FontWeight.normal, color: Colors.white)),
       ),
     );
   }
