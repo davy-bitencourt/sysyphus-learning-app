@@ -349,5 +349,7 @@
   "sync.noHost": "Nenhum host encontrado. Verifique se o app do host está aberto no mesmo Wi-Fi, ou digite o endereço abaixo.",
   "sync.hostAddress": "Endereço do host",
   "sync.connecting": "Conectando...",
-  "sync.connect": "Conectar"
+  "sync.connect": "Conectar",
+  "stats.last12Months": "Últimos 12 meses",
+  "stats.changePeriod": "Alterar período"
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/stats/review_stats.dart';
+import '../l10n/strings.dart';
 import '../styles/app_theme.dart';
 import 'stats_widgets.dart';
 
@@ -18,25 +19,25 @@ class PeriodChartCard extends StatefulWidget {
 class _PeriodChartCardState extends State<PeriodChartCard> {
   ChartRange _range = ChartRange.week; // semana pré-escolhida
 
-  static const _names = {
-    ChartRange.week: 'Last 7 days',
-    ChartRange.days30: 'Last 30 days',
-    ChartRange.months12: 'Last 12 months',
-  };
+  String _rangeName(ChartRange r) => switch (r) {
+        ChartRange.week => context.tr('stats.last7'),
+        ChartRange.days30 => context.tr('stats.last30'),
+        ChartRange.months12 => context.tr('stats.last12Months'),
+      };
 
 @override
 Widget build(BuildContext context) {
   return Stack(
     children: [
       StatCard(
-        title: _names[_range]!,
+        title: _rangeName(_range),
         child: _chart(),
       ),
       Positioned(
         top: 6,
         right: 6,
         child: PopupMenuButton<ChartRange>(
-          tooltip: 'Change period',
+          tooltip: context.tr('stats.changePeriod'),
           color: context.colors.bgSecond,
           onSelected: (r) => setState(() => _range = r),
           icon: Icon(Icons.keyboard_arrow_down, color: context.colors.textMain),
@@ -44,7 +45,7 @@ Widget build(BuildContext context) {
             for (final r in ChartRange.values)
               PopupMenuItem(
                 value: r,
-                child: Text(_names[r]!, style: TextStyle(color: context.colors.textMain)),
+                child: Text(_rangeName(r), style: TextStyle(color: context.colors.textMain)),
               ),
           ],
         ),
@@ -78,7 +79,7 @@ Widget build(BuildContext context) {
           ],
           highlight: 29,
           footerStart: formatDayShort(days.first),
-          footerEnd: 'Today',
+          footerEnd: context.tr('stats.today'),
         );
       case ChartRange.months12:
         final months = s.lastMonths(12);
